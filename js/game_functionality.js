@@ -6,15 +6,25 @@
 /* global-scope variables: */
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
-const CANVAS_HEIGHT = 800;
-const CANVAS_WIDTH = 500;
+const CANVAS_WIDTH = 600;
+const CANVAS_HEIGHT = 600;
 let allWords = {};
 let thingsElsewhere = {};
 let inventory = {};
 let thingsHere = {};
+let spellsAvailable = {};
+let rooms = {};
 let passages = [];
+let boundaries = [];
 let currentRoom = '';
 let player = {};
+let sounds = {};
+let backgroundImage = new Image();
+
+let PassageTypes = { BASIC_VERTICAL : 'basic_vertical',
+    BASIC_HORIZONTAL : 'basic_horizontal',
+    INVISIBLE_VERTICAL : 'invisible_vertical',
+    INVISIBLE_HORIZONTAL : 'invisible_horizontal' };
 
 console.log('hi');
 
@@ -24,30 +34,64 @@ class Player {
     constructor(props) {
         this.x = 50;
         this.y = 50;
+        this.goingUp = false;
+        this.goingDown = false;
+        this.goingLeft = false;
+        this.goingRight = false;
     }
 
-    update() {}
+    update() {
+        if (this.goingUp) this.y -= 1;
+        if (this.goingDown)this.y += 1;
+        if (this.goingRight) this.x += 1;
+        if (this.goingLeft) this.x -= 1;
+    }
+
     draw() {
         ctx.fillRect(this.x,  this.y,  15,  15);
     }
 }
 
 class Thing {
-    constructor(word) {
+    constructor(word, room, x, y) {
         this.word = word;
-        this.x = 10;
-        this.y = 50;
+        this.room = room;
+        this.x = x;
+        this.y = y;
         this.width = 50;
         this.height = 50;
+        this.image = new Image();
+        this.image.src = 'imgs/things/' + word + '.png';
     }
     update() {
-        this.x++;
-        this.y++;
+
     }
     draw() {
-        ctx.fillRect(this.x,  this.y,  this.width,  this.height);
+        ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
     }
 }
+
+class Passage {
+    constructor(originRoom, type, x, y, destinationRoom, destX, destY) {
+        this.originRoom = originRoom;
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.destinationRoom = destinationRoom;
+        this.destX = destX;
+        this.destY = destY;
+    }
+}
+
+function pickUpNearbyThings() {
+
+}
+
+function castSpell() {
+    let command = window.prompt('Cast a spell:');
+
+}
+
 
 function animate() {
     ctx.clearRect(0, 0,  CANVAS_WIDTH,  CANVAS_HEIGHT);
@@ -57,31 +101,72 @@ function animate() {
         thing.draw();
     }
 
+    player.update();
+    player.draw();
+
     requestAnimationFrame(animate);
 }
 
-function loadLevel(levelNumber = 1) {
-    console.log('loading level ' + levelNumber.toString());
+function newRoom(roomName) {
+    let roomData = rooms[roomName];
+    passages = roomData.passages;
+    boundaries = roomData.boundaries;
+    backgroundImage = new Image(CANVAS_WIDTH, CANVAS_HEIGHT);
+    backgroundImage.src = '/imgs/rooms/' + roomName.replace(' ','_') + '.png';
+}
+
+function loadLevel(levelName = '1') {
+    console.log('loading level ' + levelName);
     canvas.style.display = 'block';
 
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'none';
 
-    thingsHere = {
-        'clam' : new Thing('clam')
-    }
+    let levelData = getLevelData(levelName);
 
-    thingsElsewhere = {
-        'mace' : new Thing('mace'),
-        'crown' : new Thing('crown')
-    }
+    currentRoom = levelData.initialRoom;
+    player.x = levelData.initialX;
+    player.y = levelData.initialY;
+    inventory = levelData.initialInventory; // note copying by reference OK here b/c getLevelData initializes with literals
+    thingsHere = levelData.initialThingsHere;
+    thingsElsewhere = levelData.initialThingsElsewhere;
+    spellsAvailable = levelData.initialSpells;
+    rooms = levelData.rooms;
+
+    newRoom(currentRoom);
 
     animate();
+}
+
+function handleKeydown(e) {
+    switch (e.code) {
+        case 'ArrowRight' : player.goingRight = true; break;
+        case 'ArrowLeft' : player.goingLeft = true; break;
+        case 'ArrowUp' : player.goingUp = true; break;
+        case 'ArrowDown' : player.goingDown = true; break;
+
+        case 'Space' :  sounds['pickup'].play(); pickUpNearbyThings(); break;
+        case 'KeyC' : castSpell(); break;
+    }
+}
+
+function handleKeyup(e) {
+    switch (e.code) {
+        case 'ArrowRight' : player.goingRight = false; break;
+        case 'ArrowLeft' : player.goingLeft = false; break;
+        case 'ArrowUp' : player.goingUp = false; break;
+        case 'ArrowDown' : player.goingDown = false; break;
+    }
 }
 
 // this is for the very first, non-level-specific setup tasks:
 function initialize() {
     player = new Player();
+
+    sounds = { 'pickup' : new Audio('audio/magical_1.ogg') };
+
+    document.addEventListener('keydown', handleKeydown);
+    document.addEventListener('keyup', handleKeyup);
 
     allWords = { 'arts':1,  'asteroid':1,  'ace':1,  'adder':1,  'amp':1,  'bat':1,  'bath':1,  'boar':1,  'board':1,  'brook':1,  'bulls-eyes':1, 
         'carts':1, 
