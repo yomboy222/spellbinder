@@ -9,6 +9,11 @@ const ctx = canvas.getContext('2d');
 const CANVAS_WIDTH = 600; const CANVAS_HEIGHT = 600;
 const PLAY_AREA_WIDTH = 600; const PLAY_AREA_HEIGHT = 500;
 const INVENTORY_WIDTH = 600; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
+const INVENTORY_TOP_MARGIN = 58; const INVENTORY_LEFT_MARGIN = 40; const INVENTORY_SPACING = 95;
+const MAX_ITEMS_IN_INVENTORY = 3;
+const RUNE_WIDTH = 65; const RUNE_HEIGHT = 92;
+const PASSAGE_WIDTH = 55;
+const PASSAGE_LENGTH = 150;
 let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
 const PLAYER_HEIGHT = 135;
@@ -32,26 +37,31 @@ let inventory = {};
 let thingsHere = {};
 let spellsAvailable = [];
 let runes = [];
+let runeImages = [];
 let rooms = {};
 let passages = [];
+let passageImages = {};
 let boundaries = [];
 let currentRoom = '';
 let player = {};
 let sounds = {};
 let backgroundImage = new Image();
 let messageTimer = 0; // used to keep multiple messages from triggering onto screen at same time.
-const MESSAGE_DURATION_MS = 2000;
+const MESSAGE_DURATION_MS = 1500;
+const FADEOUT_DURATION_MS = 1200;
+let fadeoutTimer = 0;
+let fadeinTimer = 0;
+let fadeoutWord = '';
+let fadeinWord = '';
 
-let PassageTypes = { BASIC_VERTICAL : 'basic_vertical',
-    BASIC_HORIZONTAL : 'basic_horizontal',
-    INVISIBLE_VERTICAL : 'invisible_vertical',
-    INVISIBLE_HORIZONTAL : 'invisible_horizontal' };
+let PassageTypes = { BASIC_VERTICAL : 'basic-vertical',
+    BASIC_HORIZONTAL : 'basic-horizontal',
+    BASIC_LEFT : 'basic-left',
+    BASIC_RIGHT : 'basic-right',
+    INVISIBLE_VERTICAL : 'invisible-vertical',
+    INVISIBLE_HORIZONTAL : 'invisible-horizontal' };
 
 let Directions = { UP : 0, RIGHT : 1, DOWN : 2, LEFT : 3 };
-
-console.log('hi');
-
-function NOOP() {}
 
 class Player {
     constructor(props) {
@@ -88,6 +98,14 @@ class Player {
 
         this.x += deltaX;
         this.y += deltaY;
+
+        // first check if touching passages to other rooms.
+        for (let i=0; i<passages.length; i++) {
+            if (passages[i].inRangeOfPlayer(-20)) {
+                newRoom(passages[i].destinationRoom, passages[i].destX, passages[i].destY);
+                return;
+            }
+        }
 
         // check collisions and undo the move if collision detected.
         let collisionDetected = false;
@@ -138,38 +156,17 @@ class Player {
     }
 }
 
-class Thing {
-    constructor(word, room, x, y) {
-        this.word = word;
-        this.room = room;
-        this.x = x;
-        this.y = y;
-        this.image = new Image();
-        this.image.src = 'imgs/things/' + word + '.png';
-        console.log(this.image.width.toString() + ' !!');
-        this.width = this.image.width; // take dimensions directly from image
-        this.height = this.image.height;
-        this.halfWidth = this.width / 2; // to avoid having to recalculate at every frame
-        this.halfHeight = this.height / 2;
-        this.movable = !(word in immovableObjects);
-        this.solid = (word in solidObjects);
-        this.bridgelike = (word in bridgelikeObjects);
-        this.collisionProfile = CollisionProfile.RECTANGULAR; // should set up elliptical option here too.
-        this.displayingWord = false;
-    }
-    update() {
-
-    }
-    draw() {
-        ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
-    }
-
-    //TODO: FIGURE OUT POSITION/SCALE OF INVENTORY ITEMS; USE DEFINED CONSTANTS
-    drawInInventory(index) {
-        ctx.drawImage(this.image, (index * 60) + 20, 530, this.width / 2, this.height / 2);
+class GameElement {
+    constructor() {
+        this.x = 0;
+        this.y = 0;
+        this.halfWidth = 0;
+        this.halfHeight = 0;
+        this.image = undefined;
+        this.collisionProfile = CollisionProfile.RECTANGULAR
     }
     inRangeOfPlayer(extraRadius = 0) {
-        if (thing.collisionProfile == CollisionProfile.RECTANGULAR) {
+        if (this.collisionProfile === CollisionProfile.RECTANGULAR) {
             return (player.x > (this.x - this.halfWidth - player.halfWidth - extraRadius) &&
                 player.x < (this.x + this.halfWidth + player.halfWidth + extraRadius) &&
                 player.y > (this.y - this.halfHeight - player.halfHeight - extraRadius) &&
@@ -179,32 +176,126 @@ class Thing {
         return false; // TODO: HANDLE OTHER COLLISION PROFILES
     }
 
-    // TODO: DEAL WITH CASE WHEN IN INVENTORY!
-    occupiesPoint(x, y) {
+    occupiesPoint(x, y) { // this is overridden by Thing to handle case where it's in inventory
         return ( x >= this.x - this.halfWidth &&
-                x <= this.x + this.halfWidth &&
-                y >= this.y - this.halfHeight &&
-                y <= this.y + this.halfHeight );
+            x <= this.x + this.halfWidth &&
+            y >= this.y - this.halfHeight &&
+            y <= this.y + this.halfHeight );
+    }
+}
+
+class Thing extends GameElement {
+    constructor(word, room, x, y) {
+        super();
+        this.word = word;
+        this.room = room;
+        this.x = x;
+        this.y = y;
+        this.image = new Image();
+        this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
+        this.image.src = 'imgs/things/' + word + '.png';
+        this.movable = !(word in immovableObjects);
+        this.solid = (word in solidObjects);
+        this.bridgelike = (word in bridgelikeObjects);
+        this.collisionProfile = CollisionProfile.RECTANGULAR; // should set up elliptical option here too.
+        this.displayingWord = false;
+        this.inventoryImageRatio = 2.5; // factor by which to reduce each dimension when drawing in inventory.
+    }
+    setDimensionsFromImage() { // this gets called as soon as image loads
+        this.width = this.image.width; // take dimensions directly from image
+        this.height = this.image.height;
+        this.halfWidth = this.width / 2; // to avoid having to recalculate at every frame
+        this.halfHeight = this.height / 2;
+        drawInventory();
+    }
+    update() {
+
+    }
+    draw() {
+        if (this.word == fadeinWord) {
+            let newAlpha = (Date.now() - fadeinTimer) / FADEOUT_DURATION_MS;
+            if (newAlpha > 1.0) {
+                newAlpha = 1.0;
+                fadeinWord = '';
+            }
+            ctx.globalAlpha = newAlpha;
+        }
+        ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
+        ctx.globalAlpha = 1.0;
+    }
+
+    setCoordinatesInInventory(index) {
+        this.x = (index * INVENTORY_SPACING) + INVENTORY_LEFT_MARGIN;
+        this.y = INVENTORY_TOP + INVENTORY_TOP_MARGIN;
+    }
+
+    //TODO: FADEIN / FADEOUT OF INVENTORY ITEMS
+    drawInInventory(index) {
+        this.setCoordinatesInInventory(index);
+        ctx.drawImage(this.image, this.x - this.width / this.inventoryImageRatio, this.y - this.height / this.inventoryImageRatio,
+            this.halfWidth,
+            this.halfHeight);
     }
 
     // tryToPickUp() returns 1 if successful else 0 :
     tryToPickUp() {
         // only call this on things in thingsHere in range of player.
         if (this.movable) {
-            inventory[this.word] = this;
-            delete thingsHere[this.word];
-            return 1;
+            if (Object.keys(inventory).length >= MAX_ITEMS_IN_INVENTORY) {
+                displayMessage('Too many things in inventory!');
+            }
+            else {
+                inventory[this.word] = this;
+                delete thingsHere[this.word];
+                return 1;
+            }
         }
         else {
             return 0;
         }
     }
 
-    discard() {}
+    discard() {
+        delete inventory[this.word];
+        this.x = player.x;
+        this.y = player.y;
+        let distanceToToss = player.halfWidth + this.halfWidth;
+        if (player.direction == Directions.UP)
+            this.y -= distanceToToss;
+        else if (player.direction == Directions.DOWN)
+            this.y += distanceToToss;
+        else if (player.direction == Directions.LEFT)
+            this.x -= distanceToToss;
+        else if (player.direction == Directions.RIGHT)
+            this.x += distanceToToss;
+
+        thingsHere[this.word] = this;
+        sounds['pickup'].play();
+    }
+
+    occupiesPoint(x, y) { // Thing overrides this to handle case where it's in inventory
+
+        let adjustedWidth = this.halfWidth;
+        let adjustedHeight = this.halfHeight;
+        if (this.word in inventory) {
+            adjustedHeight = adjustedHeight / this.inventoryImageRatio;
+            adjustedWidth = adjustedWidth / this.inventoryImageRatio;
+        }
+
+        return ( x >= (this.x - adjustedWidth) &&
+                x <= (this.x + adjustedWidth) &&
+                y >= (this.y - adjustedHeight) &&
+                y <= (this.y + adjustedHeight) );
+    }
+
 
     // particular Thing subclasses may override this:
     handleClick() {
-        // TODO: add case of clicking something already in inventory.
+        if (this.word in inventory) {
+            this.discard();
+            return;
+        }
+
         if (!this.movable) {
             displayMessage("This object cannot be picked up.");
             return;
@@ -215,7 +306,6 @@ class Thing {
         }
         this.tryToPickUp();
         sounds['pickup'].play();
-        drawInventory();
     }
 
     // placeholder methods that subclasses needing specific behavior can override:
@@ -229,15 +319,36 @@ class Thing {
     extraTransformIntoBehavior() {}
 }
 
-class Passage {
-    constructor(originRoom, type, x, y, destinationRoom, destX, destY) {
-        this.originRoom = originRoom;
+class Passage extends GameElement {
+    constructor(type, x, y, destinationRoom, destX, destY) {
+        super();
+        // this.originRoom = originRoom; note -- currently don't need to specify originRoom because passage data will be packaged into room data.
         this.type = type;
         this.x = x;
         this.y = y;
         this.destinationRoom = destinationRoom;
         this.destX = destX;
         this.destY = destY;
+        if ( this.type.indexOf('left') >= 0 || this.type.indexOf('right') >= 0 || this.type.indexOf('vertical') >= 0) {
+            this.height = PASSAGE_LENGTH;
+            this.width = PASSAGE_WIDTH;
+        }
+        else {
+            this.height = PASSAGE_WIDTH;
+            this.width = PASSAGE_LENGTH;
+        }
+        this.halfWidth = this.width / 2;
+        this.halfHeight = this.height / 2;
+        if ( this.type.indexOf('invisible') >= 0) {
+            this.image = undefined;
+        } else {
+            this.image = new Image(this.width,this.height);
+            this.image.src = 'imgs/passages/passage-' + this.type + '.png'; // IF STICKING WITH THIS STRATEGY, CAN DELETE passageImages VARIABLE.
+        }
+    }
+    draw() {
+        if (typeof this.image != 'undefined')
+            ctx.drawImage(this.image,this.x - this.halfWidth, this.y - this.halfHeight);
     }
 }
 
@@ -348,7 +459,7 @@ function castSpell() {
         spellRequested = SPELL_REMOVE_EDGE;
         runeReleased = fromWord.substr(0, 1);
     }
-    else if (toWord == fromWord.split('').reverse().join()) {
+    else if (toWord == fromWord.split('').reverse().join('')) {
         spellRequested = SPELL_REVERSAL;
     }
 
@@ -389,13 +500,12 @@ function castSpell() {
 
     // create the new thing:
     let newWordCapitalized = toWord.charAt(0).toUpperCase() + toWord.slice(1);
-    let newObject = undefined;
     let newClass = window[newWordCapitalized];
     // if toWord has its own subclass, the typeof newClass will be "function", otherwise "undefined"
+    let newObject;
     if (typeof newClass === 'function') {
         newObject = new newClass(toWord, currentRoom, sourceThing.x, sourceThing.y);
-    }
-    else {
+    } else {
         newObject = new Thing(toWord, currentRoom, sourceThing.x, sourceThing.y);
     }
 
@@ -416,13 +526,28 @@ function castSpell() {
 
     if (inInventory)
         drawInventory();
+
+    fadeinTimer = Date.now();
+    fadeinWord = toWord;
 }
 
 function drawInventory() {
+    ctx.clearRect(INVENTORY_LEFT, INVENTORY_TOP, INVENTORY_WIDTH, INVENTORY_HEIGHT);
+    ctx.beginPath();
+    ctx.lineWidth = "6";
+    ctx.strokeStyle = "black";
+    ctx.rect(INVENTORY_LEFT, INVENTORY_TOP, INVENTORY_WIDTH, INVENTORY_HEIGHT);
+    ctx.stroke();
     let index = 0;
     for (let [word, thing] of Object.entries(inventory)) {
         thing.drawInInventory(index);
         index++;
+    }
+    for (let i = 0; i < runes.length; i++)
+    {
+        let x = INVENTORY_LEFT + INVENTORY_WIDTH - INVENTORY_LEFT_MARGIN - (38 * Math.round((i-1)/2));
+        let y = INVENTORY_TOP + 5 + (48 * (i % 2));
+        ctx.drawImage(runeImages[runes[i].charCodeAt(0) - 97], x, y, RUNE_WIDTH / 2.3, RUNE_HEIGHT / 2.3);
     }
 }
 
@@ -430,7 +555,7 @@ function animate() {
 
     // clear and draw background for current room:
     ctx.clearRect(0, 0,  PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
-    ctx.drawImage(backgroundImage, 0, 0, 2474, 2000, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    // ctx.drawImage(backgroundImage, 0, 0, 2474, 2000, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // draw all things sitting in current room
     for (let [word, thing] of Object.entries(thingsHere)) {
@@ -438,18 +563,51 @@ function animate() {
         thing.draw();
     }
 
+    // draw all boundaries in current room
+    for (let i = 0; i < boundaries.length; i++) {
+        ctx.strokeStyle = 'green';
+        ctx.strokeRect( boundaries[i][1]-5,
+            boundaries[i][2]-5,
+            (boundaries[i][3] + 5 - boundaries[i][1]),
+            (boundaries[i][4] + 5 - boundaries[i][2]));
+    }
+
+    // draw the non-invisible passages in current room
+    for (let i = 0; i < passages.length; i++) {
+        passages[i].draw();
+    }
+
+    // COLLISION DETECTION NOW DONE IN PLAYER.UPDATE
     player.update();
     player.draw();
 
     requestAnimationFrame(animate);
 }
 
-function newRoom(roomName) {
-    let roomData = rooms[roomName];
+function newRoom(newRoomName, newPlayerX, newPlayerY) {
+    if (typeof currentRoom != 'undefined')
+        sounds['whoosh'].play();
+
+    for (let [word, thing] of Object.entries(thingsHere)) {
+        thingsElsewhere[word] = thing;
+        delete thingsHere[word];
+    }
+    currentRoom = newRoomName;
+    for (let [word, thing] of Object.entries(thingsElsewhere)) {
+        if (thing.room == currentRoom) {
+            thingsHere[word] = thing;
+            delete thingsElsewhere[word];
+        }
+    }
+    player.x = newPlayerX;
+    player.y = newPlayerY;
+
+    let roomData = rooms[newRoomName];
     passages = roomData.passages;
     boundaries = roomData.boundaries;
     backgroundImage = new Image(CANVAS_WIDTH, CANVAS_HEIGHT);
-    backgroundImage.src = '/imgs/rooms/' + roomName.replace(' ','_') + '.png';
+    backgroundImage.src = '/imgs/rooms/' + newRoomName.replace(' ','_') + '.png';
+
 }
 
 function loadLevel(levelName = '1') {
@@ -461,17 +619,15 @@ function loadLevel(levelName = '1') {
 
     let levelData = getLevelData(levelName);
 
-    currentRoom = levelData.initialRoom;
-    player.x = levelData.initialX;
-    player.y = levelData.initialY;
+    currentRoom = undefined;
     inventory = levelData.initialInventory; // note copying by reference OK here b/c getLevelData initializes with literals
-    thingsHere = levelData.initialThingsHere;
+    thingsHere = {}; // in newRoom(), things will be moved from thingsElsewhere to thingsHere.
     thingsElsewhere = levelData.initialThingsElsewhere;
     spellsAvailable = levelData.initialSpells;
     runes = levelData.initialRunes;
     rooms = levelData.rooms;
 
-    newRoom(currentRoom);
+    newRoom(levelData.initialRoom, levelData.initialX, levelData.initialY);
 
     animate();
 }
@@ -517,6 +673,7 @@ function handleKeydown(e) {
 
         case 'Space' : pickUpNearbyThings(); break;
         case 'KeyC' : castSpell(); break;
+        case 'KeyI' : drawInventory();
     }
 }
 
@@ -537,18 +694,41 @@ function handleClick(e) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             thing.handleClick();
     }
+    for ([word, thing] of Object.entries(inventory)) {
+        if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
+            thing.handleClick();
+    }
+    drawInventory(); // important not to call this in individual Things' implementations of handleClick()!
+
 }
 
 // this is for the very first, non-level-specific setup tasks:
 function initialize() {
-    player = new Player();
+    // the variables initialized here were actually declared above
+    // so as to have global scope.
 
-    sounds = { 'pickup' : new Audio('audio/magical_1.ogg') };
+    player = new Player();
+    sounds = {};
+    const soundlist = ['glug','host_speech','kaching','om','pickup',
+        'pop','rattle','tada','whoosh','yumyum','zoop'];
+
+    for (let i = 0; i < soundlist.length; i++) {
+        sounds[soundlist[i]] = new Audio('audio/' + soundlist[i] + '.wav');
+    }
 
     document.addEventListener('keydown', handleKeydown);
     document.addEventListener('keyup', handleKeyup);
     document.addEventListener('click', handleClick);
     document.addEventListener('mousemove', handleMouseMove);
+
+    // load rune images
+    for (i=0; i<26; i++) {
+        let lower = String.fromCharCode(i + 97);
+        let upper = String.fromCharCode(i + 65);
+        let runeImage = new Image(RUNE_WIDTH,RUNE_HEIGHT);
+        runeImage.src = 'imgs/runes/Rune-' + upper + '.png';
+        runeImages.push(runeImage);
+    }
 
     let bounds = canvas.getBoundingClientRect();
     canvasOffsetX = bounds.left; // + window.scrollX;
