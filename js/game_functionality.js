@@ -9,8 +9,8 @@ const ctx = canvas.getContext('2d');
 const CANVAS_WIDTH = 600; const CANVAS_HEIGHT = 600;
 const PLAY_AREA_WIDTH = 600; const PLAY_AREA_HEIGHT = 500;
 const INVENTORY_WIDTH = 600; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
-const INVENTORY_TOP_MARGIN = 58; const INVENTORY_LEFT_MARGIN = 40; const INVENTORY_SPACING = 95;
-const MAX_ITEMS_IN_INVENTORY = 3;
+const INVENTORY_TOP_MARGIN = 58; const INVENTORY_LEFT_MARGIN = 55; const INVENTORY_SPACING = 95;
+const MAX_ITEMS_IN_INVENTORY = 6;
 const RUNE_WIDTH = 65; const RUNE_HEIGHT = 92;
 const PASSAGE_WIDTH = 55;
 const PASSAGE_LENGTH = 150;
@@ -18,7 +18,7 @@ let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
 const PLAYER_HEIGHT = 135;
 const PLAYER_WIDTH = 90;
-const EXTRA_SPELL_RADIUS = 50;
+const EXTRA_SPELL_RADIUS = 40;
 const EXTRA_PICKUP_RADIUS = 20;
 const DISTANCE_TO_MOVE = 4;
 const SPELL_ADD_EDGE = 'add-edge';
@@ -47,7 +47,8 @@ let player = {};
 let sounds = {};
 let backgroundImage = new Image();
 let messageTimer = 0; // used to keep multiple messages from triggering onto screen at same time.
-const MESSAGE_DURATION_MS = 1500;
+const MESSAGE_DURATION_MS = 2500;
+const WORD_DURATION_MS = 1500;
 const FADEOUT_DURATION_MS = 1200;
 let fadeoutTimer = 0;
 let fadeinTimer = 0;
@@ -93,7 +94,7 @@ class Player {
         if (this.goingRight) deltaX = DISTANCE_TO_MOVE;
         if (this.goingLeft) deltaX = - DISTANCE_TO_MOVE;
 
-        if (deltaX == 0 && deltaY == 0)
+        if (deltaX === 0 && deltaY === 0)
             return; // nothing else needed to update
 
         this.x += deltaX;
@@ -109,24 +110,20 @@ class Player {
 
         // check collisions and undo the move if collision detected.
         let collisionDetected = false;
-
-        // first just check edge-of-play-area conditions:
-        if (this.x < this.halfWidth ||
-            this.x > PLAY_AREA_WIDTH - this.halfWidth ||
-            this.y < this.halfHeight ||
-            this.y > PLAY_AREA_HEIGHT - this.halfHeight) {
-            collisionDetected = true;
-        }
+        let touchingBridgeObject = false;
 
         for (let [word, thing] of Object.entries(thingsHere)) {
             if (thing.solid && thing.inRangeOfPlayer()) {
                 collisionDetected = true;
+                thing.handleCollision();
+            }
+            else if (thing.bridgelike && thing.inRangeOfPlayer(-40)) { // TODO: use defined const here
+                    touchingBridgeObject = true;
             }
         }
 
-        // TODO: don't really need to do the following if collision already detected.
         for (const boundary of boundaries) {
-            if (boundary[0] == BoundaryType.HORIZONTAL) {
+            if (boundary[0] === BoundaryType.HORIZONTAL) {
                 if (this.x > (boundary[1] - this.halfWidth) &&
                     this.x < (boundary[3] + this.halfWidth) &&
                     this.y > (boundary[2] - this.halfHeight) &&
@@ -134,7 +131,7 @@ class Player {
                 )
                     collisionDetected = true;
             }
-            else if (boundary[0] == BoundaryType.VERTICAL) {
+            else if (boundary[0] === BoundaryType.VERTICAL) {
                 if (this.x > (boundary[1] - this.halfWidth) &&
                     this.x < (boundary[1] + this.halfWidth) &&
                     this.y > (boundary[2] - this.halfHeight) &&
@@ -142,6 +139,19 @@ class Player {
                 )
                     collisionDetected = true;
             }
+        }
+
+        // a collision with a solid thing or boundary is cancelled if player touches bridge-like object:
+        if (touchingBridgeObject) {
+            collisionDetected = false;
+        }
+
+        // check edge-of-play-area conditions; these aren't affected by bridge-like objects
+        if (this.x < this.halfWidth ||
+            this.x > PLAY_AREA_WIDTH - this.halfWidth ||
+            this.y < this.halfHeight ||
+            this.y > PLAY_AREA_HEIGHT - this.halfHeight) {
+            collisionDetected = true;
         }
 
         if (collisionDetected) {
@@ -173,6 +183,13 @@ class GameElement {
                 player.y < (this.y + this.halfHeight + player.halfHeight + extraRadius)
             );
         }
+        else if (this.collisionProfile === CollisionProfile.ELLIPTICAL) {
+            let relX = player.x - this.x;
+            let relY = player.y - this.y;
+            let horizAxis = this.halfWidth + player.halfWidth + extraRadius;
+            let vertAxis = this.halfHeight + player.halfHeight + extraRadius;
+            return ( (relX * relX) / (horizAxis * horizAxis) < 1 - ( (relY * relY) / (vertAxis * vertAxis)));
+        }
         return false; // TODO: HANDLE OTHER COLLISION PROFILES
     }
 
@@ -194,10 +211,11 @@ class Thing extends GameElement {
         this.image = new Image();
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
         this.image.src = 'imgs/things/' + word + '.png';
-        this.movable = !(word in immovableObjects);
-        this.solid = (word in solidObjects);
-        this.bridgelike = (word in bridgelikeObjects);
-        this.collisionProfile = CollisionProfile.RECTANGULAR; // should set up elliptical option here too.
+        this.timeOfCreation = Date.now();
+        this.movable = (immovableObjects.indexOf(word) < 0);
+        this.solid = (solidObjects.indexOf(word) >= 0);
+        this.bridgelike = (bridgelikeObjects.indexOf(word) >= 0);
+        this.collisionProfile = (ellipticalObjects.indexOf(word) >= 0) ? CollisionProfile.ELLIPTICAL : CollisionProfile.RECTANGULAR;
         this.displayingWord = false;
         this.inventoryImageRatio = 2.5; // factor by which to reduce each dimension when drawing in inventory.
     }
@@ -212,7 +230,7 @@ class Thing extends GameElement {
 
     }
     draw() {
-        if (this.word == fadeinWord) {
+        if (this.word === fadeinWord) {
             let newAlpha = (Date.now() - fadeinTimer) / FADEOUT_DURATION_MS;
             if (newAlpha > 1.0) {
                 newAlpha = 1.0;
@@ -245,6 +263,8 @@ class Thing extends GameElement {
                 displayMessage('Too many things in inventory!');
             }
             else {
+                this.x = -200;
+                this.y = -200; // the drawInventory method will reposition the thing.
                 inventory[this.word] = this;
                 delete thingsHere[this.word];
                 return 1;
@@ -260,13 +280,13 @@ class Thing extends GameElement {
         this.x = player.x;
         this.y = player.y;
         let distanceToToss = player.halfWidth + this.halfWidth;
-        if (player.direction == Directions.UP)
+        if (player.direction === Directions.UP)
             this.y -= distanceToToss;
-        else if (player.direction == Directions.DOWN)
+        else if (player.direction === Directions.DOWN)
             this.y += distanceToToss;
-        else if (player.direction == Directions.LEFT)
+        else if (player.direction === Directions.LEFT)
             this.x -= distanceToToss;
-        else if (player.direction == Directions.RIGHT)
+        else if (player.direction === Directions.RIGHT)
             this.x += distanceToToss;
 
         thingsHere[this.word] = this;
@@ -288,6 +308,9 @@ class Thing extends GameElement {
                 y <= (this.y + adjustedHeight) );
     }
 
+    displayCantPickUpMessage() {
+        displayMessage("This object cannot be picked up.");
+    }
 
     // particular Thing subclasses may override this:
     handleClick() {
@@ -295,9 +318,8 @@ class Thing extends GameElement {
             this.discard();
             return;
         }
-
         if (!this.movable) {
-            displayMessage("This object cannot be picked up.");
+            this.displayCantPickUpMessage();
             return;
         }
         if (!this.inRangeOfPlayer(EXTRA_PICKUP_RADIUS)) {
@@ -309,6 +331,8 @@ class Thing extends GameElement {
     }
 
     // placeholder methods that subclasses needing specific behavior can override:
+
+    handleCollision() {}
 
     checkIfOkayToTransform() {
         return true; // specific things could override this.
@@ -353,12 +377,12 @@ class Passage extends GameElement {
 }
 
 function displayWord(word, x, y) {
-    if (Date.now() > messageTimer + MESSAGE_DURATION_MS) {
+    if (Date.now() > messageTimer + WORD_DURATION_MS) {
         messageTimer = Date.now();
         let wordDiv = document.getElementById('word-bubble');
         wordDiv.innerText = word;
-        wordDiv.style = 'display:block; top:' + (y + canvasOffsetY) + 'px; left:' + (x + canvasOffsetX) + 'px;';
-        window.setTimeout(stopDisplayingWord, MESSAGE_DURATION_MS);
+        wordDiv.style = 'display:block; top:' + (y + canvasOffsetY + 20) + 'px; left:' + (x + canvasOffsetX - 35) + 'px;';
+        window.setTimeout(stopDisplayingWord, WORD_DURATION_MS);
     }
 }
 
@@ -379,8 +403,16 @@ function pickUpNearbyThings() {
     }
 }
 
+function stopDisplayingMsg() {
+    document.getElementById('player-message').style = 'display:none;';
+}
+
 function displayMessage(msg) {
-    alert(msg); // simplest for now.
+    messageTimer = Date.now();
+    let msgDiv = document.getElementById('player-message');
+    msgDiv.innerText = msg;
+    msgDiv.style = 'display:block;';
+    window.setTimeout(stopDisplayingMsg, MESSAGE_DURATION_MS);
 }
 
 function spellAvailable(spell) {
@@ -433,7 +465,7 @@ function castSpell() {
         return;
     }
 
-    if (! toWord in allWords) { // target word not recognized as a possible object
+    if (allWords.indexOf(toWord) < 0) { // target word not recognized as a possible object
         displayMessage("Sorry, that didn't work.");
         return;
     }
@@ -443,30 +475,28 @@ function castSpell() {
     let runeNeeded = undefined;
     let runeReleased = undefined;
 
-    if (toWord == fromWord + toWord.substr(toWord.length - 1)) {
+    if (toWord === fromWord + toWord.substr(toWord.length - 1)) {
         spellRequested = SPELL_ADD_EDGE;
         runeNeeded = toWord.substr(toWord.length - 1);
     }
-    else if (toWord == toWord.substr(0,1) + fromWord) {
+    else if (toWord === toWord.substr(0,1) + fromWord) {
         spellRequested = SPELL_ADD_EDGE;
         runeNeeded = toWord.substr(0,1)
     }
-    else if (toWord == fromWord.substr(0, fromWord.length - 1)) {
+    else if (toWord === fromWord.substr(0, fromWord.length - 1)) {
         spellRequested = SPELL_REMOVE_EDGE;
         runeReleased = fromWord.substr(fromWord.length - 1);
     }
-    else if (toWord == fromWord.substr(1, fromWord.length - 1)) {
+    else if (toWord === fromWord.substr(1, fromWord.length - 1)) {
         spellRequested = SPELL_REMOVE_EDGE;
         runeReleased = fromWord.substr(0, 1);
     }
-    else if (toWord == fromWord.split('').reverse().join('')) {
+    else if (toWord === fromWord.split('').reverse().join('')) {
         spellRequested = SPELL_REVERSAL;
     }
 
     // TODO: check for SPELL_ANAGRAM, SPELL_SYNONYM, etc.
-// alert(spellRequested);
 
-/*    alert (spellRequested);  alert (runeNeeded); alert (runeReleased); */
     if (!spellAvailable(spellRequested)) {
         displayMessage("Sorry, that didn't work!");
         return;
@@ -480,7 +510,9 @@ function castSpell() {
     if (!sourceThing.checkIfOkayToTransform())
         return;
 
-    // if we got here then the spell worked.
+    // *** if we got here then the spell worked ***
+
+
     if (typeof runeNeeded != 'undefined')
     {
         const indexToDelete = runes.indexOf(runeNeeded);
@@ -490,7 +522,7 @@ function castSpell() {
 
     sourceThing.extraTransformFromBehavior();
 
-    sounds['pickup'].play(); // obviously need correctly named sound here
+    sounds['spell'].play();
 
     // remove the source thing:
     if (inInventory)
@@ -498,16 +530,8 @@ function castSpell() {
     else
         delete thingsHere[fromWord];
 
-    // create the new thing:
-    let newWordCapitalized = toWord.charAt(0).toUpperCase() + toWord.slice(1);
-    let newClass = window[newWordCapitalized];
-    // if toWord has its own subclass, the typeof newClass will be "function", otherwise "undefined"
-    let newObject;
-    if (typeof newClass === 'function') {
-        newObject = new newClass(toWord, currentRoom, sourceThing.x, sourceThing.y);
-    } else {
-        newObject = new Thing(toWord, currentRoom, sourceThing.x, sourceThing.y);
-    }
+    // note that as of this comment, getThingButPossiblySubclass is in word_data.js:
+    let newObject = getThingButPossiblySubclass(toWord, currentRoom, sourceThing.x, sourceThing.y);
 
     if (inInventory) {
         inventory[toWord] = newObject;
@@ -594,7 +618,7 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
     }
     currentRoom = newRoomName;
     for (let [word, thing] of Object.entries(thingsElsewhere)) {
-        if (thing.room == currentRoom) {
+        if (thing.room === currentRoom) {
             thingsHere[word] = thing;
             delete thingsElsewhere[word];
         }
@@ -687,14 +711,16 @@ function handleKeyup(e) {
 }
 
 function handleClick(e) {
+
     let xWithinCanvas = e.x - canvasOffsetX;
     let yWithinCanvas = e.y - canvasOffsetY;
 
-    for ([word, thing] of Object.entries(thingsHere)) {
+    for ([word, thing] of Object.entries(inventory)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             thing.handleClick();
     }
-    for ([word, thing] of Object.entries(inventory)) {
+
+    for ([word, thing] of Object.entries(thingsHere)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             thing.handleClick();
     }
@@ -715,7 +741,8 @@ function initialize() {
     for (let i = 0; i < soundlist.length; i++) {
         sounds[soundlist[i]] = new Audio('audio/' + soundlist[i] + '.wav');
     }
-
+    sounds['host_speech'] = new Audio('audio/host_speech.m4a'); // need to convert this ...
+    sounds['spell'] = new Audio('audio/magical_1.ogg')
     document.addEventListener('keydown', handleKeydown);
     document.addEventListener('keyup', handleKeyup);
     document.addEventListener('click', handleClick);

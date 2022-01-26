@@ -10,19 +10,24 @@ function getLevelData(levelName) {
             initialY: 100,
             initialSpells: ['add-edge', 'remove-edge','reversal'],
             initialInventory: {},
-            initialThingsElsewhere: {'clam': new Clam('clam', 'entry point', 200, 200),
+            initialThingsElsewhere: {
+                'asteroid' : new Asteroid('asteroid', 'room2', 300, 80),
+                'clam': new Clam('clam', 'entry point', 200, 200),
                 'mace': new Thing('mace','entry point', 300, 30),
+                'meteor' : new Meteor('meteor', 'room2', 520, 120),
                 'rat': new Thing('rat','entry point', 150, 10),
-                'spam' : new Thing ('spam', 'room2', 50,300) },
-            initialRunes: ['p'],
+                'spa' : new Spa ('spa', 'entry point', 100,400) ,
+                'ghost' : new Ghost ('ghost', 'room2', 200, 400) ,
+                'mantrap' : new Mantrap('mantrap', 'room2', 400, 400) , },
+            initialRunes: ['p','n'],
             rooms: {
                 'entry point': {
-                    boundaries: [ ['h', 100, 300, 500, 300], ['v', 500, 200, 500, 300] ],
-                    passages: [new Passage(PassageTypes.BASIC_RIGHT, 576, 100, 'room2', 200, 100)],
+                    boundaries: [ ['h', 100, 300, 300, 300], ['v', 300, 200, 300, 300] ],
+                    passages: [new Passage(PassageTypes.BASIC_RIGHT, 576, 100, 'room2', 100, 200)],
                 },
                 'room2': {
                     boundaries: [],
-                    passages: [new Passage(PassageTypes.BASIC_LEFT, 22, 200, 'entry point', 100, 100),],
+                    passages: [new Passage(PassageTypes.BASIC_LEFT, 22, 200, 'entry point', 520, 100),],
                 }
             }
         }; break;

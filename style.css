@@ -25,10 +25,27 @@
 
 #word-bubble{
     display:none;
-    height:40px;
-    width:100px;
+    border: 3px solid red;
+    height:30px;
+    line-height: 30px;
+    width:70px;
     text-align: center;
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.8);
+    font-size:15pt;
+    font-family:sans-serif;
+    background-color: rgba(255, 255, 255, 0.85);
+    z-index: 1;
+}
+
+#player-message{
+    display:none;
+    position: absolute;
+    height:40px;
+    width:200px;
+    top:150px;
+    left:350px;
+    text-align: center;
+    border: 3px solid red;
+    background-color: rgba(30, 255, 255, 0.9);
     z-index: 1;
 }
