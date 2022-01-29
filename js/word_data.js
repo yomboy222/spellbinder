@@ -27,16 +27,20 @@ class Asteroid extends Thing {
     }
 }
 
-class Clam extends Thing {
+class Cabinet extends Thing {
     handleClick() {
-        console.log ('clam implementation!');
-        super.handleClick();
+        if (spellsAvailable.indexOf('add-edge') < 0)
+            addSpellToBinder('add-edge');
     }
 }
 
 class Ghost extends Thing {
+    constructor(word, room, x, y) {
+        super(word, room, x, y);
+        this.initialY = y;
+    }
     update() {
-        this.y += 0.7 * Math.sin(((Date.now() - this.timeOfCreation) / 300) );
+        this.y = 12 * Math.sin(((Date.now() - this.timeOfCreation) / 300) ) + this.initialY;
         super.update();
     }
 }
@@ -90,7 +94,7 @@ class Mantra extends Thing {
 
 class Mantrap extends Thing {
     handleCollision() {
-        displayMessage('yikes!');
+        displayMessage('yikes!', this.x, this.y);
     }
 }
 
@@ -125,10 +129,15 @@ class Steroid extends Thing {
     }
 }
 
-function getThingButPossiblySubclass(word, room, x, y, otherArgs = undefined) {
+function getThing(word, room, x, y, treatXandYasPercentages = true, otherArgs = undefined) {
+    if (treatXandYasPercentages) {
+        x = x * xScaleFactor;
+        y = y * yScaleFactor;
+    }
     switch (word) {
         case 'asteroid' : return new Asteroid(word, room, x, y);
-        case 'clam' : return new Clam (word, room, x, y);
+        case 'cabinet' : return new Cabinet(word, room, x, y);
+        case 'ghost' : return new Ghost (word, room, x, y);
         case 'host' : return new Host (word, room, x, y);
         case 'mantra' : return new Mantra (word, room, x, y);
         case 'mantrap' : return new Mantrap (word, room, x, y);

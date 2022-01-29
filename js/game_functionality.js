@@ -6,9 +6,10 @@
 /* global-scope variables: */
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
-const CANVAS_WIDTH = 600; const CANVAS_HEIGHT = 600;
-const PLAY_AREA_WIDTH = 600; const PLAY_AREA_HEIGHT = 500;
-const INVENTORY_WIDTH = 600; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
+const CANVAS_WIDTH = 700; const CANVAS_HEIGHT = 600;
+const PLAY_AREA_WIDTH = 700; const PLAY_AREA_HEIGHT = 500;
+const xScaleFactor = PLAY_AREA_WIDTH / 100; const yScaleFactor = PLAY_AREA_HEIGHT / 100;
+const INVENTORY_WIDTH = 700; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
 const INVENTORY_TOP_MARGIN = 58; const INVENTORY_LEFT_MARGIN = 55; const INVENTORY_SPACING = 95;
 const MAX_ITEMS_IN_INVENTORY = 6;
 const RUNE_WIDTH = 65; const RUNE_HEIGHT = 92;
@@ -16,20 +17,15 @@ const PASSAGE_WIDTH = 55;
 const PASSAGE_LENGTH = 150;
 let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
-const PLAYER_HEIGHT = 135;
-const PLAYER_WIDTH = 90;
+const PLAYER_HEIGHT = 90;
+const PLAYER_WIDTH = 60;
 const EXTRA_SPELL_RADIUS = 40;
 const EXTRA_PICKUP_RADIUS = 20;
 const DISTANCE_TO_MOVE = 4;
-const SPELL_ADD_EDGE = 'add-edge';
-const SPELL_REMOVE_EDGE = 'remove-edge';
-const SPELL_REVERSAL = 'reversal';
-const SPELL_ANAGRAM = 'anagram';
-const SPELL_SYNONYM = 'synonym';
-const SPELL_ADD = 'add';
-const SPELL_REMOVE = 'remove';
-const SPELL_CHANGE_EDGE = 'change-edge';
-const SPELL_CHANGE = 'change';
+const allSpells = { SPELL_ADD_EDGE:'add-edge', SPELL_REMOVE_EDGE:'remove-edge', SPELL_REVERSAL : 'reversal', SPELL_ANAGRAM : 'anagram',
+    SPELL_SYNONYM : 'synonym', SPELL_ADD : 'add', SPELL_REMOVE : 'remove', SPELL_CHANGE_EDGE : 'change-edge', SPELL_CHANGE : 'change',
+        BINDER_COVER : 'cover', BINDER_INTRO : 'intro' };
+let binderImages = {};
 let CollisionProfile = { RECTANGULAR : 'RECTANGULAR', ELLIPTICAL : 'ELLIPTICAL'};
 let BoundaryType = { VERTICAL : 'v', HORIZONTAL : 'h', DIAGONAL : 'd'};
 let thingsElsewhere = {};
@@ -42,11 +38,18 @@ let rooms = {};
 let passages = [];
 let passageImages = {};
 let boundaries = [];
+let otherData = {};
 let currentRoom = '';
 let player = {};
 let sounds = {};
 let backgroundImage = new Image();
-let messageTimer = 0; // used to keep multiple messages from triggering onto screen at same time.
+// levels may define following to be functions:
+let levelSpecificInitialization = undefined;
+let levelSpecificNewRoomBehavior = undefined;
+let levelSpecificAnimateLoopBehavior = undefined;
+let levelSpecificPostTransformBehavior = undefined;
+let messageTimer = 0;
+let wordTimers = [0,0]; // used to enforce duration of things' captions
 const MESSAGE_DURATION_MS = 2500;
 const WORD_DURATION_MS = 1500;
 const FADEOUT_DURATION_MS = 1200;
@@ -54,6 +57,9 @@ let fadeoutTimer = 0;
 let fadeinTimer = 0;
 let fadeoutWord = '';
 let fadeinWord = '';
+let cheating = false; // turn on to allow teleporting etc for debugging purposes
+let pageBeingShownInBinder = '';
+let pageToShow = '';
 
 let PassageTypes = { BASIC_VERTICAL : 'basic-vertical',
     BASIC_HORIZONTAL : 'basic-horizontal',
@@ -102,8 +108,8 @@ class Player {
 
         // first check if touching passages to other rooms.
         for (let i=0; i<passages.length; i++) {
-            if (passages[i].inRangeOfPlayer(-20)) {
-                newRoom(passages[i].destinationRoom, passages[i].destX, passages[i].destY);
+            if (passages[i].activated && passages[i].inRangeOfPlayer(-20)) {
+                newRoom(passages[i].destinationRoom, passages[i].destXAsPercent, passages[i].destYAsPercent);
                 return;
             }
         }
@@ -123,15 +129,17 @@ class Player {
         }
 
         for (const boundary of boundaries) {
-            if (boundary[0] === BoundaryType.HORIZONTAL) {
-                if (this.x > (boundary[1] - this.halfWidth) &&
-                    this.x < (boundary[3] + this.halfWidth) &&
-                    this.y > (boundary[2] - this.halfHeight) &&
-                    this.y < (boundary[2] + this.halfHeight)
-                )
-                    collisionDetected = true;
+            if (boundary[5] === BoundaryType.HORIZONTAL || boundary[5] === BoundaryType.DIAGONAL) {
+                if (this.x > (boundary[1] - DISTANCE_TO_MOVE) && this.x < (boundary[3] + DISTANCE_TO_MOVE)) {
+                    const slope = (boundary[4] - boundary[2]) / (boundary[3] - boundary[1]);
+                    const relX = this.x - boundary[1];
+                    const boundaryYHere = boundary[2] + (relX * slope);
+                    if (Math.abs(this.y - boundaryYHere) < this.halfHeight) {
+                        collisionDetected = true;
+                    }
+                }
             }
-            else if (boundary[0] === BoundaryType.VERTICAL) {
+            else if (boundary[5] === BoundaryType.VERTICAL) {
                 if (this.x > (boundary[1] - this.halfWidth) &&
                     this.x < (boundary[1] + this.halfWidth) &&
                     this.y > (boundary[2] - this.halfHeight) &&
@@ -309,7 +317,7 @@ class Thing extends GameElement {
     }
 
     displayCantPickUpMessage() {
-        displayMessage("This object cannot be picked up.");
+        displayMessage("This object cannot be picked up.", this.x, this.y);
     }
 
     // particular Thing subclasses may override this:
@@ -344,15 +352,16 @@ class Thing extends GameElement {
 }
 
 class Passage extends GameElement {
-    constructor(type, x, y, destinationRoom, destX, destY) {
+    constructor(type, xAsPercent, yAsPercent, destinationRoom, destXAsPercent, destYAsPercent, activated = true) {
         super();
         // this.originRoom = originRoom; note -- currently don't need to specify originRoom because passage data will be packaged into room data.
         this.type = type;
-        this.x = x;
-        this.y = y;
+        this.x = xAsPercent * xScaleFactor;
+        this.y = yAsPercent * yScaleFactor;
         this.destinationRoom = destinationRoom;
-        this.destX = destX;
-        this.destY = destY;
+        this.destXAsPercent = destXAsPercent;
+        this.destYAsPercent = destYAsPercent;
+        this.activated = activated;
         if ( this.type.indexOf('left') >= 0 || this.type.indexOf('right') >= 0 || this.type.indexOf('vertical') >= 0) {
             this.height = PASSAGE_LENGTH;
             this.width = PASSAGE_WIDTH;
@@ -377,17 +386,33 @@ class Passage extends GameElement {
 }
 
 function displayWord(word, x, y) {
-    if (Date.now() > messageTimer + WORD_DURATION_MS) {
-        messageTimer = Date.now();
-        let wordDiv = document.getElementById('word-bubble');
-        wordDiv.innerText = word;
-        wordDiv.style = 'display:block; top:' + (y + canvasOffsetY + 20) + 'px; left:' + (x + canvasOffsetX - 35) + 'px;';
-        window.setTimeout(stopDisplayingWord, WORD_DURATION_MS);
-    }
+    // there are two "caption" divs available which can display at the same time.
+    wordDivs = [  document.getElementById('word-bubble-0'), document.getElementById('word-bubble-1')];
+    // if already showing this word in either of the divs, return without doing anything.
+    if ( (wordDivs[0].innerText === word && Date.now() <= wordTimers[0] + WORD_DURATION_MS) ||
+        (wordDivs[1].innerText === word && Date.now() <= wordTimers[1] + WORD_DURATION_MS))
+        return;
+
+    let captionIndex;
+    if (Date.now() > wordTimers[0] + WORD_DURATION_MS)
+        captionIndex = 0;
+    else if (Date.now() > wordTimers[1] + WORD_DURATION_MS)
+        captionIndex = 1;
+    else
+        return; // both caption divs in use, so can't do anything.
+
+    wordTimers[captionIndex] = Date.now();
+    let wordDiv = document.getElementById('word-bubble-' + captionIndex.toString());
+    wordDiv.innerText = word;
+    wordDiv.style = 'display:block; top:' + (y + canvasOffsetY + 20) + 'px; left:' + (x + canvasOffsetX - 35) + 'px;';
+    window.setTimeout(stopDisplayingWord, WORD_DURATION_MS);
 }
 
-function stopDisplayingWord() {
-    document.getElementById('word-bubble').style = 'display:none';
+function stopDisplayingWord(forceHideAll = false) {
+    if (forceHideAll || Date.now() >= wordTimers[0] + WORD_DURATION_MS)
+        document.getElementById('word-bubble-0').style = 'display:none';
+    if (forceHideAll || Date.now() >= wordTimers[1] + WORD_DURATION_MS)
+        document.getElementById('word-bubble-1').style = 'display:none';
 }
 
 function pickUpNearbyThings() {
@@ -407,21 +432,32 @@ function stopDisplayingMsg() {
     document.getElementById('player-message').style = 'display:none;';
 }
 
-function displayMessage(msg) {
+function displayMessage(msg, x = undefined, y = undefined) {
+    if (typeof x === 'undefined') {
+        x = CANVAS_WIDTH / 2;
+        y = CANVAS_HEIGHT / 4;
+    }
+    else {
+        y = y - 32;
+    }
+    x += canvasOffsetX - 90;
+    y += canvasOffsetY;
     messageTimer = Date.now();
     let msgDiv = document.getElementById('player-message');
     msgDiv.innerText = msg;
     msgDiv.style = 'display:block;';
+    msgDiv.style.top = y.toString() + 'px';
+    msgDiv.style.left = x.toString() + 'px';
     window.setTimeout(stopDisplayingMsg, MESSAGE_DURATION_MS);
 }
 
 function spellAvailable(spell) {
     // returns whether user has the requested spell or a strictly more powerful spell.
     return (spellsAvailable.indexOf(spell) >= 0 ||
-        (spell === SPELL_ADD_EDGE && spellsAvailable.indexOf(SPELL_ADD) >= 0) ||
-        (spell === SPELL_REMOVE_EDGE && spellsAvailable.indexOf(SPELL_REMOVE) >= 0) ||
-        (spell === SPELL_REVERSAL && spellsAvailable.indexOf(SPELL_ANAGRAM) >= 0) ||
-        (spell === SPELL_CHANGE_EDGE && spellsAvailable.indexOf(SPELL_CHANGE) >= 0)
+        (spell === allSpells.SPELL_ADD_EDGE && spellsAvailable.indexOf(allSpells.SPELL_ADD) >= 0) ||
+        (spell === allSpells.SPELL_REMOVE_EDGE && spellsAvailable.indexOf(allSpells.SPELL_REMOVE) >= 0) ||
+        (spell === allSpells.SPELL_REVERSAL && spellsAvailable.indexOf(allSpells.SPELL_ANAGRAM) >= 0) ||
+        (spell === allSpells.SPELL_CHANGE_EDGE && spellsAvailable.indexOf(allSpells.SPELL_CHANGE) >= 0)
     );
 }
 
@@ -439,6 +475,18 @@ function parseCommand(command) {
     return {fromWord : fromWord, toWord : toWord};
 }
 
+function addSpellToBinder(spellName) {
+    sounds['add-spell'].play();
+    displayMessage('You found a new binder page!');
+    if (spellsAvailable.indexOf(spellName) < 0)
+        spellsAvailable.push(spellName);
+    pageToShow = spellName;
+    window.setTimeout(showNewBinderPage,1300);
+}
+
+function showNewBinderPage() {
+    pageBeingShownInBinder = pageToShow;
+}
 function castSpell() {
     let response = parseCommand(window.prompt('Cast a spell:'));
     if (typeof response.error === 'string') {
@@ -476,23 +524,23 @@ function castSpell() {
     let runeReleased = undefined;
 
     if (toWord === fromWord + toWord.substr(toWord.length - 1)) {
-        spellRequested = SPELL_ADD_EDGE;
+        spellRequested = allSpells.SPELL_ADD_EDGE;
         runeNeeded = toWord.substr(toWord.length - 1);
     }
     else if (toWord === toWord.substr(0,1) + fromWord) {
-        spellRequested = SPELL_ADD_EDGE;
+        spellRequested = allSpells.SPELL_ADD_EDGE;
         runeNeeded = toWord.substr(0,1)
     }
     else if (toWord === fromWord.substr(0, fromWord.length - 1)) {
-        spellRequested = SPELL_REMOVE_EDGE;
+        spellRequested = allSpells.SPELL_REMOVE_EDGE;
         runeReleased = fromWord.substr(fromWord.length - 1);
     }
     else if (toWord === fromWord.substr(1, fromWord.length - 1)) {
-        spellRequested = SPELL_REMOVE_EDGE;
+        spellRequested = allSpells.SPELL_REMOVE_EDGE;
         runeReleased = fromWord.substr(0, 1);
     }
     else if (toWord === fromWord.split('').reverse().join('')) {
-        spellRequested = SPELL_REVERSAL;
+        spellRequested = allSpells.SPELL_REVERSAL;
     }
 
     // TODO: check for SPELL_ANAGRAM, SPELL_SYNONYM, etc.
@@ -512,7 +560,6 @@ function castSpell() {
 
     // *** if we got here then the spell worked ***
 
-
     if (typeof runeNeeded != 'undefined')
     {
         const indexToDelete = runes.indexOf(runeNeeded);
@@ -530,8 +577,9 @@ function castSpell() {
     else
         delete thingsHere[fromWord];
 
-    // note that as of this comment, getThingButPossiblySubclass is in word_data.js:
-    let newObject = getThingButPossiblySubclass(toWord, currentRoom, sourceThing.x, sourceThing.y);
+    // note that as of this comment, getThingButPossiblySubclass is in word_data.js,
+    // also note "false" here means treat x and y as actual coordinates rather than percentages:
+    let newObject = getThing(toWord, currentRoom, sourceThing.x, sourceThing.y, false);
 
     if (inInventory) {
         inventory[toWord] = newObject;
@@ -550,6 +598,8 @@ function castSpell() {
 
     if (inInventory)
         drawInventory();
+
+    levelSpecificPostTransformBehavior(fromWord,toWord);
 
     fadeinTimer = Date.now();
     fadeinWord = toWord;
@@ -575,25 +625,31 @@ function drawInventory() {
     }
 }
 
+function showBinder() {
+    pageBeingShownInBinder = allSpells.BINDER_COVER;
+}
+
 function animate() {
 
     // clear and draw background for current room:
     ctx.clearRect(0, 0,  PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     // ctx.drawImage(backgroundImage, 0, 0, 2474, 2000, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    // draw all boundaries in current room
+    for (let i = 0; i < boundaries.length; i++) {
+        if (boundaries[i][0].startsWith('i'))
+            continue; // don't draw boundaries marked as invisible
+        ctx.strokeStyle = 'green';
+        ctx.beginPath();
+        ctx.moveTo(boundaries[i][1], boundaries[i][2]);
+        ctx.lineTo(boundaries[i][3], boundaries[i][4]);
+        ctx.stroke();
+    }
+
     // draw all things sitting in current room
     for (let [word, thing] of Object.entries(thingsHere)) {
         thing.update();
         thing.draw();
-    }
-
-    // draw all boundaries in current room
-    for (let i = 0; i < boundaries.length; i++) {
-        ctx.strokeStyle = 'green';
-        ctx.strokeRect( boundaries[i][1]-5,
-            boundaries[i][2]-5,
-            (boundaries[i][3] + 5 - boundaries[i][1]),
-            (boundaries[i][4] + 5 - boundaries[i][2]));
     }
 
     // draw the non-invisible passages in current room
@@ -605,10 +661,25 @@ function animate() {
     player.update();
     player.draw();
 
+    if (pageBeingShownInBinder != '') {
+        ctx.drawImage(binderImages[pageBeingShownInBinder], 0, 0);
+    }
+
+    levelSpecificAnimateLoopBehavior();
+
     requestAnimationFrame(animate);
 }
 
+function teleport() {
+    let newRoomString = window.prompt('enter room name');
+    newRoom(newRoomString,50,50);
+}
+
 function newRoom(newRoomName, newPlayerX, newPlayerY) {
+
+    // note that in level data, x and y coordinates have values 0-100, to facilitate rescaling.
+    // we convert to actual pixel values here.
+
     if (typeof currentRoom != 'undefined')
         sounds['whoosh'].play();
 
@@ -623,15 +694,42 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
             delete thingsElsewhere[word];
         }
     }
-    player.x = newPlayerX;
-    player.y = newPlayerY;
+    player.x = newPlayerX * xScaleFactor;
+    player.y = newPlayerY * yScaleFactor;
 
     let roomData = rooms[newRoomName];
-    passages = roomData.passages;
-    boundaries = roomData.boundaries;
+    passages = [];
+    for (let i = 0; i < roomData.passages.length; i++){
+        let p = roomData.passages[i];
+        passages.push(p);
+    }
+
     backgroundImage = new Image(CANVAS_WIDTH, CANVAS_HEIGHT);
     backgroundImage.src = '/imgs/rooms/' + newRoomName.replace(' ','_') + '.png';
 
+    boundaries = [];
+    for (let i = 0; i < roomData.boundaries.length; i++) {
+        let b = roomData.boundaries[i];
+        let orientation = (b[1] === b[3]) ? 'v' : 'd'; // v for vertical, d for diagonal (or horiz.)
+        // going to use b[0] for "type" of boundary. if starts with 'i', consider it invisible.
+        // to simplify collision detection, ensure that top point comes first (for vertical), and left pt for diag./horiz.
+        if ((orientation === 'v' && b[2] > b[4]) || (orientation != 'v' && b[1] > b[3])) {
+            let temp1 = b[1];
+            let temp2 = b[2];
+            b[1] = b[3];
+            b[2] = b[4];
+            b[3] = temp1;
+            b[4] = temp2;
+        }
+        boundaries.push( [ b[0], b[1] * xScaleFactor, b[2] * yScaleFactor,
+            b[3] * xScaleFactor, b[4] * yScaleFactor, orientation] );
+    }
+
+    // stop displaying captions for things in the old room:
+    stopDisplayingWord(true); // true forces all captions to hide
+
+    if (typeof levelSpecificNewRoomBehavior === 'function')
+        levelSpecificNewRoomBehavior(newRoomName);
 }
 
 function loadLevel(levelName = '1') {
@@ -646,11 +744,19 @@ function loadLevel(levelName = '1') {
     currentRoom = undefined;
     inventory = levelData.initialInventory; // note copying by reference OK here b/c getLevelData initializes with literals
     thingsHere = {}; // in newRoom(), things will be moved from thingsElsewhere to thingsHere.
-    thingsElsewhere = levelData.initialThingsElsewhere;
+    thingsElsewhere = levelData.initialThings;
     spellsAvailable = levelData.initialSpells;
     runes = levelData.initialRunes;
     rooms = levelData.rooms;
+    otherData = levelData.otherGameData;
+    levelSpecificNewRoomBehavior = levelData.levelSpecificNewRoomBehavior;
+    levelSpecificAnimateLoopBehavior = levelData.levelSpecificAnimateLoopBehavior;
+    levelSpecificPostTransformBehavior = levelData.levelSpecificPostTransformBehavior;
+    levelSpecificInitialization = levelData.levelSpecificInitialization;
 
+    if (typeof levelSpecificInitialization === 'function') {
+        levelSpecificInitialization();
+    }
     newRoom(levelData.initialRoom, levelData.initialX, levelData.initialY);
 
     animate();
@@ -677,36 +783,81 @@ function handleMouseMove(e) {
 }
 
 function handleKeydown(e) {
+    if (pageBeingShownInBinder !== '') {
+        handleKeyInBinderViewMode(e);
+    }
+    else {
+        switch (e.code) {
+            case 'ArrowRight' :
+            case 'KeyD' :
+                player.goingRight = true;
+                player.direction = Directions.RIGHT;
+                break;
+            case 'ArrowLeft' :
+            case 'KeyA' :
+                player.goingLeft = true;
+                player.direction = Directions.LEFT;
+                break;
+            case 'ArrowUp' :
+            case 'KeyW' :
+                player.goingUp = true;
+                player.direction = Directions.UP;
+                break;
+            case 'ArrowDown' :
+            case 'KeyS' :
+                player.goingDown = true;
+                player.direction = Directions.DOWN;
+                break;
+
+            case 'Space' : pickUpNearbyThings(); break;
+            case 'KeyB' : showBinder(); break;
+            case 'KeyC' : castSpell(); break;
+            case 'KeyI' : drawInventory(); break;
+            case 'KeyT' : teleport(); break;
+        }
+    }
+}
+
+function handleKeyInBinderViewMode(e) {
+    // in "show binder" mode so normal input suppressed.
     switch (e.code) {
         case 'ArrowRight' :
-            player.goingRight = true;
-            player.direction = Directions.RIGHT;
+            if (pageBeingShownInBinder === allSpells.BINDER_COVER)
+                pageBeingShownInBinder = allSpells.BINDER_INTRO;
+            else if (pageBeingShownInBinder === allSpells.BINDER_INTRO)
+                pageBeingShownInBinder = spellsAvailable[0];
+            else {
+                const curIndex = spellsAvailable.indexOf(pageBeingShownInBinder);
+                pageBeingShownInBinder = (curIndex >= spellsAvailable.length - 1) ? allSpells.BINDER_COVER : spellsAvailable[curIndex + 1];
+            }
             break;
         case 'ArrowLeft' :
-            player.goingLeft = true;
-            player.direction = Directions.LEFT;
+            if (pageBeingShownInBinder === allSpells.BINDER_INTRO)
+                pageBeingShownInBinder = allSpells.BINDER_COVER;
+            else if (pageBeingShownInBinder === allSpells.BINDER_COVER)
+                pageBeingShownInBinder = spellsAvailable[spellsAvailable.length - 1];
+            else {
+                const curIndex = spellsAvailable.indexOf(pageBeingShownInBinder);
+                pageBeingShownInBinder = (curIndex === 0) ? allSpells.BINDER_INTRO : spellsAvailable[curIndex - 1];
+            }
             break;
-        case 'ArrowUp' :
-            player.goingUp = true;
-            player.direction = Directions.UP;
+        case 'Space' :
+        case 'KeyB' :
+            pageBeingShownInBinder = '';
             break;
-        case 'ArrowDown' :
-            player.goingDown = true;
-            player.direction = Directions.DOWN;
-            break;
-
-        case 'Space' : pickUpNearbyThings(); break;
-        case 'KeyC' : castSpell(); break;
-        case 'KeyI' : drawInventory();
     }
 }
 
 function handleKeyup(e) {
     switch (e.code) {
-        case 'ArrowRight' : player.goingRight = false; break;
-        case 'ArrowLeft' : player.goingLeft = false; break;
-        case 'ArrowUp' : player.goingUp = false; break;
-        case 'ArrowDown' : player.goingDown = false; break;
+        case 'ArrowRight':
+        case 'KeyD' : player.goingRight = false; break;
+        case 'ArrowLeft':
+        case 'KeyA' : player.goingLeft = false; break;
+        case 'ArrowUp':
+        case 'KeyW' : player.goingUp = false; break;
+        case 'ArrowDown' :
+        case 'KeyS' : player.goingDown = false; break;
     }
 }
 
@@ -735,7 +886,7 @@ function initialize() {
 
     player = new Player();
     sounds = {};
-    const soundlist = ['glug','host_speech','kaching','om','pickup',
+    const soundlist = ['glug','host_speech','kaching','om','pickup', 'add-spell',
         'pop','rattle','tada','whoosh','yumyum','zoop'];
 
     for (let i = 0; i < soundlist.length; i++) {
@@ -743,6 +894,7 @@ function initialize() {
     }
     sounds['host_speech'] = new Audio('audio/host_speech.m4a'); // need to convert this ...
     sounds['spell'] = new Audio('audio/magical_1.ogg')
+
     document.addEventListener('keydown', handleKeydown);
     document.addEventListener('keyup', handleKeyup);
     document.addEventListener('click', handleClick);
@@ -755,6 +907,14 @@ function initialize() {
         let runeImage = new Image(RUNE_WIDTH,RUNE_HEIGHT);
         runeImage.src = 'imgs/runes/Rune-' + upper + '.png';
         runeImages.push(runeImage);
+    }
+
+    // load binder page images
+    binderImages = {};
+    for (let [key, name] of Object.entries(allSpells)) {
+        let img = new Image();
+        img.src = 'imgs/binder/binder-' + name + '.png';
+        binderImages[name] = img;
     }
 
     let bounds = canvas.getBoundingClientRect();
