@@ -43,11 +43,14 @@ let currentRoom = '';
 let player = {};
 let sounds = {};
 let backgroundImage = new Image();
+let normalPlayerInputSuppressed = false;
 // levels may define following to be functions:
 let levelSpecificInitialization = undefined;
 let levelSpecificNewRoomBehavior = undefined;
 let levelSpecificAnimateLoopBehavior = undefined;
 let levelSpecificPostTransformBehavior = undefined;
+let levelSpecificKeydownBehavior = undefined;
+let levelSpecificClickBehavior = undefined;
 let messageTimer = 0;
 let wordTimers = [0,0]; // used to enforce duration of things' captions
 const MESSAGE_DURATION_MS = 2500;
@@ -57,14 +60,17 @@ let fadeoutTimer = 0;
 let fadeinTimer = 0;
 let fadeoutWord = '';
 let fadeinWord = '';
-let cheating = false; // turn on to allow teleporting etc for debugging purposes
 let pageBeingShownInBinder = '';
 let pageToShow = '';
+
+let cheating = true; // turn on to allow teleporting etc for debugging purposes
 
 let PassageTypes = { BASIC_VERTICAL : 'basic-vertical',
     BASIC_HORIZONTAL : 'basic-horizontal',
     BASIC_LEFT : 'basic-left',
     BASIC_RIGHT : 'basic-right',
+    SECRET_LEFT : 'secret-left',
+    SECRET_RIGHT : 'secret-right',
     INVISIBLE_VERTICAL : 'invisible-vertical',
     INVISIBLE_HORIZONTAL : 'invisible-horizontal' };
 
@@ -162,7 +168,7 @@ class Player {
             collisionDetected = true;
         }
 
-        if (collisionDetected) {
+        if (collisionDetected && !cheating) {
             // undo the movement:
             this.x -= deltaX;
             this.y -= deltaY;
@@ -216,6 +222,8 @@ class Thing extends GameElement {
         this.room = room;
         this.x = x;
         this.y = y;
+        this.initialX = x;
+        this.initialY = y;
         this.image = new Image();
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
         this.image.src = 'imgs/things/' + word + '.png';
@@ -226,6 +234,10 @@ class Thing extends GameElement {
         this.collisionProfile = (ellipticalObjects.indexOf(word) >= 0) ? CollisionProfile.ELLIPTICAL : CollisionProfile.RECTANGULAR;
         this.displayingWord = false;
         this.inventoryImageRatio = 2.5; // factor by which to reduce each dimension when drawing in inventory.
+        this.destX = 0; // used if moving
+        this.destY = 0;
+        this.beginMovementTime = 0;
+        this.movementDurationMS = 0;
     }
     setDimensionsFromImage() { // this gets called as soon as image loads
         this.width = this.image.width; // take dimensions directly from image
@@ -235,7 +247,18 @@ class Thing extends GameElement {
         drawInventory();
     }
     update() {
-
+        if (this.beginMovementTime != 0) {
+            if (Date.now() > this.beginMovementTime + this.movementDurationMS) {
+                this.x = this.destX;
+                this.y = this.destY;
+                this.beginMovementTime = 0;
+            }
+            else {
+                let fractionTraversed = (Date.now() - this.beginMovementTime) / this.movementDurationMS;
+                this.x = this.initialX + ((this.destX - this.initialX) * fractionTraversed);
+                this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed);
+            }
+        }
     }
     draw() {
         if (this.word === fadeinWord) {
@@ -285,6 +308,7 @@ class Thing extends GameElement {
 
     discard() {
         delete inventory[this.word];
+        this.room = currentRoom;
         this.x = player.x;
         this.y = player.y;
         let distanceToToss = player.halfWidth + this.halfWidth;
@@ -340,6 +364,8 @@ class Thing extends GameElement {
 
     // placeholder methods that subclasses needing specific behavior can override:
 
+    okayToDisplayWord() { return true; }
+
     handleCollision() {}
 
     checkIfOkayToTransform() {
@@ -381,7 +407,7 @@ class Passage extends GameElement {
     }
     draw() {
         if (typeof this.image != 'undefined')
-            ctx.drawImage(this.image,this.x - this.halfWidth, this.y - this.halfHeight);
+            ctx.drawImage(this.image,this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
     }
 }
 
@@ -599,7 +625,9 @@ function castSpell() {
     if (inInventory)
         drawInventory();
 
-    levelSpecificPostTransformBehavior(fromWord,toWord);
+    levelSpecificPostTransformBehavior(fromWord,toWord); // should move this into extraTransformIntoBehavior
+
+    newObject.extraTransformIntoBehavior();
 
     fadeinTimer = Date.now();
     fadeinWord = toWord;
@@ -646,15 +674,15 @@ function animate() {
         ctx.stroke();
     }
 
+    // draw the non-invisible passages in current room
+    for (let i = 0; i < passages.length; i++) {
+        passages[i].draw();
+    }
+
     // draw all things sitting in current room
     for (let [word, thing] of Object.entries(thingsHere)) {
         thing.update();
         thing.draw();
-    }
-
-    // draw the non-invisible passages in current room
-    for (let i = 0; i < passages.length; i++) {
-        passages[i].draw();
     }
 
     // COLLISION DETECTION NOW DONE IN PLAYER.UPDATE
@@ -671,8 +699,11 @@ function animate() {
 }
 
 function teleport() {
-    let newRoomString = window.prompt('enter room name');
-    newRoom(newRoomString,50,50);
+    if (cheating) {
+        let newRoomString = window.prompt('enter room name');
+        if ((typeof newRoomString == 'string') && (newRoomString != ''))
+            newRoom(newRoomString, 50, 50);
+    }
 }
 
 function newRoom(newRoomName, newPlayerX, newPlayerY) {
@@ -753,6 +784,8 @@ function loadLevel(levelName = '1') {
     levelSpecificAnimateLoopBehavior = levelData.levelSpecificAnimateLoopBehavior;
     levelSpecificPostTransformBehavior = levelData.levelSpecificPostTransformBehavior;
     levelSpecificInitialization = levelData.levelSpecificInitialization;
+    levelSpecificKeydownBehavior = levelData.levelSpecificKeydownBehavior;
+    levelSpecificClickBehavior = levelData.levelSpecificClickBehavior;
 
     if (typeof levelSpecificInitialization === 'function') {
         levelSpecificInitialization();
@@ -771,7 +804,7 @@ function handleMouseMove(e) {
 
     // check all objects on screen; if hovering over, display object name.
     for (let [word, thing] of Object.entries(thingsHere)) {
-        if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas)) {
+        if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas) && thing.okayToDisplayWord()) {
             displayWord(thing.word, thing.x, thing.y);
         }
     }
@@ -785,8 +818,9 @@ function handleMouseMove(e) {
 function handleKeydown(e) {
     if (pageBeingShownInBinder !== '') {
         handleKeyInBinderViewMode(e);
+        return;
     }
-    else {
+    else if (normalPlayerInputSuppressed === false) {
         switch (e.code) {
             case 'ArrowRight' :
             case 'KeyD' :
@@ -844,6 +878,7 @@ function handleKeyInBinderViewMode(e) {
         case 'Space' :
         case 'KeyB' :
             pageBeingShownInBinder = '';
+            drawInventory(); // shouldn't be necessary when page images are scaled properly but for now they stray into inventory area.
             break;
     }
 }
@@ -865,6 +900,11 @@ function handleClick(e) {
 
     let xWithinCanvas = e.x - canvasOffsetX;
     let yWithinCanvas = e.y - canvasOffsetY;
+
+    // first see if level-specific code says it will handle the click:
+    if (levelSpecificClickBehavior(xWithinCanvas,yWithinCanvas) === true) {
+        return;
+    }
 
     for ([word, thing] of Object.entries(inventory)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
