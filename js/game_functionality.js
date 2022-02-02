@@ -36,7 +36,7 @@ let runes = [];
 let runeImages = [];
 let rooms = {};
 let passages = [];
-let passageImages = {};
+let passageImages = {}; // probably a good idea to load these in "initialize" function, but not doing this now.
 let boundaries = [];
 let otherData = {};
 let currentRoom = '';
@@ -52,7 +52,9 @@ let levelSpecificPostTransformBehavior = undefined;
 let levelSpecificKeydownBehavior = undefined;
 let levelSpecificClickBehavior = undefined;
 let messageTimer = 0;
-let wordTimers = [0,0]; // used to enforce duration of things' captions
+let wordTimers = []; // used to enforce duration of things' captions
+let wordDivs = []; // will have references to the divs used for Things' captions
+const NUMBER_OF_CAPTION_DIVS = 10;
 const MESSAGE_DURATION_MS = 2500;
 const WORD_DURATION_MS = 1500;
 const FADEOUT_DURATION_MS = 1200;
@@ -60,6 +62,7 @@ let fadeoutTimer = 0;
 let fadeinTimer = 0;
 let fadeoutWord = '';
 let fadeinWord = '';
+let showingIntroPage = true;
 let pageBeingShownInBinder = '';
 let pageToShow = '';
 
@@ -226,7 +229,7 @@ class Thing extends GameElement {
         this.initialY = y;
         this.image = new Image();
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
-        this.image.src = 'imgs/things/' + word + '.png';
+        this.image.src = 'imgs/things/' + word.replace(' ','_')  + '.png';
         this.timeOfCreation = Date.now();
         this.movable = (immovableObjects.indexOf(word) < 0);
         this.solid = (solidObjects.indexOf(word) >= 0);
@@ -347,7 +350,12 @@ class Thing extends GameElement {
     // particular Thing subclasses may override this:
     handleClick() {
         if (this.word in inventory) {
-            this.discard();
+            if (currentRoom === 'darkroom') {
+                displayMessage("Don't put anything down here, you might lose it!");
+            }
+            else {
+                this.discard();
+            }
             return;
         }
         if (!this.movable) {
@@ -412,33 +420,36 @@ class Passage extends GameElement {
 }
 
 function displayWord(word, x, y) {
-    // there are two "caption" divs available which can display at the same time.
-    wordDivs = [  document.getElementById('word-bubble-0'), document.getElementById('word-bubble-1')];
-    // if already showing this word in either of the divs, return without doing anything.
-    if ( (wordDivs[0].innerText === word && Date.now() <= wordTimers[0] + WORD_DURATION_MS) ||
-        (wordDivs[1].innerText === word && Date.now() <= wordTimers[1] + WORD_DURATION_MS))
-        return;
+    // wordDivs is array of "caption" divs available which can display at the same time.
+    // see if already showing this word in one of the divs, if so just reset its duration timer.
+    let firstUsableIndex = -1;
+    for (let i = 0; i < 10; i++) {
+        if  (wordDivs[i].innerText === word && Date.now() <= wordTimers[i] + WORD_DURATION_MS) {
+            return;
+        }
+        if (firstUsableIndex === -1 && Date.now() > wordTimers[i] + WORD_DURATION_MS) {
+            firstUsableIndex = i;
+        }
+    }
 
-    let captionIndex;
-    if (Date.now() > wordTimers[0] + WORD_DURATION_MS)
-        captionIndex = 0;
-    else if (Date.now() > wordTimers[1] + WORD_DURATION_MS)
-        captionIndex = 1;
-    else
-        return; // both caption divs in use, so can't do anything.
+    if (firstUsableIndex === -1)
+        return; // all word caption divs being used already, oh well.
 
-    wordTimers[captionIndex] = Date.now();
-    let wordDiv = document.getElementById('word-bubble-' + captionIndex.toString());
-    wordDiv.innerText = word;
-    wordDiv.style = 'display:block; top:' + (y + canvasOffsetY + 20) + 'px; left:' + (x + canvasOffsetX - 35) + 'px;';
+    let divHeight = (word.indexOf(' ') > 0 || word.indexOf('-') > 0) ? '60px' : '30px';
+
+    wordTimers[firstUsableIndex] = Date.now();
+    wordDivs[firstUsableIndex].innerText = word;
+    wordDivs[firstUsableIndex].style = 'display:block; top:' + (y + canvasOffsetY + 20) + 'px; left:' + (x + canvasOffsetX - 35) + 'px; ' +
+        'height:' + divHeight;
     window.setTimeout(stopDisplayingWord, WORD_DURATION_MS);
 }
 
 function stopDisplayingWord(forceHideAll = false) {
-    if (forceHideAll || Date.now() >= wordTimers[0] + WORD_DURATION_MS)
-        document.getElementById('word-bubble-0').style = 'display:none';
-    if (forceHideAll || Date.now() >= wordTimers[1] + WORD_DURATION_MS)
-        document.getElementById('word-bubble-1').style = 'display:none';
+    for (let i = 0; i < NUMBER_OF_CAPTION_DIVS; i++) {
+        if (forceHideAll || Date.now() >= wordTimers[i] + WORD_DURATION_MS - 100) {
+            wordDivs[i].style = 'display:none';
+        }
+    }
 }
 
 function pickUpNearbyThings() {
@@ -514,7 +525,10 @@ function showNewBinderPage() {
     pageBeingShownInBinder = pageToShow;
 }
 function castSpell() {
-    let response = parseCommand(window.prompt('Cast a spell:'));
+    let command = window.prompt('Cast a spell:');
+    if (typeof command !== 'string' || command.length < 1)
+        return;
+    let response = parseCommand(command);
     if (typeof response.error === 'string') {
         displayMessage(response.error);
         return;
@@ -711,8 +725,12 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
     // note that in level data, x and y coordinates have values 0-100, to facilitate rescaling.
     // we convert to actual pixel values here.
 
-    if (typeof currentRoom != 'undefined')
+    if (typeof currentRoom != 'undefined') {
+        // coming from old room (rather than starting new level, so do the following:
+        // stop displaying captions for things in the old room:
+        stopDisplayingWord(true); // true forces all captions to hide
         sounds['whoosh'].play();
+    }
 
     for (let [word, thing] of Object.entries(thingsHere)) {
         thingsElsewhere[word] = thing;
@@ -723,6 +741,9 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
         if (thing.room === currentRoom) {
             thingsHere[word] = thing;
             delete thingsElsewhere[word];
+            // put up captions for all things in new word.
+            if (currentRoom !== 'darkroom')
+                displayWord(thing.word, thing.x, thing.y);
         }
     }
     player.x = newPlayerX * xScaleFactor;
@@ -756,9 +777,6 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
             b[3] * xScaleFactor, b[4] * yScaleFactor, orientation] );
     }
 
-    // stop displaying captions for things in the old room:
-    stopDisplayingWord(true); // true forces all captions to hide
-
     if (typeof levelSpecificNewRoomBehavior === 'function')
         levelSpecificNewRoomBehavior(newRoomName);
 }
@@ -769,6 +787,7 @@ function loadLevel(levelName = '1') {
 
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'none';
+    showingIntroPage = false;
 
     let levelData = getLevelData(levelName);
 
@@ -796,8 +815,8 @@ function loadLevel(levelName = '1') {
 }
 
 function handleMouseMove(e) {
-    if (Date.now() <= messageTimer + MESSAGE_DURATION_MS)
-        return; // already displaying a message so don't display another one
+    if (showingIntroPage || pageBeingShownInBinder != '')
+        return;
 
     let xWithinCanvas = e.x - canvasOffsetX;
     let yWithinCanvas = e.y - canvasOffsetY;
@@ -816,6 +835,8 @@ function handleMouseMove(e) {
 }
 
 function handleKeydown(e) {
+    if (showingIntroPage)
+        return;
     if (pageBeingShownInBinder !== '') {
         handleKeyInBinderViewMode(e);
         return;
@@ -897,7 +918,14 @@ function handleKeyup(e) {
 }
 
 function handleClick(e) {
-
+    if (showingIntroPage) {
+        // TODO: maybe handle clicks on intro page programatically here??
+        return;
+    }
+    else if (pageBeingShownInBinder != '') {
+        pageBeingShownInBinder = '';
+        return;
+    }
     let xWithinCanvas = e.x - canvasOffsetX;
     let yWithinCanvas = e.y - canvasOffsetY;
 
@@ -960,6 +988,13 @@ function initialize() {
     let bounds = canvas.getBoundingClientRect();
     canvasOffsetX = bounds.left; // + window.scrollX;
     canvasOffsetY = bounds.top; // + window.scrollY;
+
+    wordDivs = [];
+    wordTimers = [];
+    for (let i=0; i<NUMBER_OF_CAPTION_DIVS; i++) {
+        wordDivs.push(document.getElementById('word-bubble-' + i.toString()));
+        wordTimers.push(0);
+    }
 
 }
 
