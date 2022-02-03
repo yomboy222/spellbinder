@@ -66,7 +66,7 @@ let showingIntroPage = true;
 let pageBeingShownInBinder = '';
 let pageToShow = '';
 
-let cheating = true; // turn on to allow teleporting etc for debugging purposes
+let cheating = false; // turn on to allow teleporting etc for debugging purposes
 
 let PassageTypes = { BASIC_VERTICAL : 'basic-vertical',
     BASIC_HORIZONTAL : 'basic-horizontal',
@@ -241,6 +241,9 @@ class Thing extends GameElement {
         this.destY = 0;
         this.beginMovementTime = 0;
         this.movementDurationMS = 0;
+        this.soundToPlayAfterMovement = undefined;
+        this.messageToDisplayAfterMovement = undefined;
+        this.deleteAfterMovement = false;
     }
     setDimensionsFromImage() { // this gets called as soon as image loads
         this.width = this.image.width; // take dimensions directly from image
@@ -249,11 +252,24 @@ class Thing extends GameElement {
         this.halfHeight = this.height / 2;
         drawInventory();
     }
+    deleteFromThingsHere() {
+        for (let [word,thing] of Object.entries(thingsHere)) {
+            if (thing === this) {
+                delete thingsHere[word];
+            }
+        }
+    }
     update() {
         if (this.beginMovementTime != 0) {
             if (Date.now() > this.beginMovementTime + this.movementDurationMS) {
                 this.x = this.destX;
                 this.y = this.destY;
+                if (typeof this.soundToPlayAfterMovement !== 'undefined')
+                    this.soundToPlayAfterMovement.play();
+                if (typeof this.messageToDisplayAfterMovement !== 'undefined')
+                    displayMessage(this.messageToDisplayAfterMovement);
+                if (this.deleteAfterMovement === true)
+                    this.deleteFromThingsHere();
                 this.beginMovementTime = 0;
             }
             else {

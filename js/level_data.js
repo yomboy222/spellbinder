@@ -31,7 +31,7 @@ let ellipticalObjects = [ 'clam', 'meteor', 'asteroid'];
 
 class Asteroid extends Thing {
     displayCantPickUpMessage() {
-        displayMessage('Too heavy!');
+        displayMessage('Too heavy to move!');
     }
 }
 
@@ -239,38 +239,23 @@ class Maps extends Thing {
 
 class Meteor extends Thing {
     displayCantPickUpMessage() {
-        displayMessage('Too heavy!');
+        displayMessage('Too heavy to move!');
+    }
+    handleCollision() {
+        if ((otherData['steroid drunk'] === true) && (typeof otherData['meteor moved'] === 'undefined' || otherData['meteor moved'] === false)) {
+            otherData['meteor moved'] = true;
+            this.destX = this.x + 80;
+            this.destY = this.y + 80;
+            this.beginMovementTime = Date.now();
+            this.movementDurationMS = 1200;
+        }
+        else {
+            return super.handleCollision();
+        }
     }
 }
 
 class Portcullis extends Thing {
-    draw() {
-        let startTime = (currentRoom === 'secret room') ? otherData['wheel turned time'] : otherData['toll paid time'];
-        if (typeof startTime == 'undefined' || Date.now() < startTime + 1000) {
-            // draw normally
-            return super.draw();
-        } else if (Date.now() >= startTime + 5000) {
-            // fully retracted, so delete:
-            delete thingsHere['portcullis'];
-            return;
-        } else {
-            // otherwise draw the "retracting" behavior:
-            let deltaY = -300 * ((Date.now() - startTime - 1000) / 4000);
-            ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight + deltaY);
-            /*            ctx.fillStyle = 'white';
-                        ctx.beginPath();
-                        let pct1 = 30;
-                        let pct2 = 92;
-                        ctx.moveTo((46 + (pct1 / 2)) * xScaleFactor, pct1 * yScaleFactor + 5);
-                        ctx.lineTo((46 + (pct2 / 2)) * xScaleFactor, pct2 * yScaleFactor + 5);
-                        ctx.lineTo((46 + (pct2 / 2)) * xScaleFactor, PLAY_AREA_HEIGHT);
-                        ctx.lineTo((46 + (pct1 / 2)) * xScaleFactor, PLAY_AREA_HEIGHT);
-                        ctx.lineTo((46 + (pct1 / 2)) * xScaleFactor, pct1 * yScaleFactor + 5);
-                        ctx.closePath();
-                        ctx.fill();
-                        drawInventory(); // because this image might overwrite the inventory area.  */
-        }
-    }
 }
 
 class Reward extends Thing {
@@ -300,7 +285,13 @@ class Reward extends Thing {
         if (this.beginMovementTime > 0 && Date.now() > this.beginMovementTime + this.movementDurationMS) {
             // sounds['kaching'].play();
             otherData['toll paid time'] = Date.now();
-            delete thingsHere['reward'];
+            let portcullis = thingsHere['portcullis'];
+            portcullis.beginMovementTime = Date.now();
+            portcullis.movementDurationMS = 4000;
+            portcullis.destX = portcullis.x;
+            portcullis.destY = portcullis.y - 300;
+            portcullis.deleteAfterMovement = true;
+            this.deleteFromThingsHere();
         }
         else {
             return super.update();
@@ -327,9 +318,7 @@ class Steroid extends Thing {
         displayMessage('I feel so strong now!');
         delete thingsHere['steroid'];
         delete inventory['steroid'];
-        if (typeof thingsHere['meteor'] != 'undefined') {
-            thingsHere['meteor'].movable = true;
-        }
+        otherData['steroid drunk'] = true;
     }
     extraTransformIntoBehavior() {
         if (currentRoom === 'asteroid room' && 'steroid' in thingsHere) {
@@ -349,6 +338,12 @@ class Wheel extends Thing {
                 // TODO: play wheel sound
                 // TODO: maybe make it possible to turn the portcullis back down??
                 otherData['wheel turned time'] = Date.now();
+                let portcullis = thingsHere['portcullis2'];
+                portcullis.beginMovementTime = Date.now();
+                portcullis.movementDurationMS = 4000;
+                portcullis.destX = portcullis.x;
+                portcullis.destY = portcullis.y - 300;
+                portcullis.deleteAfterMovement = true;
             }
             return;
         }
@@ -360,6 +355,7 @@ class Wheel extends Thing {
             this.destX = axle.x - 15;
             this.destY = axle.y;
             this.movable = false; // can't pick up anymore once affixed to axle.
+            displayMessage('You affix the wheel to the axle.');
         }
         return super.handleClick();
     }
@@ -414,6 +410,8 @@ function getLevelData(levelName) {
                 'showing maps':false,
                 'maps image':new Image(),
                 'drawer open': false,
+                'steroid drunk': false,
+                'meteor moved': false,
             },
             initialThings: {
                 'maps': getThing('maps','entry point',50,50),
@@ -422,7 +420,7 @@ function getLevelData(levelName) {
                 'axle': getThing('axle','secret room',84,62),
                 'bath': getThing('bath','bathroom',25,70),
                 'board': getThing('board','darkroom',90,62),
-                'bulls-eyes': getThing('bulls-eyes', 'game room', 78, 50),
+                'bulls-eyes': getThing('bulls-eyes', 'game room', 78, 51),
                 'cabinet': getThing('cabinet','bathroom',25,25),
                 'clam': getThing('clam', 'kitchen', 50, 50),
                 'crown': getThing('crown','crown room',50,50),
@@ -458,7 +456,8 @@ function getLevelData(levelName) {
                     passages:[ new Passage(PassageTypes.SECRET_LEFT, 30,50,'game room',60,52)],
                 },
                 'asteroid room': {
-                    boundaries: [ ['n',0,40,60,40], ['n',60,40,60,10], ['n',60,10,100,40], ['n',0,60,60,60], ['n',60,60,60,90], ['n',60,90,100,60] ],
+                    boundaries: [ ['n',0,40,60,40], ['n',60,40,60,10], ['n',60,10,95,10], ['n',95,10,95,40], ['n',95,40,100,40], ['n',0,60,60,60],
+                        ['n',60,60,60,90], ['n',60,90,95,90], ['n',95,90,95,60], ['n',95,60,100,60], ],
                     passages: [ new Passage(PassageTypes.INVISIBLE_HORIZONTAL,0,50,'main',89,50),
                         new Passage(PassageTypes.INVISIBLE_VERTICAL,100,50,'kitchen',12,50)],
                 },
@@ -502,7 +501,7 @@ function getLevelData(levelName) {
                 'game room': {
                     boundaries: [ ['n',4,40,4,0], ['n',4,0,46,0], ['n',46,0,96,100], ['n',96,100,4,100], ['n',4,100,4,60], ],
                     passages: [ new Passage(PassageTypes.BASIC_LEFT,4,50,'bathroom',70,66),
-                        new Passage(PassageTypes.SECRET_RIGHT,75,49,'armory',42,50),],
+                        new Passage(PassageTypes.SECRET_RIGHT,75,50,'armory',42,50),],
                 },
                 'hive room': {
                     boundaries: [ ['n',75,0,75,50], ['n',92,0,92,72], ['n',75,50,50,50], ['n',50,50,50,25], ['n',50,25,15,25], ['n',15,25,15,72], ['n',15,72,92,72],
@@ -522,7 +521,7 @@ function getLevelData(levelName) {
                     ]
                 },
                 'secret room': {
-                    boundaries: [ ['n',12,100,12,0], ['n',12,0,28,0], ['n',28,15,28,42],  ['n',28,42,60,42], ['n',60,42,100,100], ['n',100,100,12,100], ],
+                    boundaries: [ ['n',12,100,12,0], ['n',12,0,28,0], ['n',28,15,28,42],  ['n',28,42,62,42], ['n',62,42,62,5], ['n',62,5,78,28], ['n',78,28,78,70], ['n',78,70,100,100], ['n',100,100,12,100], ],
                     passages: [ new Passage(PassageTypes.BASIC_RIGHT, 28, 14, 'statue room', 49, 78),
                         new Passage(PassageTypes.INVISIBLE_HORIZONTAL,78,50,'stream room',12,50), ],
                 },
