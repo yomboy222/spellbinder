@@ -17,13 +17,13 @@ let allWords = [ 'arts',  'asteroid',  'ace',  'adder',  'amp',  'axle', 'bat', 
     'tab',  'tar',  'taro',
     'tarot',  'toll machine',  'tuna',  'warts',  'wheel',  ];
 
-let solidObjects = [ 'brook', 'bulls-eyes','portcullis','cabinet','stream','cow','lock','spa','bath','ceiling',
+let solidObjects = [ 'brook', 'bulls-eyes','portcullis','cabinet','cow','lock','spa','bath','ceiling',
     'ghost','dresser','pools','mantrap','meteor','asteroid' ];
 
 // TODO: maybe make solid objects immovable by default so you don't have to list them twice?
 
 let immovableObjects = [ 'axle','brook','bulls-eyes','drawer','portcullis','cabinet','stream','flock','lock','cow','bath','spa',
-    'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser' ];
+    'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser','statue' ];
 
 let bridgelikeObjects = [ 'span', 'ladder' ];
 
@@ -195,9 +195,9 @@ class Host extends Thing {
 }
 
 class Mantra extends Thing {
-    constructor(word, room, x, y) {
-        super(word, room, x, y);
-        //    sounds['om'].play();
+    extraTransformIntoBehavior() {
+        const om = new Audio('audio/om.m4a');
+        om.play();
     }
     draw() {
         let t = Date.now() - this.timeOfCreation;
@@ -216,6 +216,10 @@ class Mantra extends Thing {
 }
 
 class Mantrap extends Thing {
+    constructor(word,room,x,y) {
+        super(word,room,x,y);
+        this.playAudioWhenTransformed = false;
+    }
     handleCollision() {
         displayMessage('yikes!', this.x, this.y);
     }
@@ -244,8 +248,8 @@ class Meteor extends Thing {
     handleCollision() {
         if ((otherData['steroid drunk'] === true) && (typeof otherData['meteor moved'] === 'undefined' || otherData['meteor moved'] === false)) {
             otherData['meteor moved'] = true;
-            this.destX = this.x + 80;
-            this.destY = this.y + 80;
+            this.destX = this.x + 94;
+            this.destY = this.y + 84;
             this.beginMovementTime = Date.now();
             this.movementDurationMS = 1200;
         }
@@ -407,6 +411,9 @@ function getLevelData(levelName) {
                 'bee image':new Image(),
                 'bulls-eye coordinates':[ [435,170], [480,230], [525,295]],
                 'dart image':new Image(),
+                'lamplight image': new Image(),
+                'lamplight height':118,
+                'lamplight width':225,
                 'showing maps':false,
                 'maps image':new Image(),
                 'drawer open': false,
@@ -414,15 +421,13 @@ function getLevelData(levelName) {
                 'meteor moved': false,
             },
             initialThings: {
-                'maps': getThing('maps','entry point',50,50),
-
                 'asteroid' : getThing('asteroid', 'asteroid room', 70, 43),
                 'axle': getThing('axle','secret room',84,62),
                 'bath': getThing('bath','bathroom',25,70),
                 'board': getThing('board','darkroom',90,62),
                 'bulls-eyes': getThing('bulls-eyes', 'game room', 78, 51),
                 'cabinet': getThing('cabinet','bathroom',25,25),
-                'clam': getThing('clam', 'kitchen', 50, 50),
+                'clam': getThing('clam', 'kitchen', 42, 40),
                 'crown': getThing('crown','crown room',50,50),
                 'darts': getThing('darts','game room',40,40),
                 'dresser':getThing('dresser','beyond',26,80),
@@ -453,67 +458,76 @@ function getLevelData(levelName) {
             rooms: {
                 'armory': {
                     boundaries: [['n',30,30,60,30],['n',60,30,60,75], ['n',60,75,30,75], ['n',30,75,30,30,],],
-                    passages:[ new Passage(PassageTypes.SECRET_LEFT, 30,50,'game room',60,52)],
+                    filledPolygons: [ ['r',0,0,100,30], ['r',0,30,30,70], ['r',30,75,70,25], ['r',60,30,40,45], ],
+                    passages:[ new Passage(PassageTypes.SECRET_LEFT, 30,50,'game room',60,56)],
                 },
                 'asteroid room': {
                     boundaries: [ ['n',0,40,60,40], ['n',60,40,60,10], ['n',60,10,95,10], ['n',95,10,95,40], ['n',95,40,100,40], ['n',0,60,60,60],
                         ['n',60,60,60,90], ['n',60,90,95,90], ['n',95,90,95,60], ['n',95,60,100,60], ],
+                    filledPolygons: [ ['r',0,0,60,40], ['r',60,0,40,10], ['r',95,10,5,30],
+                        ['r',0,60,60,40], ['r',60,90,40,10], ['r',95,60,5,30], ],
                     passages: [ new Passage(PassageTypes.INVISIBLE_HORIZONTAL,0,50,'main',89,50),
                         new Passage(PassageTypes.INVISIBLE_VERTICAL,100,50,'kitchen',12,50)],
                 },
                 'bathroom': {
                     boundaries:[ ['n',15,15,85,15], ['n',85,15,85,85], ['n',85,85,15,85], ['n',15,85,15,15], ],
+                    filledPolygons: [ ['r',0,0,100,15], ['r',0,15,15,85], ['r',15,85,85,15], ['r',85,15,15,85], ],
                     passages:[ new Passage(PassageTypes.BASIC_HORIZONTAL,50,80,'main',50,11),
-                        new Passage(PassageTypes.BASIC_RIGHT,85,65,'game room',12,50),],
+                        new Passage(PassageTypes.BASIC_RIGHT,85,65,'game room',12,56),],
                 },
                 'beyond':{
                     boundaries: [ ['n',4,40,4,0], ['n',4,0,30,0], ['n',30,0,61,46], ['n',61,46,61,5], ['n',61,5,76,28], ['n',76,28,76,69], ['n',76,69,100,100], ['n',100,100,4,100], ['n',4,100,4,60], ],
+                    filledPolygons: [ ['r',0,0,4,100], ['p',30,0,61,46,61,0], ['p',61,0,61,5,76,28,76,69,100,100,100,0], ],
                     passages: [ new Passage(PassageTypes.BASIC_LEFT,4,50,'darkroom',70,66),
                            new Passage(PassageTypes.INVISIBLE_HORIZONTAL,78,50,'crown room',42,50),],
                 },
                 'crown room':{
                     boundaries: [['n',30,30,60,30],['n',60,30,60,75], ['n',60,75,30,75], ['n',30,75,30,30,],],
-                    passages:[ new Passage(PassageTypes.BASIC_LEFT, 30,50,'beyond',60,50)],
+                    filledPolygons: [ ['r',0,0,100,30], ['r',0,30,30,70], ['r',30,75,70,25], ['r',60,30,40,45], ],
+                    passages:[ new Passage(PassageTypes.BASIC_LEFT, 30,50,'beyond',58,60)],
                 },
                 'darkroom':{
                     boundaries:[ ['n',10,20,90,20], ['n',90,20,90,82], ['n',90,82,10,82], ['n',10,82,10,20]],
+                    filledPolygons: [ ['r',0,0,100,20], ['r',0,20,10,80], ['r',10,82,90,18], ['r',90,20,10,80], ],
                     passages:[ new Passage(PassageTypes.BASIC_HORIZONTAL, 50, 20, 'main', 50, 89),
                         new Passage(PassageTypes.BASIC_RIGHT, 90, 60, 'beyond', 11, 60, false)]
                 },
                 'entry point': {
                     boundaries: [ ['n',10, 36, 30, 36], ['n',10,64,30,64], ['n',10,36,10,64], ['d',30,36,42,18], ['n',42,18,54,18],
                         ['d',54,18,66,36], ['n',66,36,100,36], ['d',30,64,42,82], ['n',42,82,54,82], ['d',54,82,66,64], ['n',66,64,100,64] ],
+                    filledPolygons: [ ['r',0,0,10,100],['r',10,0,20,36],['p',30,36,42,18,42,0,30,0],['r',42,0,58,18],
+                        ['p',54,18,66,36,100,36,100,18],  ['r',10,64,20,36], ['p',30,64,42,82,42,100,30,100],
+                        ['r',42,82,58,18], ['p',54,82,66,64,100,64,100,82], ],
                     passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 50, 'entry hall 1', 11, 50)],
                 },
                 'entry hall 1': {
                     boundaries: [ ['n',0,36,100,36], ['n',0,64,75,64], ['n',75,64,75,100], ['n',92,100,92,64], ['n',92,64,100,64]] ,
+                    filledPolygons: [ ['r',0,0,100,36], ['r',0,64,75,36], ['r',92,64,8,36], ],
                     passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'entry point', 90, 50),
                             new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 50, 'statue room', 11, 50),
                             new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 84, 100, 'hive room', 84, 10),
                     ],
                 },
-                'entry hall 2': {
-                    boundaries: [ ['n',0,36,100,36], ['n',0,64,100,64], ] ,
-                    passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'entry hall 1', 90, 50),
-                        new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 50, 'statue room', 11, 50)
-                    ],
-                },
                 'game room': {
                     boundaries: [ ['n',4,40,4,0], ['n',4,0,46,0], ['n',46,0,96,100], ['n',96,100,4,100], ['n',4,100,4,60], ],
+                    filledPolygons: [ ['r',0,0,4,100], ['p',46,0,96,100,100,100,100,0], ],
                     passages: [ new Passage(PassageTypes.BASIC_LEFT,4,50,'bathroom',70,66),
                         new Passage(PassageTypes.SECRET_RIGHT,75,50,'armory',42,50),],
                 },
                 'hive room': {
                     boundaries: [ ['n',75,0,75,50], ['n',92,0,92,72], ['n',75,50,50,50], ['n',50,50,50,25], ['n',50,25,15,25], ['n',15,25,15,72], ['n',15,72,92,72],
                         ['i',50,50,50,72], ],
+                    filledPolygons: [ ['r',0,0,75,25], ['r',50,25,25,25,], ['r',0,25,15,75], ['r',15,72,85,28], ['r',92,0,8,100], ],
                     passages: [new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 84, 0, 'entry hall 1', 84, 90), ]
                 },
                 'kitchen': {
                     boundaries: [ ['n',0,30,10,30], ['n',10,30,10,20], ['n',10,20,90,20], ['n',90,20,90,80], ['n',90,80,10,80], ['n',10,80,10,70], ['n',10,70,0,70], ],
+                    filledPolygons: [ ['r',0,0,10,30], ['r',0,70,10,30], ['r',10,0,100,20], ['r',10,80,90,20], ['r',90,0,10,100], ],
                     passages: [ new Passage(PassageTypes.INVISIBLE_VERTICAL,0,50,'asteroid room',88,50),],
                 },
                 'main': {
                     boundaries: [ ['n',0,36,40,36], ['n',40,36,40,0], ['n',60,0,60,36], ['n',60,36,100,36], ['n',100,64,60,64], ['n',60,64,60,100], ['n',40,100,40,64], ['n',40,64,0,64] ],
+                    filledPolygons: [ ['r',0,0,40,36], ['r',60,0,40,36], ['r',0,64,40,36], ['r',60,64,40,36], ],
                     passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'statue room', 90, 50),
                         new Passage(PassageTypes.INVISIBLE_VERTICAL,100,50,'asteroid room',15,50),
                         new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 50, 0, 'bathroom',45,60),
@@ -522,6 +536,7 @@ function getLevelData(levelName) {
                 },
                 'secret room': {
                     boundaries: [ ['n',12,100,12,0], ['n',12,0,28,0], ['n',28,15,28,42],  ['n',28,42,62,42], ['n',62,42,62,5], ['n',62,5,78,28], ['n',78,28,78,70], ['n',78,70,100,100], ['n',100,100,12,100], ],
+                    filledPolygons: [ ['r',0,0,12,100], ['r',28,0,34,42], ['p',62,0,62,5,78,28,78,70,100,100,100,0], ],
                     passages: [ new Passage(PassageTypes.BASIC_RIGHT, 28, 14, 'statue room', 49, 78),
                         new Passage(PassageTypes.INVISIBLE_HORIZONTAL,78,50,'stream room',12,50), ],
                 },
@@ -530,14 +545,19 @@ function getLevelData(levelName) {
                         ['n',42,36,42,10], ['n',42,10,60,10], ['n',60,10,60,36], ['n',60,36,72,36], ['n',72,36,72,10], ['n',72,10,90,10], ['n',90,10,90,36], ['n',90,36,100,36],
                         ['n',0,64,12,64], ['n',12,64,12,90], ['n',12,90,30,90], ['n',30,90,30,64], ['n',30,64,42,64], ['n',42,64,42,90], ['n',42,90,60,90],
                         ['n',60,90,60,64], ['n',60,64,72,64], ['n',72,64,72,90], ['n',72,90,90,90], ['n',90,90,90,64], ['n',90,64,100,64], ] ,
+                    filledPolygons: [ ['r',0,0,100,10], ['r',0,90,100,10], ['r',0,10,12,26], ['r',30,10,12,26], ['r',60,10,12,26], ['r',90,10,10,26],
+                        ['r',0,64,12,26], ['r',30,64,12,26], ['r',60,64,12,26], ['r',90,64,10,26], ],
                     passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'entry hall 1', 90, 50),
                         new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 50, 'main', 11, 50),
                         new Passage(PassageTypes.INVISIBLE_VERTICAL, 41, 91, 'secret room', 20, 20),
                     ],
                 },
                 'stream room': {
-                    boundaries: [ ['n',0,35,5,35], ['n',5,35,5,15], ['n',5,15,90,15], ['n',90,15,90,85], ['n',90,85,5,85], ['n',5,85,5,65], ['n',5,65,0,65], ],
-                    passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'secret room', 60, 50)],
+                    boundaries: [ ['n',0,35,5,35], ['n',5,35,5,15], ['n',5,15,90,15], ['n',90,15,90,85], ['n',90,85,5,85], ['n',5,85,5,65], ['n',5,65,0,65],
+                        ['i',48,15,43,40], ['i',43,40,46,72], ['i',46,72,35,85],
+                        ['i',66,15,59,40], ['i',59,40,55,74], ['i',55,74,60,85],],
+                    filledPolygons: [ ['r',0,0,5,35], ['r',0,65,5,35], ['r',5,0,95,15], ['r',5,85,95,15], ['r',90,15,10,70], ],
+                    passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'secret room', 60, 60)],
                 },
             },
             levelSpecificInitialization: function() {
@@ -545,6 +565,7 @@ function getLevelData(levelName) {
                 otherData['bee image'].src = 'imgs/things/bees-1.png';
                 otherData['bee sound'] = new Audio('audio/481647__joncon-library__bee-buzzing.wav');
                 otherData['dart image'].src = 'imgs/things/dart.png';
+                otherData['lamplight image'].src = 'imgs/things/Ellipse.png';
                 otherData['maps image'].src = 'imgs/things/maps-display.png';
             },
             levelSpecificNewRoomBehavior: function(roomName) {
@@ -568,20 +589,24 @@ function getLevelData(levelName) {
                         passages[0].draw();
                     }
                     else {
-                        let lampX, lampY;
+                        let lamp, lampX, lampY;
                         if ('lamp' in inventory) {
-                            lampX = player.x;
-                            lampY = player.y - 40;
-                            ctx.drawImage(inventory['lamp'].image,lampX,lampY,53,48);
+                            lampX = player.x + 32;
+                            lampY = player.y - 2;
+                            lamp = inventory['lamp'];
+                            ctx.drawImage(lamp.image,lampX - 26,lampY - 24,53,48);
                         }
                         else {
                             lampX = thingsHere['lamp'].x;
                             lampY = thingsHere['lamp'].y;
                         }
-                        ctx.fillRect(0,0,PLAY_AREA_WIDTH, lampY-100);
-                        ctx.fillRect(0,lampY-100,lampX-100,PLAY_AREA_HEIGHT-(lampY-100));
-                        ctx.fillRect(lampX-100,lampY+100,PLAY_AREA_WIDTH-(lampX-100),PLAY_AREA_HEIGHT-(lampY+100));
-                        ctx.fillRect(lampX+100,lampY-100,PLAY_AREA_WIDTH-(lampX+100),200);
+                        let halfX = otherData['lamplight width']/2 ;
+                        let halfY = otherData['lamplight height']/2 ;
+                        ctx.fillRect(0,0,PLAY_AREA_WIDTH, 2 + lampY-halfY);
+                        ctx.fillRect(0,lampY-halfY - 1,2 + lampX-halfX, 2 + PLAY_AREA_HEIGHT-(lampY-halfY));
+                        ctx.fillRect(lampX-halfX - 1,lampY+halfY-1,2 + PLAY_AREA_WIDTH-(lampX-halfX),2 + PLAY_AREA_HEIGHT-(lampY+halfY));
+                        ctx.fillRect(lampX+halfX - 1,lampY-halfY-1,2 + PLAY_AREA_WIDTH-(lampX+halfX),2 + halfY + halfY);
+                        ctx.drawImage(otherData['lamplight image'],lampX - halfX,lampY - halfY);
                         if ('lamp' in thingsHere) {
                             player.draw(); // draw the player again ... inefficient but easier than setting up logic to determine layers relative to black rectangle
                         }

@@ -38,6 +38,7 @@ let rooms = {};
 let passages = [];
 let passageImages = {}; // probably a good idea to load these in "initialize" function, but not doing this now.
 let boundaries = [];
+let filledPolygons = [];
 let otherData = {};
 let currentRoom = '';
 let player = {};
@@ -244,6 +245,7 @@ class Thing extends GameElement {
         this.soundToPlayAfterMovement = undefined;
         this.messageToDisplayAfterMovement = undefined;
         this.deleteAfterMovement = false;
+        this.playAudioWhenTransformed = true;
     }
     setDimensionsFromImage() { // this gets called as soon as image loads
         this.width = this.image.width; // take dimensions directly from image
@@ -625,7 +627,8 @@ function castSpell() {
 
     sourceThing.extraTransformFromBehavior();
 
-    sounds['spell'].play();
+    if (sourceThing.playAudioWhenTransformed === true)
+        sounds['spell'].play();
 
     // remove the source thing:
     if (inInventory)
@@ -692,6 +695,28 @@ function animate() {
     // clear and draw background for current room:
     ctx.clearRect(0, 0,  PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     // ctx.drawImage(backgroundImage, 0, 0, 2474, 2000, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // fill all filledPolygons if any:
+    if (typeof filledPolygons !== 'undefined') {
+        ctx.fillStyle = 'black';
+        for (let i = 0; i < filledPolygons.length; i++) {
+            const polygon = filledPolygons[i];
+            const pType = polygon[0];
+            if (pType === 'r') {
+                ctx.fillRect(polygon[1],polygon[2],polygon[3],polygon[4]);
+            }
+            else if (pType === 'p') {
+                ctx.beginPath()
+                ctx.moveTo(polygon[1],polygon[2]);
+                for (let j = 3; j < polygon.length; j += 2) {
+                    ctx.lineTo(polygon[j], polygon[j+1]);
+                }
+                ctx.lineTo(polygon[1], polygon[2]);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+    }
 
     // draw all boundaries in current room
     for (let i = 0; i < boundaries.length; i++) {
@@ -775,22 +800,37 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
     backgroundImage = new Image(CANVAS_WIDTH, CANVAS_HEIGHT);
     backgroundImage.src = '/imgs/rooms/' + newRoomName.replace(' ','_') + '.png';
 
-    boundaries = [];
-    for (let i = 0; i < roomData.boundaries.length; i++) {
-        let b = roomData.boundaries[i];
-        let orientation = (b[1] === b[3]) ? 'v' : 'd'; // v for vertical, d for diagonal (or horiz.)
-        // going to use b[0] for "type" of boundary. if starts with 'i', consider it invisible.
-        // to simplify collision detection, ensure that top point comes first (for vertical), and left pt for diag./horiz.
-        if ((orientation === 'v' && b[2] > b[4]) || (orientation != 'v' && b[1] > b[3])) {
-            let temp1 = b[1];
-            let temp2 = b[2];
-            b[1] = b[3];
-            b[2] = b[4];
-            b[3] = temp1;
-            b[4] = temp2;
+    filledPolygons = [];
+    if (typeof roomData.filledPolygons !== 'undefined') {
+        for (let i = 0; i < roomData.filledPolygons.length; i++) {
+            const p = roomData.filledPolygons[i];
+            let scaledPolygon = [p[0]];
+            for (let j = 1; j < p.length; j += 2) {
+                scaledPolygon.push(p[j] * xScaleFactor);
+                scaledPolygon.push(p[j + 1] * yScaleFactor);
+            }
+            filledPolygons.push(scaledPolygon);
         }
-        boundaries.push( [ b[0], b[1] * xScaleFactor, b[2] * yScaleFactor,
-            b[3] * xScaleFactor, b[4] * yScaleFactor, orientation] );
+    }
+
+    boundaries = [];
+    if (typeof roomData.boundaries !== 'undefined') {
+        for (let i = 0; i < roomData.boundaries.length; i++) {
+            let b = roomData.boundaries[i];
+            let orientation = (b[1] === b[3]) ? 'v' : 'd'; // v for vertical, d for diagonal (or horiz.)
+            // going to use b[0] for "type" of boundary. if starts with 'i', consider it invisible.
+            // to simplify collision detection, ensure that top point comes first (for vertical), and left pt for diag./horiz.
+            if ((orientation === 'v' && b[2] > b[4]) || (orientation != 'v' && b[1] > b[3])) {
+                let temp1 = b[1];
+                let temp2 = b[2];
+                b[1] = b[3];
+                b[2] = b[4];
+                b[3] = temp1;
+                b[4] = temp2;
+            }
+            boundaries.push([b[0], b[1] * xScaleFactor, b[2] * yScaleFactor,
+                b[3] * xScaleFactor, b[4] * yScaleFactor, orientation]);
+        }
     }
 
     if (typeof levelSpecificNewRoomBehavior === 'function')
@@ -970,7 +1010,7 @@ function initialize() {
 
     player = new Player();
     sounds = {};
-    const soundlist = ['glug','host_speech','kaching','om','pickup', 'add-spell',
+    const soundlist = ['glug','host_speech','kaching', 'pickup', 'add-spell',
         'pop','rattle','tada','whoosh','yumyum','zoop'];
 
     for (let i = 0; i < soundlist.length; i++) {
@@ -1011,7 +1051,6 @@ function initialize() {
         wordDivs.push(document.getElementById('word-bubble-' + i.toString()));
         wordTimers.push(0);
     }
-
 }
 
 function showIntroScreen() {
