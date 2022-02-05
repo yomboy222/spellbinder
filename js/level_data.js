@@ -185,7 +185,7 @@ class Ghost extends Thing {
 class Host extends Thing {
     constructor(word, room, x, y) {
         super(word, room, x, y);
-        let sound = new Audio(levelPath + '/audio/host_speech.m4a');
+        let sound = new Audio(levelPath + '/audio/host-speech.m4a');
         sound.play();
     }
     draw() {
@@ -211,7 +211,7 @@ class Host extends Thing {
 
 class Mantra extends Thing {
     extraTransformIntoBehavior() {
-        const om = new Audio(levelPath + 'audio/om.m4a');
+        const om = new Audio(levelPath + '/audio/om.m4a');
         om.play();
     }
     draw() {
@@ -527,10 +527,10 @@ function getLevelData(levelName) {
                     passages:[ new Passage(PassageTypes.SECRET_LEFT, 30,50,'game room',60,56)],
                 },
                 'asteroid room': {
-                    boundaries: [ ['n',0,40,60,40], ['n',60,40,60,10], ['n',60,10,95,10], ['n',95,10,95,40], ['n',95,40,100,40], ['n',0,60,60,60],
-                        ['n',60,60,60,90], ['n',60,90,95,90], ['n',95,90,95,60], ['n',95,60,100,60], ],
-                    filledPolygons: [ ['r',0,0,60,40], ['r',60,0,40,10], ['r',95,10,5,30],
-                        ['r',0,60,60,40], ['r',60,90,40,10], ['r',95,60,5,30], ],
+                    boundaries: [ ['n',0,40,60,40], ['n',60,40,60,10], ['n',60,10,95,10], ['n',95,10,95,35], ['n',95,35,100,35], ['n',0,60,60,60],
+                        ['n',60,60,60,90], ['n',60,90,95,90], ['n',95,90,95,65], ['n',95,65,100,65], ],
+                    filledPolygons: [ ['r',0,0,60,40], ['r',60,0,40,10], ['r',95,10,5,25],
+                        ['r',0,60,60,40], ['r',60,90,40,10], ['r',95,65,5,25], ],
                     passages: [ new Passage(PassageTypes.INVISIBLE_HORIZONTAL,0,50,'main',89,50),
                         new Passage(PassageTypes.INVISIBLE_VERTICAL,100,50,'kitchen',12,50)],
                 },
