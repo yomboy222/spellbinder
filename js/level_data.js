@@ -18,12 +18,12 @@ let allWords = [ 'arts',  'asteroid',  'ace',  'adder',  'amp',  'axle', 'bat', 
     'tarot',  'toll machine',  'tuna',  'warts',  'wheel',  ];
 
 let solidObjects = [ 'brook', 'bulls-eyes','portcullis','cabinet','cow','lock','spa','bath','ceiling',
-    'ghost','dresser','pools','mantrap','meteor','asteroid',  ];
+    'ghost','dresser','pools','mantrap','meteor','asteroid', 'stand',  ];
 
 // TODO: maybe make solid objects immovable by default so you don't have to list them twice?
 
 let immovableObjects = [ 'axle','brook','bulls-eyes','drawer','portcullis','cabinet','stream','flock','lock','cow','bath','spa',
-    'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser','statue', 'toll machine', ];
+    'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser','stand','statue', 'toll machine', ];
 
 let bridgelikeObjects = [ 'span', 'ladder' ];
 
@@ -277,6 +277,19 @@ class Meteor extends Thing {
 }
 
 class Portcullis extends Thing {
+    inRangeOfPlayer(extraRadius = 0) {
+        // weirdly shaped so need custom collision detection.
+        let inRectangle =  (player.x > (this.x - this.halfWidth - player.halfWidth - extraRadius) &&
+            player.x < (this.x + this.halfWidth + player.halfWidth + extraRadius) &&
+            player.y > (this.y - this.halfHeight - player.halfHeight - extraRadius) &&
+            player.y < (this.y + this.halfHeight + player.halfHeight + extraRadius) );
+        if (inRectangle === false)
+            return false;
+        let relX = player.x - this.x;
+        let relY = player.y - this.y;
+        let inEmptyPart = (relY > .6 * this.halfHeight) && (relX + this.halfHeight < relY);
+        return (! inEmptyPart);
+    }
 }
 
 class Reward extends Thing {
@@ -331,6 +344,21 @@ class Spa extends Thing {
         let t = Date.now() - this.timeOfCreation;
         let frame = ( Math.round(t / 100) % 2);
         ctx.drawImage(this.images[frame], this.x - this.halfWidth, this.y - this.halfHeight, this.images[frame].width, this.images[frame].height);
+    }
+}
+
+class Stand extends Thing {
+    handleCollision() {
+        if (otherData['grabbed binder'] === false) {
+            otherData['grabbed binder'] = true;
+            displayMessage('You got the Spell Binder! Type B to look inside.');
+            this.solid = false;
+            sounds['pickup'].play();
+            this.image.src = levelPath + '/things/stand-no-binder.png';
+        }
+        else {
+            return super.handleClick();
+        }
     }
 }
 
@@ -423,6 +451,7 @@ function getThing(word, room, x, y, treatXandYasPercentages = true, otherArgs = 
         case 'reward': return new Reward(word,room,x,y);
         case 'steroid' : return new Steroid(word, room, x, y);
         case 'spa' : return new Spa (word, room, x, y);
+        case 'stand' : return new Stand(word,room,x,y);
         case 'treasure' : return new Treasure(word,room,x,y);
         case 'wheel' : return new Wheel (word,room,x,y);
         default : return new Thing (word, room, x, y);
@@ -455,6 +484,7 @@ function getLevelData(levelName) {
                 'drawer open': false,
                 'steroid drunk': false,
                 'meteor moved': false,
+                'grabbed binder': false,
             },
             initialThings: {
                 'asteroid' : getThing('asteroid', 'asteroid room', 70, 43),
@@ -477,6 +507,7 @@ function getLevelData(levelName) {
                 'portcullis2' : getThing('portcullis', 'secret room',70,37),
                 'spa' : getThing('spa', 'bathroom', 67,34) ,
                 'statue1' : getThing('statue','statue room', 21, 23),
+                'stand' : getThing('stand','entry point', 48, 50),
                 'statue2' : getThing('statue','statue room', 51, 23),
                 'statue3' : getThing('statue','statue room', 81, 23),
                 'statue4' : getThing('statue','statue room', 21, 77),
@@ -486,7 +517,6 @@ function getLevelData(levelName) {
                 'stream': getThing('stream','stream room', 50, 50),
                 'toll machine': getThing('toll machine', 'beyond', 85,60),
                 'treasure': getThing('treasure', 'stream room', 90, 80),
-                'wheel':getThing('wheel','secret room',40,60),
             },
 
             initialRunes: [],
@@ -570,7 +600,9 @@ function getLevelData(levelName) {
                     ]
                 },
                 'secret room': {
-                    boundaries: [ ['n',12,100,12,0], ['n',12,0,28,0], ['n',28,15,28,42],  ['n',28,42,62,42], ['n',62,42,62,5], ['n',62,5,78,28], ['n',78,28,78,70], ['n',78,70,100,100], ['n',100,100,12,100], ],
+                    boundaries: [ ['n',12,100,12,0], ['n',12,0,28,0], ['n',28,15,28,42],  ['n',28,42,62,42], ['n',62,42,62,5], ['n',62,5,78,28],
+                        ['n',78,28,78,70], ['n',78,70,100,100], ['n',100,100,12,100],
+                        ['t',86,62,86,37], ['t',86,37,72,17], ],
                     filledPolygons: [ ['r',0,0,12,100], ['r',28,0,34,42], ['p',62,0,62,5,78,28,78,70,100,100,100,0], ],
                     passages: [ new Passage(PassageTypes.BASIC_RIGHT, 28, 14, 'statue room', 49, 78),
                         new Passage(PassageTypes.INVISIBLE_HORIZONTAL,78,50,'stream room',12,50), ],

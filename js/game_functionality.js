@@ -737,9 +737,19 @@ function animate() {
 
     // draw all boundaries in current room
     for (let i = 0; i < boundaries.length; i++) {
-        if (boundaries[i][0].startsWith('i'))
+        let bType = boundaries[i][0];
+        if (bType.startsWith('i'))
             continue; // don't draw boundaries marked as invisible
-        ctx.strokeStyle = 'green';
+        if (bType.startsWith('t')) {
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+        }
+        else
+        {
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 4;
+        }
+
         ctx.beginPath();
         ctx.moveTo(boundaries[i][1], boundaries[i][2]);
         ctx.lineTo(boundaries[i][3], boundaries[i][4]);
@@ -814,8 +824,10 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
         passages.push(p);
     }
 
-    backgroundImage = new Image(CANVAS_WIDTH, CANVAS_HEIGHT);
-    backgroundImage.src = '/imgs/rooms/' + newRoomName.replace(' ','_') + '.png';
+    if (typeof roomData.backgroundImage !== 'undefined') {
+        backgroundImage = new Image(CANVAS_WIDTH, CANVAS_HEIGHT);
+        backgroundImage.src = levelPath + '/imgs/rooms/' + roomData.backgroundImage;
+    }
 
     filledPolygons = [];
     if (typeof roomData.filledPolygons !== 'undefined') {
@@ -1035,8 +1047,7 @@ function initialize() {
 
     player = new Player();
     sounds = {};
-    const soundlist = ['host_speech', 'pickup', 'add-spell',
-        'pop','rattle','tada','whoosh','zoop'];
+    const soundlist = ['pickup', 'add-spell', 'whoosh'];
 
     for (let i = 0; i < soundlist.length; i++) {
         sounds[soundlist[i]] = new Audio('audio/' + soundlist[i] + '.wav');
