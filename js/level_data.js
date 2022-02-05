@@ -18,12 +18,12 @@ let allWords = [ 'arts',  'asteroid',  'ace',  'adder',  'amp',  'axle', 'bat', 
     'tarot',  'toll machine',  'tuna',  'warts',  'wheel',  ];
 
 let solidObjects = [ 'brook', 'bulls-eyes','portcullis','cabinet','cow','lock','spa','bath','ceiling',
-    'ghost','dresser','pools','mantrap','meteor','asteroid' ];
+    'ghost','dresser','pools','mantrap','meteor','asteroid',  ];
 
 // TODO: maybe make solid objects immovable by default so you don't have to list them twice?
 
 let immovableObjects = [ 'axle','brook','bulls-eyes','drawer','portcullis','cabinet','stream','flock','lock','cow','bath','spa',
-    'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser','statue' ];
+    'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser','statue', 'toll machine', ];
 
 let bridgelikeObjects = [ 'span', 'ladder' ];
 
@@ -32,6 +32,20 @@ let ellipticalObjects = [ 'clam', 'meteor', 'asteroid'];
 class Asteroid extends Thing {
     displayCantPickUpMessage() {
         displayMessage('Too heavy to move!');
+    }
+}
+
+class Boar extends Thing{
+    extraTransformIntoBehavior() {
+        window.setTimeout(this.leaveRoom.bind(this),1200);
+    }
+
+    leaveRoom() {
+        this.movementDurationMS = 1000;
+        this.beginMovementTime = Date.now();
+        this.destX = 50 * xScaleFactor;
+        this.destY = 33 * yScaleFactor;
+        this.deleteAfterMovement = true;
     }
 }
 
@@ -171,7 +185,8 @@ class Ghost extends Thing {
 class Host extends Thing {
     constructor(word, room, x, y) {
         super(word, room, x, y);
-        sounds['host_speech'].play();
+        let sound = new Audio(levelPath + '/audio/host_speech.m4a');
+        sound.play();
     }
     draw() {
         let t = Date.now() - this.timeOfCreation;
@@ -196,7 +211,7 @@ class Host extends Thing {
 
 class Mantra extends Thing {
     extraTransformIntoBehavior() {
-        const om = new Audio('audio/om.m4a');
+        const om = new Audio(levelPath + 'audio/om.m4a');
         om.play();
     }
     draw() {
@@ -225,6 +240,7 @@ class Mantrap extends Thing {
     }
 }
 
+/* handling maps like regular thing now ...
 class Maps extends Thing {
     handleClick() {
         if (otherData['showing maps'] === true) {
@@ -240,6 +256,7 @@ class Maps extends Thing {
         }
     }
 }
+*/
 
 class Meteor extends Thing {
     displayCantPickUpMessage() {
@@ -271,7 +288,7 @@ class Reward extends Thing {
                 delete inventory['reward'];
                 this.movable = false; // so player can't pick up again as it moves into toll machine
                 this.beginMovementTime = Date.now();
-                this.movementDurationMS = 1500;
+                this.movementDurationMS = 1000;
                 this.initialX = player.x;
                 this.initialY = player.y;
                 this.destX = tollMachine.x;
@@ -287,7 +304,8 @@ class Reward extends Thing {
     }
     update() {
         if (this.beginMovementTime > 0 && Date.now() > this.beginMovementTime + this.movementDurationMS) {
-            // sounds['kaching'].play();
+            let sound = new Audio(levelPath + '/audio/kaching.wav');
+            sound.play();
             otherData['toll paid time'] = Date.now();
             let portcullis = thingsHere['portcullis'];
             portcullis.beginMovementTime = Date.now();
@@ -307,7 +325,7 @@ class Spa extends Thing {
     constructor(word, room, x, y) {
         super(word, room, x, y);
         this.images = [this.image, new Image(196, 172)];
-        this.images[1].src = 'imgs/things/spa-2.png';
+        this.images[1].src = levelPath + '/things/spa-2.png';
     }
     draw() {
         let t = Date.now() - this.timeOfCreation;
@@ -328,6 +346,22 @@ class Steroid extends Thing {
         if (currentRoom === 'asteroid room' && 'steroid' in thingsHere) {
             this.x -= 30; // move closer so player can reach it.
         }
+    }
+}
+
+class Treasure extends Thing {
+    tryToPickUp() {
+        displayMessage('Congratulations, you solved this level!');
+        return super.tryToPickUp();
+    }
+
+    handleClick() {
+        displayMessage('Congratulations, you solved this level!');
+        return super.handleClick();
+    }
+    handleCollision() {
+        displayMessage('Congratulations, you solved this level!');
+        super.handleCollision();
     }
 }
 
@@ -372,6 +406,7 @@ function getThing(word, room, x, y, treatXandYasPercentages = true, otherArgs = 
     }
     switch (word) {
         case 'asteroid' : return new Asteroid(word, room, x, y);
+        case 'boar' : return new Boar(word,room,x,y);
         case 'board' : return new Board(word,room,x,y,);
         case 'bulls-eyes' : return new Bullseyes(word,room,x,y);
         case 'cabinet' : return new Cabinet(word, room, x, y);
@@ -383,12 +418,12 @@ function getThing(word, room, x, y, treatXandYasPercentages = true, otherArgs = 
         case 'host' : return new Host (word, room, x, y);
         case 'mantra' : return new Mantra (word, room, x, y);
         case 'mantrap' : return new Mantrap (word, room, x, y);
-        case 'maps' : return new Maps(word,room,x,y);
         case 'meteor' : return new Meteor(word, room, x, y);
         case 'portcullis' : return new Portcullis(word,room,x,y);
         case 'reward': return new Reward(word,room,x,y);
         case 'steroid' : return new Steroid(word, room, x, y);
         case 'spa' : return new Spa (word, room, x, y);
+        case 'treasure' : return new Treasure(word,room,x,y);
         case 'wheel' : return new Wheel (word,room,x,y);
         default : return new Thing (word, room, x, y);
     }
@@ -400,12 +435,13 @@ let levelData = {};
 
 function getLevelData(levelName) {
     switch(levelName) {
-        case '1': return {
+        case 'intro level': return {
             initialRoom: 'entry point',
             initialX: 20, // expressed as % of way across x axis, i.e. value range is 0-100
             initialY: 50,
-            initialSpells: ['remove-edge','add-edge'],
+            initialSpells: ['remove-edge'],
             initialInventory: {},
+            backgroundMusicFile: 'Sneaky Snitch.mp3',
             otherGameData: { 'hive in place':true,
                 'last hive trigger time':0,
                 'bee image':new Image(),
@@ -429,7 +465,6 @@ function getLevelData(levelName) {
                 'cabinet': getThing('cabinet','bathroom',25,25),
                 'clam': getThing('clam', 'kitchen', 42, 40),
                 'crown': getThing('crown','crown room',50,50),
-                'darts': getThing('darts','game room',40,40),
                 'dresser':getThing('dresser','beyond',26,80),
                 'drawer': getThing('drawer','beyond', 26, 73),
                 'ghost' : getThing('ghost', 'entry hall 1', 40, 50) ,
@@ -440,7 +475,7 @@ function getLevelData(levelName) {
                 'mantrap' : getThing('mantrap', 'main', 50, 23) ,
                 'portcullis': getThing('portcullis', 'beyond', 69, 37),
                 'portcullis2' : getThing('portcullis', 'secret room',70,37),
-                'spa' : getThing('spa', 'bathroom', 67,36) ,
+                'spa' : getThing('spa', 'bathroom', 67,34) ,
                 'statue1' : getThing('statue','statue room', 21, 23),
                 'statue2' : getThing('statue','statue room', 51, 23),
                 'statue3' : getThing('statue','statue room', 81, 23),
@@ -454,7 +489,7 @@ function getLevelData(levelName) {
                 'wheel':getThing('wheel','secret room',40,60),
             },
 
-            initialRunes: ['p','n', 'c'],
+            initialRunes: [],
             rooms: {
                 'armory': {
                     boundaries: [['n',30,30,60,30],['n',60,30,60,75], ['n',60,75,30,75], ['n',30,75,30,30,],],
@@ -472,7 +507,7 @@ function getLevelData(levelName) {
                 'bathroom': {
                     boundaries:[ ['n',15,15,85,15], ['n',85,15,85,85], ['n',85,85,15,85], ['n',15,85,15,15], ],
                     filledPolygons: [ ['r',0,0,100,15], ['r',0,15,15,85], ['r',15,85,85,15], ['r',85,15,15,85], ],
-                    passages:[ new Passage(PassageTypes.BASIC_HORIZONTAL,50,80,'main',50,11),
+                    passages:[ new Passage(PassageTypes.BASIC_HORIZONTAL,50,82,'main',50,11),
                         new Passage(PassageTypes.BASIC_RIGHT,85,65,'game room',12,56),],
                 },
                 'beyond':{
@@ -562,11 +597,11 @@ function getLevelData(levelName) {
             },
             levelSpecificInitialization: function() {
                 console.log('yo');
-                otherData['bee image'].src = 'imgs/things/bees-1.png';
-                otherData['bee sound'] = new Audio('audio/481647__joncon-library__bee-buzzing.wav');
-                otherData['dart image'].src = 'imgs/things/dart.png';
-                otherData['lamplight image'].src = 'imgs/things/Ellipse.png';
-                otherData['maps image'].src = 'imgs/things/maps-display.png';
+                otherData['bee image'].src = levelPath + '/things/bees-1.png';
+                otherData['bee sound'] = new Audio( 'audio/481647__joncon-library__bee-buzzing.wav');
+                otherData['dart image'].src = levelPath + '/things/dart.png';
+                otherData['lamplight image'].src = levelPath + '/things/Ellipse.png';
+                otherData['maps image'].src = levelPath + '/things/maps-display.png';
             },
             levelSpecificNewRoomBehavior: function(roomName) {
                 if (roomName === 'hive room' && otherData['hive in place'] === false) {
@@ -661,9 +696,12 @@ function getLevelData(levelName) {
                     }
                 } // end hive room behavior
 
+                /* ... now just drawing maps like a normal object.
                 if (otherData['showing maps'] === true) {
                     ctx.drawImage(otherData['maps image'],0,0);
                 }
+                */
+
 
             },
             levelSpecificKeydownBehavior : function(e) {

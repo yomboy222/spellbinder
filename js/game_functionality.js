@@ -28,6 +28,8 @@ const allSpells = { SPELL_ADD_EDGE:'add-edge', SPELL_REMOVE_EDGE:'remove-edge', 
 let binderImages = {};
 let CollisionProfile = { RECTANGULAR : 'RECTANGULAR', ELLIPTICAL : 'ELLIPTICAL'};
 let BoundaryType = { VERTICAL : 'v', HORIZONTAL : 'h', DIAGONAL : 'd'};
+let levelName = '';
+let levelPath = ''; // to remove spaces etc. so can be used in file paths more easily
 let thingsElsewhere = {};
 let inventory = {};
 let thingsHere = {};
@@ -44,6 +46,8 @@ let currentRoom = '';
 let player = {};
 let sounds = {};
 let backgroundImage = new Image();
+let backgroundMusic = undefined;
+let musicPlaying = false;
 let normalPlayerInputSuppressed = false;
 // levels may define following to be functions:
 let levelSpecificInitialization = undefined;
@@ -230,7 +234,7 @@ class Thing extends GameElement {
         this.initialY = y;
         this.image = new Image();
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
-        this.image.src = 'imgs/things/' + word.replace(' ','_')  + '.png';
+        this.image.src = levelPath + '/things/' + word.replace(' ','_')  + '.png';
         this.timeOfCreation = Date.now();
         this.movable = (immovableObjects.indexOf(word) < 0);
         this.solid = (solidObjects.indexOf(word) >= 0);
@@ -690,6 +694,19 @@ function showBinder() {
     pageBeingShownInBinder = allSpells.BINDER_COVER;
 }
 
+function toggleMusic() {
+    if (typeof backgroundMusic === 'object') {
+        if (musicPlaying === false) {
+            musicPlaying = true;
+            backgroundMusic.loop = true;
+            backgroundMusic.play();
+        } else {
+            musicPlaying = false;
+            backgroundMusic.pause();
+        }
+    }
+}
+
 function animate() {
 
     // clear and draw background for current room:
@@ -837,15 +854,17 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
         levelSpecificNewRoomBehavior(newRoomName);
 }
 
-function loadLevel(levelName = '1') {
-    console.log('loading level ' + levelName);
+function loadLevel(lName = 'intro level') {
+    console.log('loading level ' + lName);
     canvas.style.display = 'block';
+    levelName = lName;
+    levelPath = 'levels/' + lName.replace(' ','_');
 
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'none';
     showingIntroPage = false;
 
-    let levelData = getLevelData(levelName);
+    let levelData = getLevelData(lName);
 
     currentRoom = undefined;
     inventory = levelData.initialInventory; // note copying by reference OK here b/c getLevelData initializes with literals
@@ -865,6 +884,11 @@ function loadLevel(levelName = '1') {
     if (typeof levelSpecificInitialization === 'function') {
         levelSpecificInitialization();
     }
+
+    if (typeof levelData.backgroundMusicFile !== 'undefined') {
+        backgroundMusic = new Audio(levelPath + '/audio/' + levelData.backgroundMusicFile);
+    }
+
     newRoom(levelData.initialRoom, levelData.initialX, levelData.initialY);
 
     animate();
@@ -925,6 +949,7 @@ function handleKeydown(e) {
             case 'KeyC' : castSpell(); break;
             case 'KeyI' : drawInventory(); break;
             case 'KeyT' : teleport(); break;
+            case 'KeyQ' : cheating = !cheating; // use to toggle cheating on and off.
         }
     }
 }
@@ -1010,13 +1035,12 @@ function initialize() {
 
     player = new Player();
     sounds = {};
-    const soundlist = ['glug','host_speech','kaching', 'pickup', 'add-spell',
-        'pop','rattle','tada','whoosh','yumyum','zoop'];
+    const soundlist = ['host_speech', 'pickup', 'add-spell',
+        'pop','rattle','tada','whoosh','zoop'];
 
     for (let i = 0; i < soundlist.length; i++) {
         sounds[soundlist[i]] = new Audio('audio/' + soundlist[i] + '.wav');
     }
-    sounds['host_speech'] = new Audio('audio/host_speech.m4a'); // need to convert this ...
     sounds['spell'] = new Audio('audio/magical_1.ogg')
 
     document.addEventListener('keydown', handleKeydown);
