@@ -42,9 +42,10 @@
 #player-message{
     display:none;
     position: absolute;
-    height:40px;
+    height:auto;
     width:200px;
     text-align: center;
+    padding: 5px;
     border: 3px solid red;
     background-color: rgba(30, 255, 255, 0.9);
     z-index: 1;

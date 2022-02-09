@@ -42,11 +42,14 @@
         you can click it to drop it, or to use it, if it has some special use (or can be eaten etc.).
         <br/><br/>
 
-        <button id="loadLevelButton" name="yo" value="load level" onclick="loadLevel()"> load level 1</button>
+        <button id="loadTutorialButton" name="yo2" value="load tutorial level" onclick="loadLevel('tutorial level')">load tutorial level</button>
+        <button id="loadLevelButton" name="yo" value="load level 1" onclick="loadLevel()"> load level 1</button>
+
     </div>
     <canvas id="canvas1" width="700px" height="600px"></canvas>
     <script type="text/javascript" src="js/game_functionality.js"></script>
-    <script type="text/javascript" src="js/word_data.js"></script>
-    <script type="text/javascript" src="js/level_data.js"></script>
+    <!-- script type="text/javascript" src="levels/intro_level/intro_level.js"></script -->
+    <script type="text/javascript" src="levels/tutorial_level/tutorial_level.js"></script>
+
 </body>
 </html>

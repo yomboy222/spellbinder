@@ -3,6 +3,9 @@
     Doug McLellan 1/2022
 */
 
+/* TODO: deal with issue of doing setTimeouts whose handlers may not exist if you exit level.
+
+ */
 /* global-scope variables: */
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
@@ -28,6 +31,8 @@ const allSpells = { SPELL_ADD_EDGE:'add-edge', SPELL_REMOVE_EDGE:'remove-edge', 
 let binderImages = {};
 let CollisionProfile = { RECTANGULAR : 'RECTANGULAR', ELLIPTICAL : 'ELLIPTICAL'};
 let BoundaryType = { VERTICAL : 'v', HORIZONTAL : 'h', DIAGONAL : 'd'};
+let getLevelFunctions = {};
+let level = undefined;
 let levelName = '';
 let levelPath = ''; // to remove spaces etc. so can be used in file paths more easily
 let thingsElsewhere = {};
@@ -50,17 +55,11 @@ let backgroundMusic = undefined;
 let musicPlaying = false;
 let normalPlayerInputSuppressed = false;
 // levels may define following to be functions:
-let levelSpecificInitialization = undefined;
-let levelSpecificNewRoomBehavior = undefined;
-let levelSpecificAnimateLoopBehavior = undefined;
-let levelSpecificPostTransformBehavior = undefined;
-let levelSpecificKeydownBehavior = undefined;
-let levelSpecificClickBehavior = undefined;
 let messageTimer = 0;
 let wordTimers = []; // used to enforce duration of things' captions
 let wordDivs = []; // will have references to the divs used for Things' captions
 const NUMBER_OF_CAPTION_DIVS = 10;
-const MESSAGE_DURATION_MS = 2500;
+const DEFAULT_MESSAGE_DURATION = 2500;
 const WORD_DURATION_MS = 1500;
 const FADEOUT_DURATION_MS = 1200;
 let fadeoutTimer = 0;
@@ -68,8 +67,14 @@ let fadeinTimer = 0;
 let fadeoutWord = '';
 let fadeinWord = '';
 let showingIntroPage = true;
+let levelComplete = false;
 let pageBeingShownInBinder = '';
 let pageToShow = '';
+let allWords = []; // individual level-data files will fill this array.
+let solidObjects = [];
+let immovableObjects = [];
+let bridgelikeObjects = [];
+let ellipticalObjects = [];
 
 let cheating = false; // turn on to allow teleporting etc for debugging purposes
 
@@ -83,6 +88,41 @@ let PassageTypes = { BASIC_VERTICAL : 'basic-vertical',
     INVISIBLE_HORIZONTAL : 'invisible-horizontal' };
 
 let Directions = { UP : 0, RIGHT : 1, DOWN : 2, LEFT : 3 };
+
+/* Definitions of classes: */
+class Level {
+    constructor(name) {
+        this.name = name;
+        this.initialRoom = '';
+        this.initialX = 0; // expressed as % of way across x axis, i.e. value range is 0-100
+        this.initialY = 0;
+        this.initialSpells = [];
+        this.initialInventory = {};
+        this.backgroundMusicFile = undefined;
+        this.allWords=  [];
+        this.solidObjects = [];
+        this.immovableObjects = [];
+        this.bridgelikeObjects = [];
+        this.ellipticalObjects = [];
+        this.otherGameData = {};
+        this.initialThings = [];
+        this.initialRunes = [];
+        this.rooms = {};
+        this.defineThingSubclasses = function() {};
+        this.getThing = function(word,room,x,y) {
+            return undefined; // undefined indicates no special Thing subclass for this word
+        };
+        this.initializationFunction = function() {};
+        this.animateLoopFunction = function() {};
+        this.keydownFunction = function(e) {
+            return false; // false indicates keydown event not handled here
+        };
+        this.clickHandlerFunction = function(xWithinCanvas,yWithinCanvas) {
+            return false; // false indicates click event not handled here
+        };
+        this.postTransformBehavior = function(fromWord,toWord) {};
+    }
+}
 
 class Player {
     constructor(props) {
@@ -236,7 +276,7 @@ class Thing extends GameElement {
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
         this.image.src = levelPath + '/things/' + word.replace(' ','_')  + '.png';
         this.timeOfCreation = Date.now();
-        this.movable = (immovableObjects.indexOf(word) < 0);
+        this.movable = (immovableObjects.indexOf(word) < 0 && solidObjects.indexOf(word) < 0);
         this.solid = (solidObjects.indexOf(word) >= 0);
         this.bridgelike = (bridgelikeObjects.indexOf(word) >= 0);
         this.collisionProfile = (ellipticalObjects.indexOf(word) >= 0) ? CollisionProfile.ELLIPTICAL : CollisionProfile.RECTANGULAR;
@@ -441,6 +481,21 @@ class Passage extends GameElement {
     }
 }
 
+/* end class definitions; begin global functions */
+
+function getThing(word, room, x, y, treatXandYasPercentages = true, otherArgs = undefined) {
+    if (treatXandYasPercentages) {
+        x = x * xScaleFactor;
+        y = y * yScaleFactor;
+    }
+    // first see if there is a subclass of Thing defined for this word in level-specific code:
+    let thing = level.getThing(word,room,x,y);
+    if (!(typeof thing === 'object')) {
+        thing = new Thing(word,room,x,y); // otherwise get a plain-vanilla Thing
+    }
+    return thing;
+}
+
 function displayWord(word, x, y) {
     // wordDivs is array of "caption" divs available which can display at the same time.
     // see if already showing this word in one of the divs, if so just reset its duration timer.
@@ -491,23 +546,28 @@ function stopDisplayingMsg() {
     document.getElementById('player-message').style = 'display:none;';
 }
 
-function displayMessage(msg, x = undefined, y = undefined) {
+function displayMessage(msg, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
+
     if (typeof x === 'undefined') {
         x = CANVAS_WIDTH / 2;
         y = CANVAS_HEIGHT / 4;
     }
-    else {
-        y = y - 32;
+    else if (treatCoordinatesAsPercentages === true) {
+        x = x * xScaleFactor;
+        y = y * yScaleFactor;
     }
+
     x += canvasOffsetX - 90;
     y += canvasOffsetY;
     messageTimer = Date.now();
     let msgDiv = document.getElementById('player-message');
     msgDiv.innerText = msg;
-    msgDiv.style = 'display:block;';
+    msgDiv.style.display = 'block';
     msgDiv.style.top = y.toString() + 'px';
     msgDiv.style.left = x.toString() + 'px';
-    window.setTimeout(stopDisplayingMsg, MESSAGE_DURATION_MS);
+    window.setTimeout(stopDisplayingMsg, DEFAULT_MESSAGE_DURATION);
+    console.log(msg);
+
 }
 
 function spellAvailable(spell) {
@@ -527,7 +587,7 @@ function parseCommand(command) {
     let index = command.indexOf('>');
     if (index < 0)
         return { error: 'Spells must have form "fromWord > toWord".'};
-    fromWord = command.substring(0,index-1).trim();
+    fromWord = command.substring(0,index).trim();
     toWord = command.substring(index+1).trim();
     if (fromWord.length < 1 || toWord.length < 1)
         return { error: 'Spells must have form "fromWord > toWord".'};
@@ -614,6 +674,12 @@ function castSpell() {
 
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
         displayMessage("Sorry, you need a rune: " + runeNeeded);
+        if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
+            setTimeout(
+                function() { displayMessage('To get a "b" rune, cast "bear > ear".'); },
+                DEFAULT_MESSAGE_DURATION + 10
+            );
+        }
         return;
     }
 
@@ -662,7 +728,7 @@ function castSpell() {
     if (inInventory)
         drawInventory();
 
-    levelSpecificPostTransformBehavior(fromWord,toWord); // should move this into extraTransformIntoBehavior
+    level.postTransformBehavior(fromWord,toWord); // might move this into extraTransformIntoBehavior
 
     newObject.extraTransformIntoBehavior();
 
@@ -775,9 +841,11 @@ function animate() {
         ctx.drawImage(binderImages[pageBeingShownInBinder], 0, 0);
     }
 
-    levelSpecificAnimateLoopBehavior();
+    // do any level-specific animation (might move this into room data)
+    level.animateLoopFunction();
 
-    requestAnimationFrame(animate);
+    if (!showingIntroPage)
+        requestAnimationFrame(animate);
 }
 
 function teleport() {
@@ -785,6 +853,21 @@ function teleport() {
         let newRoomString = window.prompt('enter room name');
         if ((typeof newRoomString == 'string') && (newRoomString != ''))
             newRoom(newRoomString, 50, 50);
+    }
+}
+
+function completeLevel() {
+    levelComplete = true;
+    displayMessage('Congratulations, you completed the level! Press R to return to intro screen.');
+}
+
+function confirmQuit() {
+    let confirmed = levelComplete || (window.confirm('OK to leave this level and return to intro screen?'));
+    if (confirmed === true) {
+        let introDiv = document.getElementById('intro_screen_div');
+        introDiv.style.display = 'block';
+        document.getElementById('canvas1').style.display = 'none';
+        showingIntroPage = true;
     }
 }
 
@@ -810,7 +893,7 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
             thingsHere[word] = thing;
             delete thingsElsewhere[word];
             // put up captions for all things in new word.
-            if (currentRoom !== 'darkroom')
+            if (thing.okayToDisplayWord())
                 displayWord(thing.word, thing.x, thing.y);
         }
     }
@@ -862,8 +945,8 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
         }
     }
 
-    if (typeof levelSpecificNewRoomBehavior === 'function')
-        levelSpecificNewRoomBehavior(newRoomName);
+    if (typeof roomData.specificNewRoomBehavior === 'function')
+        roomData.specificNewRoomBehavior();
 }
 
 function loadLevel(lName = 'intro level') {
@@ -871,37 +954,51 @@ function loadLevel(lName = 'intro level') {
     canvas.style.display = 'block';
     levelName = lName;
     levelPath = 'levels/' + lName.replace(' ','_');
+    levelComplete = false;
 
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'none';
     showingIntroPage = false;
 
-    let levelData = getLevelData(lName);
+    level = getLevelFunctions[lName]();
 
-    currentRoom = undefined;
-    inventory = levelData.initialInventory; // note copying by reference OK here b/c getLevelData initializes with literals
+    level.defineThingSubclasses();
+
+    currentRoom = undefined; // "undefined" will tell newRoom function that new level is starting.
+    inventory = level.initialInventory;
     thingsHere = {}; // in newRoom(), things will be moved from thingsElsewhere to thingsHere.
-    thingsElsewhere = levelData.initialThings;
-    spellsAvailable = levelData.initialSpells;
-    runes = levelData.initialRunes;
-    rooms = levelData.rooms;
-    otherData = levelData.otherGameData;
-    levelSpecificNewRoomBehavior = levelData.levelSpecificNewRoomBehavior;
-    levelSpecificAnimateLoopBehavior = levelData.levelSpecificAnimateLoopBehavior;
-    levelSpecificPostTransformBehavior = levelData.levelSpecificPostTransformBehavior;
-    levelSpecificInitialization = levelData.levelSpecificInitialization;
-    levelSpecificKeydownBehavior = levelData.levelSpecificKeydownBehavior;
-    levelSpecificClickBehavior = levelData.levelSpecificClickBehavior;
+    spellsAvailable = level.initialSpells;
+    runes = level.initialRunes;
+    rooms = level.rooms;
+    allWords = level.allWords;
+    solidObjects = level.solidObjects;
+    immovableObjects = level.immovableObjects;
+    bridgelikeObjects = level.bridgelikeObjects;
+    ellipticalObjects = level.ellipticalObjects;
+    otherData = level.otherGameData;
 
-    if (typeof levelSpecificInitialization === 'function') {
-        levelSpecificInitialization();
+    thingsElsewhere = {};
+    let objectData = level.initialThings;
+    for (let i=0; i < objectData.length; i++) {
+        let key = objectData[i][0];
+        if (key in thingsElsewhere) {
+            // might have to append digit to word to get unique key for it:
+            for (let j=1; j<10; j++) {
+                key = objectData[i][0] + j.toString();
+                if (!(key in thingsElsewhere))
+                    break;
+            }
+        }
+        thingsElsewhere[key] = getThing(objectData[i][0], objectData[i][1], objectData[i][2], objectData[i][3]);
     }
 
-    if (typeof levelData.backgroundMusicFile !== 'undefined') {
-        backgroundMusic = new Audio(levelPath + '/audio/' + levelData.backgroundMusicFile);
+    level.initializationFunction();
+
+    if (typeof level.backgroundMusicFile !== 'undefined') {
+        backgroundMusic = new Audio(levelPath + '/audio/' + level.backgroundMusicFile);
     }
 
-    newRoom(levelData.initialRoom, levelData.initialX, levelData.initialY);
+    newRoom(level.initialRoom, level.initialX, level.initialY);
 
     animate();
 }
@@ -961,7 +1058,12 @@ function handleKeydown(e) {
             case 'KeyC' : castSpell(); break;
             case 'KeyI' : drawInventory(); break;
             case 'KeyT' : teleport(); break;
-            case 'KeyQ' : cheating = !cheating; // use to toggle cheating on and off.
+            case 'KeyX' : cheating = !cheating; break; // use to toggle cheating on and off.
+            case 'KeyQ' : confirmQuit(); break;
+            case 'KeyR' : if (levelComplete === true) {
+                confirmQuit();
+            }
+
         }
     }
 }
@@ -1023,7 +1125,7 @@ function handleClick(e) {
     let yWithinCanvas = e.y - canvasOffsetY;
 
     // first see if level-specific code says it will handle the click:
-    if (levelSpecificClickBehavior(xWithinCanvas,yWithinCanvas) === true) {
+    if (level.clickHandlerFunction(xWithinCanvas,yWithinCanvas) === true) {
         return;
     }
 

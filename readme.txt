@@ -3,9 +3,9 @@ Doug McLellan, created 2/4/2022
 https://github.com/yomboy222/spellbinder.git
 
 TODO:
-remaining pictures:  MAP!
+give hint to open cabinet ... and in general to click things to open
+make simple puzzle with hint about clicking in inventory to drop or "use"
 draw piece of paper in drawer when first opening
-better collision detection for portcullis
 re-record host message to say goal is to get treasure chest
 make stream flowing (using 2nd image)
 
