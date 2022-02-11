@@ -5,6 +5,9 @@
     <title>Spell-Binder</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Griffy&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="word-bubble-0" class="word-bubble"></div>
@@ -20,7 +23,12 @@
     <div id="music-toggle-div">
         <button id="musicToggleButton" name="music toggle" value="music on/off" onclick="toggleMusic()">music on/off</button>
     </div>
-    <div id="player-message"></div>
+    <div id="player-message-0" class="player-message"></div>
+    <div id="player-message-1" class="player-message"></div>
+    <div id="player-message-2" class="player-message"></div>
+
+    <div id="binder-page-left" class="binder-page"></div>
+    <div id="binder-page-right" class="binder-page"></div>
     <div id="intro_screen_div">
         <h1>Spell-Binder Game Prototype</h1>
 
@@ -43,13 +51,15 @@
         <br/><br/>
 
         <button id="loadTutorialButton" name="yo2" value="load tutorial level" onclick="loadLevel('tutorial level')">load tutorial level</button>
-        <button id="loadLevelButton" name="yo" value="load level 1" onclick="loadLevel()"> load level 1</button>
+        <button id="loadLevelButton" name="yo" value="level 1" onclick="loadLevel()"> level 1</button>
+        <button id="loadLevelButton" name="yo" value="tear-dicer" onclick="loadLevel('tear/dicer puzzle')">tear/dicer puzzle</button>
 
     </div>
     <canvas id="canvas1" width="700px" height="600px"></canvas>
     <script type="text/javascript" src="js/game_functionality.js"></script>
-    <!-- script type="text/javascript" src="levels/intro_level/intro_level.js"></script -->
+    <script type="text/javascript" src="levels/intro_level/intro_level.js"></script>
     <script type="text/javascript" src="levels/tutorial_level/tutorial_level.js"></script>
+    <script type="text/javascript" src="levels/puzzle_tear_dicer/puzzle_tear_dicer.js"></script>
 
 </body>
 </html>

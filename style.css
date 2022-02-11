@@ -39,7 +39,7 @@
     z-index: 1;
 }
 
-#player-message{
+.player-message{
     display:none;
     position: absolute;
     height:auto;
@@ -49,4 +49,40 @@
     border: 3px solid red;
     background-color: rgba(30, 255, 255, 0.9);
     z-index: 1;
+}
+
+/* classes for binder pages: */
+
+
+.binder-page{
+    height:400px;
+    width:280px;
+    padding:10px;
+    position: absolute;
+    overflow:hidden;
+    background-color: white;
+    display:none;
+    z-index: 1;
+}
+
+.spell-title{
+    font-family: 'Griffy', cursive;
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.spell-description{
+    font-family: 'Griffy', cursive;
+    font-size: 20px;
+    margin-left: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.spell-example{
+    font-family:monospace;
+    margin-left:65px;
+    margin-top: 18px;
+    margin-bottom: 18px;
 }

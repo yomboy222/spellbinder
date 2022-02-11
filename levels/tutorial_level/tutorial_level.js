@@ -1,35 +1,38 @@
 /* tutorial_level.js */
 
+levelList.push( { name:'tutorial level', difficulty:1 });
+
 getLevelFunctions['tutorial level'] = function() {
 
     let level = new Level('tutorial level');
-    level.defineThingSubclasses = function() {
+    levelPath = 'levels/tutorial_level';
 
-        console.log('got here');
+    level.defineThingSubclasses = function() {
 
         window.Bear = class Bear extends Thing{
             extraTransformFromBehavior() {
-                displayMessage('Now you can cast "cur > curb".');
+                displayMessage('Now you can cast "cur > curb".', 3600);
             }
         }
 
         window.Cur = class Cur extends Thing{
             handleCollision() {
-                // displayMessage('Yikes!');
+                level.sounds['dog bark'].play();
                 super.handleCollision();
             }
         }
 
         window.Gate = class Gate extends Thing {
-            constructor(word, room, x, y) {
-                super(word, room, x, y);
-                this.locked = true;
-            }
             unlock() {
-                if (this.locked === true) {
+                if (this.solid === true) {
                     // play unlocking sound, change image
+                    level.sounds['unlock'].play();
+                    this.destX = this.x + 80;
+                    this.destY = this.y + 90;
+                    this.beginMovementTime = Date.now();
+                    this.movementDurationMS = 1200;
                     this.solid = false;
-                    displayMessage('The gate is now unlocked. In general, if an object can be used, you use it by clicking on it when it is in your inventory.');
+                    displayMessage('The gate is now unlocked. In general, if an object can be used, you use it by clicking on it when it is in your inventory.', 3600);
                 }
             }
         }
@@ -38,11 +41,11 @@ getLevelFunctions['tutorial level'] = function() {
             tryToPickUp() {
                 let returnValue = super.tryToPickUp();
                 if (returnValue === 1) { // indicates it was picked up.
-                    displayMessage('The key is now in your inventory. You can click it to drop it.');
+                    displayMessage('The key is now in your inventory. You can click it to drop it.',3000);
                     setTimeout(function () {
-                            displayMessage('To unlock the gate, go over to it and click on the key in your inventory.');
+                            displayMessage('To unlock the gate, go over to it and click on the key in your inventory.',3600);
                         },
-                        DEFAULT_MESSAGE_DURATION + 500);
+                        2500);
                 };
                 return returnValue;
             }
@@ -62,17 +65,6 @@ getLevelFunctions['tutorial level'] = function() {
             }
         }
 
-        window.Shovel = class Shovel extends Thing{
-            handleClick() {
-                if ('shovel' in inventory && currentRoom === 'pirate room') { // or whatever to check if digging in right place? }
-                    displayMessage('yo');
-                }
-                else {
-                    return super.handleClick();
-                }
-            }
-        }
-
         window.Stand = class Stand extends Thing {
             okayToDisplayWord() {
                 return false; // this just exists to hold Binder
@@ -80,7 +72,7 @@ getLevelFunctions['tutorial level'] = function() {
             handleCollision() {
                 if (otherData['grabbed binder'] === false) {
                     otherData['grabbed binder'] = true;
-                    displayMessage('You got the Spell Binder! Type B to look inside.');
+                    displayMessage('You got the Spell Binder! Type B to look inside.', 2500);
                     this.solid = false;
                     sounds['pickup'].play();
                     this.image.src = levelPath + '/things/stand-no-binder.png';
@@ -124,18 +116,18 @@ getLevelFunctions['tutorial level'] = function() {
     }
 
     level.showInitialTutorialMsg = function() {
-        displayMessage("Use arrow keys (or A-S-D-W) to move over to the Binder.", 45, 10, true);
+        displayMessage("Use arrow keys (or A-S-D-W) to move over to the Binder.", DEFAULT_MESSAGE_DURATION, 45, 10, true);
     }
 
     level.showRoom2Message = function () {
         if ('bear' in thingsHere) {
-            displayMessage('Try to get past the cur by typing C and casting "cur > curb".');
+            displayMessage('Try to get past the cur by typing C and casting "cur > curb".', 3600);
         }
     }
 
     level.showRoom3Message = function () {
         if ('key' in thingsHere) {
-            displayMessage('Go to the key, and pick it up, either by clicking it or by pressing space bar.');
+            displayMessage('Go to the key, and pick it up, either by clicking it or by pressing space bar.', 3600);
         }
     }
 
@@ -161,6 +153,10 @@ getLevelFunctions['tutorial level'] = function() {
         ['treasure','room3',90,47],
     ];
     level.initialRunes = [];
+    level.sounds = {
+        'dog bark': new Audio(levelPath + '/audio/327666__juan-merie-venter__dog-bark.wav'),
+        'unlock': new Audio(levelPath + '/audio/410983__mihirfreesound__unlocking-door.wav'),
+    };
     level.rooms = {
         'room1': {
             boundaries: [ ['n',10, 36, 30, 36], ['n',10,64,30,64], ['n',10,36,10,64], ['d',30,36,42,18], ['n',42,18,54,18],

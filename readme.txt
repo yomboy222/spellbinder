@@ -20,3 +20,7 @@ Creative Commons — Attribution 3.0 Unported — CC BY 3.0
 Free Download / Stream: http://bit.ly/sneaky-snitch
 Music promoted by Audio Library https://youtu.be/7-rXQALDv-4
 ––––––––––––––––––––––––––––––
+
+dog bark -- https://freesound.org/s/327666/
+unlock door -- https://freesound.org/s/410983/
+

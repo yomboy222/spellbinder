@@ -3,446 +3,443 @@
    then the more general level data (rooms, passages, boundaries etc.)
  */
 
-/* SECTION 1 -- WORD-RELATED DATA AND CODE */
+levelList.push( {name:'intro level', difficulty:5});
 
-class Asteroid extends Thing {
-    displayCantPickUpMessage() {
-        displayMessage('Too heavy to move!');
-    }
-}
+getLevelFunctions['intro level'] = function() {
 
-class Boar extends Thing{
-    extraTransformIntoBehavior() {
-        window.setTimeout(this.leaveRoom.bind(this),1200);
-    }
+    let level = new Level('intro level');
+    levelPath = 'levels/intro_level';
 
-    leaveRoom() {
-        this.movementDurationMS = 1000;
-        this.beginMovementTime = Date.now();
-        this.destX = 50 * xScaleFactor;
-        this.destY = 33 * yScaleFactor;
-        this.deleteAfterMovement = true;
-    }
-}
+    level.defineThingSubclasses = function () {
 
-class Board extends Thing {
-    okayToDisplayWord() {
-        if (currentRoom === 'darkroom' && 'board' in thingsHere && !('lamp' in inventory || 'lamp' in thingsHere)) {
-            return false;
-        }
-        else
-            return true;
-    }
-    extraTransformFromBehavior() {
-        if (currentRoom === 'darkroom') {
-            // door is unboarded so make all passages in room activated:
-            for (let i=0; i<passages.length; i++) {
-                passages[i].activated = true;
+        window.Asteroid = class Asteroid extends Thing {
+            displayCantPickUpMessage() {
+                displayMessage('Too heavy to move!');
             }
         }
-    }
-}
 
-class Bullseyes extends Thing {
-    draw() {
-        if (typeof otherData['darts thrown time'] == 'undefined' || Date.now() < otherData['darts thrown time'] + 1000) {
-            // draw normally
-            return super.draw();
-        }
-        else if (Date.now() >= otherData['darts thrown time'] + 5000) {
-            // fully retracted, so delete:
-            delete thingsHere['bulls-eyes'];
-            return;
-        }
-        else {
-            // otherwise draw the "retracting" behavior:
-            let deltaY = 200 * ((Date.now() - otherData['darts thrown time'] - 1000) / 4000);
-            ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight + deltaY);
-            for (let i=0; i<3; i++) {
-                ctx.drawImage(otherData['dart image'],otherData['bulls-eye coordinates'][i][0],otherData['bulls-eye coordinates'][i][1] + deltaY);
-            }
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            let pct1 = 30; let pct2 = 92;
-            ctx.moveTo((46 + (pct1/2)) * xScaleFactor, pct1 * yScaleFactor + 5);
-            ctx.lineTo((46 + (pct2/2)) * xScaleFactor, pct2 * yScaleFactor + 5);
-            ctx.lineTo((46 + (pct2/2)) * xScaleFactor, PLAY_AREA_HEIGHT);
-            ctx.lineTo((46 + (pct1/2)) * xScaleFactor, PLAY_AREA_HEIGHT);
-            ctx.lineTo( (46 + (pct1/2)) * xScaleFactor, pct1 * yScaleFactor + 5);
-            ctx.closePath();
-            ctx.fill();
-            drawInventory(); // because this image might overwrite the inventory area.
-        }
-    }
-}
-
-class Cabinet extends Thing {
-    handleClick() {
-        if (spellsAvailable.indexOf('add-edge') < 0)
-            addSpellToBinder('add-edge');
-    }
-}
-
-class Chive extends Thing {
-    update() {
-        if (Date.now() < this.timeOfCreation + 1900) {
-            const relTime = Date.now() - this.timeOfCreation;
-            this.x = this.initialX + (18 * Math.sin(relTime / 120));
-            this.y = this.initialY + (relTime / 14);
-        }
-    }
-    extraTransformIntoBehavior() {
-        if (otherData['hive in place'] === true) {
-            // remove the invisible boundary caused by the hive:
-            for (let i = 0;i < boundaries.length; i++) {
-                if (boundaries[i][0] === 'i')
-                    boundaries.splice(i);
+        window.Axle = class Axle extends Thing{
+            displayCantPickUpMessage() {
+                if ('wheel' in thingsHere && thingsHere['wheel'].movable === false) { // this obtains only if wheel is affixed to axle
+                    // don't display anything.
+                }
+                else {
+                    displayMessage("To turn the axle, you'd need to affix something to it first.", DEFAULT_MESSAGE_DURATION + 1000);
+                }
             }
         }
-        otherData['hive in place'] = false;
-    }
-}
 
-class Darts extends Thing {
-    handleClick() {
-        if (('darts' in inventory) && (currentRoom === 'game room') && ('bulls-eyes' in thingsHere)) {
-            otherData['darts origin'] = [player.x, player.y];
-            otherData['darts thrown time'] = Date.now();
-            otherData['darts deltas'] = [];
-            for (let i=0; i < 3; i++) {
-                otherData['darts deltas'].push( [otherData['bulls-eye coordinates'][i][0] - player.x, otherData['bulls-eye coordinates'][i][1] - player.y] );
+        window.Boar = class Boar extends Thing{
+            extraTransformIntoBehavior() {
+                window.setTimeout(this.leaveRoom.bind(this),1200);
             }
-            sounds['whoosh'].play();
-            delete inventory['darts'];
-        }
-        else {
-            return super.handleClick();
-        }
-    }
-}
 
-class Drawer extends Thing {
-    handleClick() {
-        if (Date.now() < this.beginMovementTime + this.movementDurationMS) {
-            return; // don't interrupt movement in progress.
-        }
-        sounds['whoosh'].play();
-        this.movementDurationMS = 1000;
-        this.beginMovementTime = Date.now();
-        this.initialX = this.x;
-        this.initialY = this.y;
-        this.destY = this.y;
-        if (otherData['drawer open'] === true) {
-            this.destX = this.x + 40;
-            otherData['drawer open'] = false;
-        }
-        else {
-            this.destX = this.x - 40;
-            otherData['drawer open'] = true;
-            if (spellsAvailable.indexOf('reversal') < 0) {
-                addSpellToBinder('reversal');
-            }
-        }
-    }
-}
-
-class Dresser extends Thing {
-    handleClick() { // don't do anything; don't interfere with clicking drawer which is superimposed on this.
-    }
-}
-
-class Ghost extends Thing {
-    update() {
-        this.y = 12 * Math.sin(((Date.now() - this.timeOfCreation) / 300) ) + this.initialY;
-        super.update();
-    }
-}
-
-class Host extends Thing {
-    constructor(word, room, x, y) {
-        super(word, room, x, y);
-        let sound = new Audio(levelPath + '/audio/host-speech.m4a');
-        sound.play();
-    }
-    draw() {
-        let t = Date.now() - this.timeOfCreation;
-        if (t < 5000) {
-            return super.draw();
-        }
-        if (t >= 5000 + 3000) {
-            delete thingsHere['host'];
-            return;
-        }
-
-        let fractionOfTheWayToEnd = (t - 5000) / 3001;
-        let fractionSquared = fractionOfTheWayToEnd * fractionOfTheWayToEnd;
-        ctx.globalAlpha = 1.0 - fractionSquared;
-        let newX = (fractionOfTheWayToEnd * 100) * (Math.sin(fractionSquared * 25)) + (this.x - this.halfWidth);
-        let newY = (fractionOfTheWayToEnd * 100) * (Math.cos(fractionSquared * 25)) + (this.y - this.halfHeight);
-        ctx.drawImage(this.image, newX, newY, this.width, this.height);
-        ctx.globalAlpha = 1.0;
-
-    }
-}
-
-class Mantra extends Thing {
-    extraTransformIntoBehavior() {
-        const om = new Audio(levelPath + '/audio/om.m4a');
-        om.play();
-    }
-    draw() {
-        let t = Date.now() - this.timeOfCreation;
-        if (t >= 3000) {
-            delete thingsHere['mantra'];
-            return;
-        }
-        let fractionOfTheWayToEnd =  t / 3001;
-        ctx.globalAlpha = 1.0 - fractionOfTheWayToEnd;
-        let newX = 30 * (Math.sin(fractionOfTheWayToEnd * 25)) + (this.x - this.halfWidth);
-        let newY = (this.y - this.halfHeight) - (fractionOfTheWayToEnd * 180);
-        ctx.drawImage(this.image, newX, newY, this.width, this.height);
-        ctx.globalAlpha = 1.0;
-    }
-}
-
-class Mantrap extends Thing {
-    constructor(word,room,x,y) {
-        super(word,room,x,y);
-        this.playAudioWhenTransformed = false;
-    }
-    handleCollision() {
-        displayMessage('yikes!', this.x, this.y);
-    }
-}
-
-/* handling maps like regular thing now ...
-class Maps extends Thing {
-    handleClick() {
-        if (otherData['showing maps'] === true) {
-            otherData['showing maps'] = false;
-            normalPlayerInputSuppressed = false;
-        }
-        else if ('maps' in inventory) {
-            otherData['showing maps'] = true;
-            normalPlayerInputSuppressed = true;
-        }
-        else {
-            return super.handleClick();
-        }
-    }
-}
-*/
-
-class Meteor extends Thing {
-    displayCantPickUpMessage() {
-        displayMessage('Too heavy to move!');
-    }
-    handleCollision() {
-        if ((otherData['steroid drunk'] === true) && (typeof otherData['meteor moved'] === 'undefined' || otherData['meteor moved'] === false)) {
-            otherData['meteor moved'] = true;
-            this.destX = this.x + 94;
-            this.destY = this.y + 84;
-            this.beginMovementTime = Date.now();
-            this.movementDurationMS = 1200;
-        }
-        else {
-            return super.handleCollision();
-        }
-    }
-}
-
-class Portcullis extends Thing {
-    inRangeOfPlayer(extraRadius = 0) {
-        // weirdly shaped so need custom collision detection.
-        let inRectangle =  (player.x > (this.x - this.halfWidth - player.halfWidth - extraRadius) &&
-            player.x < (this.x + this.halfWidth + player.halfWidth + extraRadius) &&
-            player.y > (this.y - this.halfHeight - player.halfHeight - extraRadius) &&
-            player.y < (this.y + this.halfHeight + player.halfHeight + extraRadius) );
-        if (inRectangle === false)
-            return false;
-        let relX = player.x - this.x;
-        let relY = player.y - this.y;
-        let inEmptyPart = (relY > .6 * this.halfHeight) && (relX + this.halfHeight < relY);
-        return (! inEmptyPart);
-    }
-}
-
-class Reward extends Thing {
-    handleClick() {
-        if (currentRoom === 'beyond' && 'reward' in inventory) {
-            let tollMachine = thingsHere['toll machine'];
-            if (tollMachine.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
-                thingsHere['reward'] = this;
-                delete inventory['reward'];
-                this.movable = false; // so player can't pick up again as it moves into toll machine
-                this.beginMovementTime = Date.now();
+            leaveRoom() {
                 this.movementDurationMS = 1000;
-                this.initialX = player.x;
-                this.initialY = player.y;
-                this.destX = tollMachine.x;
-                this.destY = tollMachine.y;
+                this.beginMovementTime = Date.now();
+                this.destX = 50 * xScaleFactor;
+                this.destY = 33 * yScaleFactor;
+                this.deleteAfterMovement = true;
             }
-            else {
+        }
+
+        window.Board = class Board extends Thing {
+            okayToDisplayWord() {
+                if (currentRoom === 'darkroom' && 'board' in thingsHere && !('lamp' in inventory || 'lamp' in thingsHere)) {
+                    return false;
+                }
+                else
+                    return true;
+            }
+            extraTransformFromBehavior() {
+                if (currentRoom === 'darkroom') {
+                    // door is unboarded so make all passages in room activated:
+                    for (let i=0; i<passages.length; i++) {
+                        passages[i].activated = true;
+                    }
+                }
+            }
+        }
+
+        window.Bullseyes = class Bullseyes extends Thing {
+            draw() {
+                if (typeof otherData['darts thrown time'] == 'undefined' || Date.now() < otherData['darts thrown time'] + 1000) {
+                    // draw normally
+                    return super.draw();
+                }
+                else if (Date.now() >= otherData['darts thrown time'] + 5000) {
+                    // fully retracted, so delete:
+                    delete thingsHere['bulls-eyes'];
+                    return;
+                }
+                else {
+                    // otherwise draw the "retracting" behavior:
+                    let deltaY = 200 * ((Date.now() - otherData['darts thrown time'] - 1000) / 4000);
+                    ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight + deltaY);
+                    for (let i=0; i<3; i++) {
+                        ctx.drawImage(otherData['dart image'],otherData['bulls-eye coordinates'][i][0],otherData['bulls-eye coordinates'][i][1] + deltaY);
+                    }
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    let pct1 = 30; let pct2 = 92;
+                    ctx.moveTo((46 + (pct1/2)) * xScaleFactor, pct1 * yScaleFactor + 5);
+                    ctx.lineTo((46 + (pct2/2)) * xScaleFactor, pct2 * yScaleFactor + 5);
+                    ctx.lineTo((46 + (pct2/2)) * xScaleFactor, PLAY_AREA_HEIGHT);
+                    ctx.lineTo((46 + (pct1/2)) * xScaleFactor, PLAY_AREA_HEIGHT);
+                    ctx.lineTo( (46 + (pct1/2)) * xScaleFactor, pct1 * yScaleFactor + 5);
+                    ctx.closePath();
+                    ctx.fill();
+                    drawInventory(); // because this image might overwrite the inventory area.
+                }
+            }
+        }
+
+        window.Cabinet = class Cabinet extends Thing {
+            handleClick() {
+                if (spellsAvailable.indexOf('add-edge') < 0)
+                    addSpellToBinder('add-edge');
+            }
+        }
+
+        window.Chive = class Chive extends Thing {
+            update() {
+                if (Date.now() < this.timeOfCreation + 1900) {
+                    const relTime = Date.now() - this.timeOfCreation;
+                    this.x = this.initialX + (18 * Math.sin(relTime / 120));
+                    this.y = this.initialY + (relTime / 14);
+                }
+            }
+            extraTransformIntoBehavior() {
+                if (otherData['hive in place'] === true) {
+                    // remove the invisible boundary caused by the hive:
+                    for (let i = 0;i < boundaries.length; i++) {
+                        if (boundaries[i][0] === 'i')
+                            boundaries.splice(i);
+                    }
+                }
+                otherData['hive in place'] = false;
+            }
+        }
+
+        window.Darts = class Darts extends Thing {
+            handleClick() {
+                if (('darts' in inventory) && (currentRoom === 'game room') && ('bulls-eyes' in thingsHere)) {
+                    otherData['darts origin'] = [player.x, player.y];
+                    otherData['darts thrown time'] = Date.now();
+                    otherData['darts deltas'] = [];
+                    for (let i=0; i < 3; i++) {
+                        otherData['darts deltas'].push( [otherData['bulls-eye coordinates'][i][0] - player.x, otherData['bulls-eye coordinates'][i][1] - player.y] );
+                    }
+                    sounds['whoosh'].play();
+                    delete inventory['darts'];
+                }
+                else {
+                    return super.handleClick();
+                }
+            }
+        }
+
+        window.Drawer = class Drawer extends Thing {
+            handleClick() {
+                if (Date.now() < this.beginMovementTime + this.movementDurationMS) {
+                    return; // don't interrupt movement in progress.
+                }
+                sounds['whoosh'].play();
+                this.movementDurationMS = 1000;
+                this.beginMovementTime = Date.now();
+                this.initialX = this.x;
+                this.initialY = this.y;
+                this.destY = this.y;
+                if (otherData['drawer open'] === true) {
+                    this.destX = this.x + 40;
+                    otherData['drawer open'] = false;
+                }
+                else {
+                    this.destX = this.x - 40;
+                    otherData['drawer open'] = true;
+                    if (spellsAvailable.indexOf('reversal') < 0) {
+                        addSpellToBinder('reversal');
+                    }
+                }
+            }
+        }
+
+        window.Dresser = class Dresser extends Thing {
+            handleClick() { // don't do anything; don't interfere with clicking drawer which is superimposed on this.
+            }
+        }
+
+        window.Ghost = class Ghost extends Thing {
+            update() {
+                this.y = 12 * Math.sin(((Date.now() - this.timeOfCreation) / 300) ) + this.initialY;
+                super.update();
+            }
+        }
+
+        window.Host = class Host extends Thing {
+            constructor(word, room, x, y) {
+                super(word, room, x, y);
+                let sound = new Audio(levelPath + '/audio/host-speech.m4a');
+                sound.play();
+            }
+            draw() {
+                let t = Date.now() - this.timeOfCreation;
+                if (t < 5000) {
+                    return super.draw();
+                }
+                if (t >= 5000 + 3000) {
+                    delete thingsHere['host'];
+                    return;
+                }
+
+                let fractionOfTheWayToEnd = (t - 5000) / 3001;
+                let fractionSquared = fractionOfTheWayToEnd * fractionOfTheWayToEnd;
+                ctx.globalAlpha = 1.0 - fractionSquared;
+                let newX = (fractionOfTheWayToEnd * 100) * (Math.sin(fractionSquared * 25)) + (this.x - this.halfWidth);
+                let newY = (fractionOfTheWayToEnd * 100) * (Math.cos(fractionSquared * 25)) + (this.y - this.halfHeight);
+                ctx.drawImage(this.image, newX, newY, this.width, this.height);
+                ctx.globalAlpha = 1.0;
+
+            }
+        }
+
+        window.Mantra = class Mantra extends Thing {
+            extraTransformIntoBehavior() {
+                const om = new Audio(levelPath + '/audio/om.m4a');
+                om.play();
+            }
+            draw() {
+                let t = Date.now() - this.timeOfCreation;
+                if (t >= 3000) {
+                    delete thingsHere['mantra'];
+                    return;
+                }
+                let fractionOfTheWayToEnd =  t / 3001;
+                ctx.globalAlpha = 1.0 - fractionOfTheWayToEnd;
+                let newX = 30 * (Math.sin(fractionOfTheWayToEnd * 25)) + (this.x - this.halfWidth);
+                let newY = (this.y - this.halfHeight) - (fractionOfTheWayToEnd * 180);
+                ctx.drawImage(this.image, newX, newY, this.width, this.height);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        window.Mantrap = class Mantrap extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.playAudioWhenTransformed = false;
+            }
+            handleCollision() {
+                displayMessage('yikes!', DEFAULT_MESSAGE_DURATION, this.x, this.y);
+            }
+        }
+
+        window.Meteor = class Meteor extends Thing {
+            displayCantPickUpMessage() {
+                displayMessage('Too heavy to move!');
+            }
+            handleCollision() {
+                if ((otherData['steroid drunk'] === true) && (typeof otherData['meteor moved'] === 'undefined' || otherData['meteor moved'] === false)) {
+                    otherData['meteor moved'] = true;
+                    this.destX = this.x + 94;
+                    this.destY = this.y + 84;
+                    this.beginMovementTime = Date.now();
+                    this.movementDurationMS = 1200;
+                }
+                else {
+                    return super.handleCollision();
+                }
+            }
+        }
+
+        window.Portcullis = class Portcullis extends Thing {
+            inRangeOfPlayer(extraRadius = 0) {
+                // weirdly shaped so need custom collision detection.
+                let inRectangle =  (player.x > (this.x - this.halfWidth - player.halfWidth - extraRadius) &&
+                    player.x < (this.x + this.halfWidth + player.halfWidth + extraRadius) &&
+                    player.y > (this.y - this.halfHeight - player.halfHeight - extraRadius) &&
+                    player.y < (this.y + this.halfHeight + player.halfHeight + extraRadius) );
+                if (inRectangle === false)
+                    return false;
+                let relX = player.x - this.x;
+                let relY = player.y - this.y;
+                let inEmptyPart = (relY > .6 * this.halfHeight) && (relX + this.halfHeight < relY);
+                return (! inEmptyPart);
+            }
+        }
+
+        window.Reward = class Reward extends Thing {
+            handleClick() {
+                if (currentRoom === 'beyond' && 'reward' in inventory) {
+                    let tollMachine = thingsHere['toll machine'];
+                    if (tollMachine.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
+                        thingsHere['reward'] = this;
+                        delete inventory['reward'];
+                        this.movable = false; // so player can't pick up again as it moves into toll machine
+                        this.beginMovementTime = Date.now();
+                        this.movementDurationMS = 1000;
+                        this.initialX = player.x;
+                        this.initialY = player.y;
+                        this.destX = tollMachine.x;
+                        this.destY = tollMachine.y;
+                    }
+                    else {
+                        return super.handleClick();
+                    }
+                }
+                else {
+                    return super.handleClick();
+                }
+            }
+            update() {
+                if (this.beginMovementTime > 0 && Date.now() > this.beginMovementTime + this.movementDurationMS) {
+                    let sound = new Audio(levelPath + '/audio/kaching.wav');
+                    sound.play();
+                    otherData['toll paid time'] = Date.now();
+                    let portcullis = thingsHere['portcullis'];
+                    portcullis.beginMovementTime = Date.now();
+                    portcullis.movementDurationMS = 4000;
+                    portcullis.destX = portcullis.x;
+                    portcullis.destY = portcullis.y - 300;
+                    portcullis.deleteAfterMovement = true;
+                    this.deleteFromThingsHere();
+                }
+                else {
+                    return super.update();
+                }
+            }
+        }
+
+        window.Spa = class Spa extends Thing {
+            constructor(word, room, x, y) {
+                super(word, room, x, y);
+                this.images = [this.image, new Image(196, 172)];
+                this.images[1].src = levelPath + '/things/spa-2.png';
+            }
+            draw() {
+                let t = Date.now() - this.timeOfCreation;
+                let frame = ( Math.round(t / 100) % 2);
+                ctx.drawImage(this.images[frame], this.x - this.halfWidth, this.y - this.halfHeight, this.images[frame].width, this.images[frame].height);
+            }
+        }
+
+        window.Stand = class Stand extends Thing {
+            okayToDisplayWord() {
+                return false; // this just exists to hold Binder
+            }
+            handleCollision() {
+                if (otherData['grabbed binder'] === false) {
+                    otherData['grabbed binder'] = true;
+                    displayMessage('You got the Spell Binder! Type B to look inside.');
+                    this.solid = false;
+                    sounds['pickup'].play();
+                    this.image.src = levelPath + '/things/stand-no-binder.png';
+                }
+                else {
+                    return super.handleClick();
+                }
+            }
+        }
+
+        window.Steroid = class Steroid extends Thing {
+            handleClick() {
+                // TODO: play "glug glug" sound
+                displayMessage('I feel so strong now!');
+                delete thingsHere['steroid'];
+                delete inventory['steroid'];
+                otherData['steroid drunk'] = true;
+            }
+            extraTransformIntoBehavior() {
+                if (currentRoom === 'asteroid room' && 'steroid' in thingsHere) {
+                    this.x -= 30; // move closer so player can reach it.
+                }
+            }
+        }
+
+        window.Treasure = class Treasure extends Thing {
+            tryToPickUp() {
+                completeLevel();
+                return super.tryToPickUp();
+            }
+
+            handleClick() {
+                completeLevel();
+                return super.handleClick();
+            }
+            handleCollision() {
+                completeLevel();
+                return super.handleCollision();
+            }
+        }
+
+        window.Wheel = class Wheel extends Thing {
+            handleClick() {
+                if (!('axle' in thingsHere)) { // the special case to handle here is dropping wheel to affix to axle. if no axle, no special behavior:
+                    return super.handleClick();
+                }
+                let axle = thingsHere['axle'];
+                if (this.movable === false) { // this will be the case iff it's already been affixed to the axle
+                    if (typeof otherData['wheel turned time'] === 'undefined' || otherData['wheel turned time'] === 0) {
+                        // TODO: play wheel sound
+                        // TODO: maybe make it possible to turn the portcullis back down??
+                        otherData['wheel turned time'] = Date.now();
+                        let portcullis = thingsHere['portcullis1'];
+                        portcullis.beginMovementTime = Date.now();
+                        portcullis.movementDurationMS = 4000;
+                        portcullis.destX = portcullis.x;
+                        portcullis.destY = portcullis.y - 300;
+                        portcullis.deleteAfterMovement = true;
+                    }
+                    return;
+                }
+                else if (('wheel' in inventory) && axle.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
+                    this.initialX = player.x;
+                    this.initialY = player.y;
+                    this.beginMovementTime = Date.now();
+                    this.movementDurationMS = 800;
+                    this.destX = axle.x - 15;
+                    this.destY = axle.y;
+                    this.movable = false; // can't pick up anymore once affixed to axle.
+                    displayMessage('You affix the wheel to the axle.');
+                }
                 return super.handleClick();
             }
         }
-        else {
-            return super.handleClick();
+
+    level.getThing = function (word, room, x, y) {
+        switch (word) {
+            case 'asteroid' : return new Asteroid(word, room, x, y);
+            case 'axle' : return new Axle(word, room, x, y);
+            case 'boar' : return new Boar(word,room,x,y);
+            case 'board' : return new Board(word,room,x,y,);
+            case 'bulls-eyes' : return new Bullseyes(word,room,x,y);
+            case 'cabinet' : return new Cabinet(word, room, x, y);
+            case 'chive' : return new Chive(word,room,x,y);
+            case 'darts' : return new Darts(word,room,x,y);
+            case 'drawer' : return new Drawer(word,room,x,y);
+            case 'dresser': return new Dresser(word,room,x,y);
+            case 'ghost' : return new Ghost (word, room, x, y);
+            case 'host' : return new Host (word, room, x, y);
+            case 'mantra' : return new Mantra (word, room, x, y);
+            case 'mantrap' : return new Mantrap (word, room, x, y);
+            case 'meteor' : return new Meteor(word, room, x, y);
+            case 'portcullis' : return new Portcullis(word,room,x,y);
+            case 'reward': return new Reward(word,room,x,y);
+            case 'steroid' : return new Steroid(word, room, x, y);
+            case 'spa' : return new Spa (word, room, x, y);
+            case 'stand' : return new Stand(word,room,x,y);
+            case 'treasure' : return new Treasure(word,room,x,y);
+            case 'wheel' : return new Wheel (word,room,x,y);
+            default : return undefined; // the generic getThing function will then create a plain-vanilla Thing object.
         }
     }
-    update() {
-        if (this.beginMovementTime > 0 && Date.now() > this.beginMovementTime + this.movementDurationMS) {
-            let sound = new Audio(levelPath + '/audio/kaching.wav');
-            sound.play();
-            otherData['toll paid time'] = Date.now();
-            let portcullis = thingsHere['portcullis'];
-            portcullis.beginMovementTime = Date.now();
-            portcullis.movementDurationMS = 4000;
-            portcullis.destX = portcullis.x;
-            portcullis.destY = portcullis.y - 300;
-            portcullis.deleteAfterMovement = true;
-            this.deleteFromThingsHere();
-        }
-        else {
-            return super.update();
-        }
-    }
-}
 
-class Spa extends Thing {
-    constructor(word, room, x, y) {
-        super(word, room, x, y);
-        this.images = [this.image, new Image(196, 172)];
-        this.images[1].src = levelPath + '/things/spa-2.png';
-    }
-    draw() {
-        let t = Date.now() - this.timeOfCreation;
-        let frame = ( Math.round(t / 100) % 2);
-        ctx.drawImage(this.images[frame], this.x - this.halfWidth, this.y - this.halfHeight, this.images[frame].width, this.images[frame].height);
-    }
-}
-
-class Stand extends Thing {
-    okayToDisplayWord() {
-        return false; // this just exists to hold Binder
-    }
-    handleCollision() {
-        if (otherData['grabbed binder'] === false) {
-            otherData['grabbed binder'] = true;
-            displayMessage('You got the Spell Binder! Type B to look inside.');
-            this.solid = false;
-            sounds['pickup'].play();
-            this.image.src = levelPath + '/things/stand-no-binder.png';
-        }
-        else {
-            return super.handleClick();
-        }
-    }
-}
-
-class Steroid extends Thing {
-    handleClick() {
-        // TODO: play "glug glug" sound
-        displayMessage('I feel so strong now!');
-        delete thingsHere['steroid'];
-        delete inventory['steroid'];
-        otherData['steroid drunk'] = true;
-    }
-    extraTransformIntoBehavior() {
-        if (currentRoom === 'asteroid room' && 'steroid' in thingsHere) {
-            this.x -= 30; // move closer so player can reach it.
-        }
-    }
-}
-
-class Treasure extends Thing {
-    tryToPickUp() {
-        completeLevel();
-        return super.tryToPickUp();
-    }
-
-    handleClick() {
-        completeLevel();
-        return super.handleClick();
-    }
-    handleCollision() {
-        completeLevel();
-        return super.handleCollision();
-    }
-}
-
-class Wheel extends Thing {
-    handleClick() {
-        if (!('axle' in thingsHere)) { // the special case to handle here is dropping wheel to affix to axle. if no axle, no special behavior:
-            return super.handleClick();
-        }
-        let axle = thingsHere['axle'];
-        if (this.movable === false) { // this will be the case iff it's already been affixed to the axle
-            if (typeof otherData['wheel turned time'] === 'undefined' || otherData['wheel turned time'] === 0) {
-                // TODO: play wheel sound
-                // TODO: maybe make it possible to turn the portcullis back down??
-                otherData['wheel turned time'] = Date.now();
-                let portcullis = thingsHere['portcullis1'];
-                portcullis.beginMovementTime = Date.now();
-                portcullis.movementDurationMS = 4000;
-                portcullis.destX = portcullis.x;
-                portcullis.destY = portcullis.y - 300;
-                portcullis.deleteAfterMovement = true;
-            }
-            return;
-        }
-        else if (('wheel' in inventory) && axle.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
-            this.initialX = player.x;
-            this.initialY = player.y;
-            this.beginMovementTime = Date.now();
-            this.movementDurationMS = 800;
-            this.destX = axle.x - 15;
-            this.destY = axle.y;
-            this.movable = false; // can't pick up anymore once affixed to axle.
-            displayMessage('You affix the wheel to the axle.');
-        }
-        return super.handleClick();
-    }
-}
-
-function getIntroLevelThing(word, room, x, y) {
-    switch (word) {
-        case 'asteroid' : return new Asteroid(word, room, x, y);
-        case 'boar' : return new Boar(word,room,x,y);
-        case 'board' : return new Board(word,room,x,y,);
-        case 'bulls-eyes' : return new Bullseyes(word,room,x,y);
-        case 'cabinet' : return new Cabinet(word, room, x, y);
-        case 'chive' : return new Chive(word,room,x,y);
-        case 'darts' : return new Darts(word,room,x,y);
-        case 'drawer' : return new Drawer(word,room,x,y);
-        case 'dresser': return new Dresser(word,room,x,y);
-        case 'ghost' : return new Ghost (word, room, x, y);
-        case 'host' : return new Host (word, room, x, y);
-        case 'mantra' : return new Mantra (word, room, x, y);
-        case 'mantrap' : return new Mantrap (word, room, x, y);
-        case 'meteor' : return new Meteor(word, room, x, y);
-        case 'portcullis' : return new Portcullis(word,room,x,y);
-        case 'reward': return new Reward(word,room,x,y);
-        case 'steroid' : return new Steroid(word, room, x, y);
-        case 'spa' : return new Spa (word, room, x, y);
-        case 'stand' : return new Stand(word,room,x,y);
-        case 'treasure' : return new Treasure(word,room,x,y);
-        case 'wheel' : return new Wheel (word,room,x,y);
-        default : return undefined; // the generic getThing function will then create a plain-vanilla Thing object.
-    }
-}
-
-/* SECTION 2 -- GENERAL LEVEL-RELATED DATA AND CODE (ROOMS, PASSAGES, BOUNDARIES, ETC.) */
-
-function getIntroLevelData() {
-    return {
-        initialRoom: 'entry point',
-        initialX: 20, // expressed as % of way across x axis, i.e. value range is 0-100
-        initialY: 50,
-        initialSpells: ['remove-edge'],
-        initialInventory: {},
-        backgroundMusicFile: 'Sneaky Snitch.mp3',
-        allWords: [ 'arts',  'asteroid',  'ace',  'adder',  'amp',  'axle', 'bat',  'bath',  'boar',  'board',  'brook',  'bulls-eyes',
+        level.initialRoom= 'entry point';
+        level.initialX = 20; // expressed as % of way across x axis, i.e. value range is 0-100
+        level.initialY = 50;
+        level.initialSpells=  ['remove-edge'];
+        level.initialInventory= {};
+        level.backgroundMusicFile = 'Sneaky Snitch.mp3';
+        level.allWords= [ 'arts',  'asteroid',  'ace',  'adder',  'amp',  'axle', 'bat',  'bath',  'boar',  'board',  'brook',  'bulls-eyes',
             'carts',
             'cabinet',  'chive',
             'clam',  'clamp',  'cow',  'cowl',  'crow',  'crown',  'darts',  'drawer',  'eel',  'flock',  'ghost',
@@ -451,27 +448,27 @@ function getIntroLevelData() {
             'peel',  'portcullis',
             'rat',  'reed',  'reward',  'spa',  'spam',  'span',  'star',  'steroid',  'strad',  'strap',  'straw',  'stream',
             'tab',  'tar',  'taro',
-            'tarot',  'toll machine',  'tuna',  'warts',  'wheel',  ],
-        solidObjects : [ 'brook', 'bulls-eyes','portcullis','cabinet','cow','lock','spa','bath','ceiling',
-            'ghost','dresser','pools','mantrap','meteor','asteroid', 'stand',  ],
-        immovableObjects: [ 'axle','brook','bulls-eyes','drawer','portcullis','cabinet','stream','flock','lock','cow','bath','spa',
-            'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser','stand','statue', 'toll machine', ],
-        bridgelikeObjects: [ 'span', 'ladder' ],
-        ellipticalObjects: [ 'clam', 'meteor', 'asteroid'],
-        otherGameData: { 'hive in place':true,
-            'last hive trigger time':0,
-            'bee image':new Image(),
-            'bulls-eye coordinates':[ [435,170], [480,230], [525,295]],
-            'dart image':new Image(),
-            'lamplight image': new Image(),
-            'lamplight height':118,
-            'lamplight width':225,
-            'drawer open': false,
-            'steroid drunk': false,
-            'meteor moved': false,
-            'grabbed binder': false,
-        },
-        initialThings: [
+            'tarot',  'toll machine',  'tuna',  'warts',  'wheel',  ];
+            level.solidObjects = [ 'brook', 'bulls-eyes','portcullis','cabinet','cow','lock','spa','bath','ceiling',
+            'ghost','dresser','pools','mantrap','meteor','asteroid', 'stand',  ];
+            level.immovableObjects= [ 'axle','brook','bulls-eyes','drawer','portcullis','cabinet','stream','flock','lock','cow','bath','spa',
+            'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser','stand','statue', 'toll machine', ];
+            level.bridgelikeObjects= [ 'span', 'ladder' ];
+            level.ellipticalObjects= [ 'clam', 'meteor', 'asteroid'];
+            level.otherGameData= { 'hive in place':true,
+                'last hive trigger time':0,
+                'bee image':new Image(),
+                'bulls-eye coordinates':[ [435,170], [480,230], [525,295]],
+                'dart image':new Image(),
+                'lamplight image': new Image(),
+                'lamplight height':118,
+                'lamplight width':225,
+                'drawer open': false,
+                'steroid drunk': false,
+                'meteor moved': false,
+                'grabbed binder': false,
+            },
+                level.initialThings = [
             ['asteroid', 'asteroid room', 70, 43],
             ['axle','secret room',84,62],
             ['bath','bathroom',25,70],
@@ -502,9 +499,9 @@ function getIntroLevelData() {
             ['stream','stream room', 50, 50],
             ['toll machine', 'beyond', 85,60],
             ['treasure', 'stream room', 90, 80],
-        ],
-        initialRunes: [],
-        rooms: {
+        ];
+        level.initialRunes = [];
+        level.rooms = {
             'armory': {
                 boundaries: [['n',30,30,60,30],['n',60,30,60,75], ['n',60,75,30,75], ['n',30,75,30,30,],],
                 filledPolygons: [ ['r',0,0,100,30], ['r',0,30,30,70], ['r',30,75,70,25], ['r',60,30,40,45], ],
@@ -624,15 +621,15 @@ function getIntroLevelData() {
                 filledPolygons: [ ['r',0,0,5,35], ['r',0,65,5,35], ['r',5,0,95,15], ['r',5,85,95,15], ['r',90,15,10,70], ],
                 passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'secret room', 60, 60)],
             },
-        },
-        levelSpecificInitialization: function() {
+        };
+        level.initializationFunction = function() {
             console.log('yo');
             otherData['bee image'].src = levelPath + '/things/bees-1.png';
             otherData['bee sound'] = new Audio( 'audio/481647__joncon-library__bee-buzzing.wav');
             otherData['dart image'].src = levelPath + '/things/dart.png';
             otherData['lamplight image'].src = levelPath + '/things/Ellipse.png';
-        },
-        levelSpecificAnimateLoopBehavior : function() {
+        };
+        level.animateLoopFunction = function() {
             if (currentRoom === 'darkroom') {
                 ctx.fillStyle = 'black';
                 if (!('lamp' in inventory || 'lamp' in thingsHere)) {
@@ -712,26 +709,8 @@ function getIntroLevelData() {
                     }
                 }
             } // end hive room behavior
+        }; // end implementation of level.animateLoopFunction
+    }; // end definition of getLevelFunctions['intro level']
 
-            /* ... now just drawing maps like a normal object.
-            if (otherData['showing maps'] === true) {
-                ctx.drawImage(otherData['maps image'],0,0);
-            }
-            */
-
-
-        },
-        levelSpecificKeydownBehavior : function(e) {
-            return false; // returning "true" will tell the main keydown handler that the event was handled here, so ignore it.
-        },
-        levelSpecificClickBehavior : function(xWithinCanvas,yWithinCanvas) {
-            return false;// returning "true" will tell the main keydown handler that the event was handled here, so ignore it.
-        },
-        levelSpecificPostTransformBehavior : function(fromWord, toWord) {
-
-        },
-    };
+    return level;
 }
-
-functionsThatReturnLevelData['intro level'] = getIntroLevelData;
-levelSpecificGetThingFunctions['intro level'] = getIntroLevelThing;

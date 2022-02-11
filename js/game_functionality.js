@@ -29,8 +29,10 @@ const allSpells = { SPELL_ADD_EDGE:'add-edge', SPELL_REMOVE_EDGE:'remove-edge', 
     SPELL_SYNONYM : 'synonym', SPELL_ADD : 'add', SPELL_REMOVE : 'remove', SPELL_CHANGE_EDGE : 'change-edge', SPELL_CHANGE : 'change',
         BINDER_COVER : 'cover', BINDER_INTRO : 'intro' };
 let binderImages = {};
+let binderPageHtml = {};
 let CollisionProfile = { RECTANGULAR : 'RECTANGULAR', ELLIPTICAL : 'ELLIPTICAL'};
 let BoundaryType = { VERTICAL : 'v', HORIZONTAL : 'h', DIAGONAL : 'd'};
+let levelList = [];
 let getLevelFunctions = {};
 let level = undefined;
 let levelName = '';
@@ -41,6 +43,8 @@ let thingsHere = {};
 let spellsAvailable = [];
 let runes = [];
 let runeImages = [];
+let runeAcquisitionTime = 0;
+let newRuneIndex = -1;
 let rooms = {};
 let passages = [];
 let passageImages = {}; // probably a good idea to load these in "initialize" function, but not doing this now.
@@ -54,11 +58,12 @@ let backgroundImage = new Image();
 let backgroundMusic = undefined;
 let musicPlaying = false;
 let normalPlayerInputSuppressed = false;
-// levels may define following to be functions:
-let messageTimer = 0;
+let fixedMessages = [];
+let floatingMessageDisplayDivs = [];
 let wordTimers = []; // used to enforce duration of things' captions
 let wordDivs = []; // will have references to the divs used for Things' captions
 const NUMBER_OF_CAPTION_DIVS = 10;
+const NUMBER_OF_FIXED_MESSAGE_DIVS = 3;
 const DEFAULT_MESSAGE_DURATION = 2500;
 const WORD_DURATION_MS = 1500;
 const FADEOUT_DURATION_MS = 1200;
@@ -108,6 +113,7 @@ class Level {
         this.initialThings = [];
         this.initialRunes = [];
         this.rooms = {};
+        this.sounds = {};
         this.defineThingSubclasses = function() {};
         this.getThing = function(word,room,x,y) {
             return undefined; // undefined indicates no special Thing subclass for this word
@@ -281,6 +287,7 @@ class Thing extends GameElement {
         this.bridgelike = (bridgelikeObjects.indexOf(word) >= 0);
         this.collisionProfile = (ellipticalObjects.indexOf(word) >= 0) ? CollisionProfile.ELLIPTICAL : CollisionProfile.RECTANGULAR;
         this.displayingWord = false;
+        this.cannotPickUpMessage = 'This object cannot be picked up.';
         this.inventoryImageRatio = 2.5; // factor by which to reduce each dimension when drawing in inventory.
         this.destX = 0; // used if moving
         this.destY = 0;
@@ -406,7 +413,7 @@ class Thing extends GameElement {
     }
 
     displayCantPickUpMessage() {
-        displayMessage("This object cannot be picked up.", this.x, this.y);
+        displayMessage(this.cannotPickUpMessage, this.x, this.y);
     }
 
     // particular Thing subclasses may override this:
@@ -543,11 +550,28 @@ function pickUpNearbyThings() {
 }
 
 function stopDisplayingMsg() {
-    document.getElementById('player-message').style = 'display:none;';
+    for (let i=0; i< NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
+        if (fixedMessages[i].timeAtMessageCreation !== 0 && Date.now() >= fixedMessages[i].timeAtMessageCreation + fixedMessages[i].duration) {
+            fixedMessages[i].divElement.style.display = 'none';
+            fixedMessages[i].timeAtMessageCreation = 0;
+        }
+    }
 }
 
-function displayMessage(msg, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
+function displayMessage(msg, durationMS = DEFAULT_MESSAGE_DURATION, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
 
+    // find first unused fixed message div:
+    let index = 0;
+    for (i = 0; i < NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
+        if (fixedMessages[i].timeAtMessageCreation == 0) {
+            index = i;
+            break;
+        }
+    }
+
+    console.log('index is ' + index);
+
+    /*
     if (typeof x === 'undefined') {
         x = CANVAS_WIDTH / 2;
         y = CANVAS_HEIGHT / 4;
@@ -559,15 +583,22 @@ function displayMessage(msg, x = undefined, y = undefined, treatCoordinatesAsPer
 
     x += canvasOffsetX - 90;
     y += canvasOffsetY;
-    messageTimer = Date.now();
-    let msgDiv = document.getElementById('player-message');
+    */
+
+    fixedMessages[index].timeAtMessageCreation = Date.now();
+    fixedMessages[index].duration = durationMS;
+    let msgDiv = fixedMessages[index].divElement; // document.getElementById('player-message');
     msgDiv.innerText = msg;
     msgDiv.style.display = 'block';
-    msgDiv.style.top = y.toString() + 'px';
-    msgDiv.style.left = x.toString() + 'px';
+    // msgDiv.style.top = y.toString() + 'px';
+    // msgDiv.style.left = x.toString() + 'px';
     window.setTimeout(stopDisplayingMsg, DEFAULT_MESSAGE_DURATION);
     console.log(msg);
 
+}
+
+function getCanonicalAnagram(word) {
+    return word.split('').sort().join(); // turns VEAL into AELV etc.
 }
 
 function spellAvailable(spell) {
@@ -606,6 +637,7 @@ function addSpellToBinder(spellName) {
 function showNewBinderPage() {
     pageBeingShownInBinder = pageToShow;
 }
+
 function castSpell() {
     let command = window.prompt('Cast a spell:');
     if (typeof command !== 'string' || command.length < 1)
@@ -664,8 +696,21 @@ function castSpell() {
     else if (toWord === fromWord.split('').reverse().join('')) {
         spellRequested = allSpells.SPELL_REVERSAL;
     }
+    else if (getCanonicalAnagram(toWord) === getCanonicalAnagram(fromWord)) {
+        spellRequested = allSpells.SPELL_ANAGRAM;
+    }
+    else if (toWord == fromWord.substr(0,fromWord.length - 1) + toWord.substr(toWord.length - 1, 1)) {
+        spellRequested = allSpells.SPELL_CHANGE_EDGE;
+        runeNeeded = toWord.substr(toWord.length - 1, 1);
+        runeReleased = fromWord.substr(fromWord.length - 1, 1);
+    }
+    else if (toWord == toWord.substr(0,1) + fromWord.substr(1,fromWord.length - 1) ) {
+        spellRequested = allSpells.SPELL_CHANGE_EDGE;
+        runeNeeded = toWord.substr(0, 1);
+        runeReleased = fromWord.substr(0, 1);
+    }
 
-    // TODO: check for SPELL_ANAGRAM, SPELL_SYNONYM, etc.
+    // TODO: check for SPELL_SYNONYM, etc.
 
     if (!spellAvailable(spellRequested)) {
         displayMessage("Sorry, that didn't work!");
@@ -676,8 +721,8 @@ function castSpell() {
         displayMessage("Sorry, you need a rune: " + runeNeeded);
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
             setTimeout(
-                function() { displayMessage('To get a "b" rune, cast "bear > ear".'); },
-                DEFAULT_MESSAGE_DURATION + 10
+                function() { displayMessage('To get a "b" rune, cast "bear > ear".', 3500); },
+                1200
             );
         }
         return;
@@ -723,10 +768,11 @@ function castSpell() {
 
     if (typeof runeReleased != 'undefined') {
         runes.push(runeReleased);
+        newRuneIndex = runes.length-1;
+        runeAcquisitionTime = Date.now();
     }
 
-    if (inInventory)
-        drawInventory();
+    drawInventory();
 
     level.postTransformBehavior(fromWord,toWord); // might move this into extraTransformIntoBehavior
 
@@ -752,7 +798,19 @@ function drawInventory() {
     {
         let x = INVENTORY_LEFT + INVENTORY_WIDTH - INVENTORY_LEFT_MARGIN - (38 * Math.round((i-1)/2));
         let y = INVENTORY_TOP + 5 + (48 * (i % 2));
-        ctx.drawImage(runeImages[runes[i].charCodeAt(0) - 97], x, y, RUNE_WIDTH / 2.3, RUNE_HEIGHT / 2.3);
+        let showRune = true;
+        if (runeAcquisitionTime !== 0 && newRuneIndex === i) {
+            if (Date.now() > runeAcquisitionTime + 2000) {
+                runeAcquisitionTime = 0;
+                newRuneIndex = -1;
+            }
+            else {
+                showRune = (Math.round(Date.now() / 180) % 2 === 0);
+            }
+        }
+        if (showRune) {
+            ctx.drawImage(runeImages[runes[i].charCodeAt(0) - 97], x, y, RUNE_WIDTH / 2.3, RUNE_HEIGHT / 2.3);
+        }
     }
 }
 
@@ -838,11 +896,20 @@ function animate() {
     player.draw();
 
     if (pageBeingShownInBinder != '') {
-        ctx.drawImage(binderImages[pageBeingShownInBinder], 0, 0);
+        if (pageBeingShownInBinder === allSpells.BINDER_COVER || pageBeingShownInBinder === allSpells.BINDER_INTRO)
+            ctx.drawImage(binderImages[pageBeingShownInBinder], 0, 0);
+        else {
+            ctx.drawImage(binderImages['generic_page'], 0, 0);
+            let pageDiv = document.getElementById('binder-page-right');
+            pageDiv.innerHTML = binderPageHtml[pageBeingShownInBinder];
+            pageDiv.style.display = 'block';
+        }
     }
 
     // do any level-specific animation (might move this into room data)
     level.animateLoopFunction();
+
+    drawInventory();
 
     if (!showingIntroPage)
         requestAnimationFrame(animate);
@@ -953,7 +1020,6 @@ function loadLevel(lName = 'intro level') {
     console.log('loading level ' + lName);
     canvas.style.display = 'block';
     levelName = lName;
-    levelPath = 'levels/' + lName.replace(' ','_');
     levelComplete = false;
 
     let introDiv = document.getElementById('intro_screen_div');
@@ -961,6 +1027,7 @@ function loadLevel(lName = 'intro level') {
     showingIntroPage = false;
 
     level = getLevelFunctions[lName]();
+    levelPath = (typeof level.levelPath === 'string') ? 'levels/' + level.levelPath : 'levels/' + lName.replace(' ','_');
 
     level.defineThingSubclasses();
 
@@ -1001,6 +1068,15 @@ function loadLevel(lName = 'intro level') {
     newRoom(level.initialRoom, level.initialX, level.initialY);
 
     animate();
+}
+
+function closeBinder() {
+    pageBeingShownInBinder = '';
+    let leftPage = document.getElementById('binder-page-left');
+    let rightPage = document.getElementById('binder-page-right');
+    leftPage.style.display = 'none';
+    rightPage.style.display = 'none';
+    drawInventory(); // shouldn't be necessary when page images are scaled properly but for now they stray into inventory area.
 }
 
 function handleMouseMove(e) {
@@ -1068,6 +1144,17 @@ function handleKeydown(e) {
     }
 }
 
+function showOrHideBinderPageDiv() {
+    let rightPageDiv = document.getElementById('binder-page-right');
+    if (pageBeingShownInBinder === allSpells.BINDER_INTRO || pageBeingShownInBinder === allSpells.BINDER_COVER || pageBeingShownInBinder === '') {
+        rightPageDiv.style.display = 'none';
+    }
+    else {
+        rightPageDiv.style.display = 'block';
+    }
+
+}
+
 function handleKeyInBinderViewMode(e) {
     // in "show binder" mode so normal input suppressed.
     switch (e.code) {
@@ -1093,10 +1180,10 @@ function handleKeyInBinderViewMode(e) {
             break;
         case 'Space' :
         case 'KeyB' :
-            pageBeingShownInBinder = '';
-            drawInventory(); // shouldn't be necessary when page images are scaled properly but for now they stray into inventory area.
+            closeBinder();
             break;
     }
+    showOrHideBinderPageDiv();
 }
 
 function handleKeyup(e) {
@@ -1118,7 +1205,7 @@ function handleClick(e) {
         return;
     }
     else if (pageBeingShownInBinder != '') {
-        pageBeingShownInBinder = '';
+        closeBinder();
         return;
     }
     let xWithinCanvas = e.x - canvasOffsetX;
@@ -1160,23 +1247,26 @@ function initialize() {
     document.addEventListener('keyup', handleKeyup);
     document.addEventListener('click', handleClick);
     document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('blur',closeBinder);
 
     // load rune images
-    for (i=0; i<26; i++) {
+    for (i = 0; i < 26; i++) {
         let lower = String.fromCharCode(i + 97);
         let upper = String.fromCharCode(i + 65);
-        let runeImage = new Image(RUNE_WIDTH,RUNE_HEIGHT);
+        let runeImage = new Image(RUNE_WIDTH, RUNE_HEIGHT);
         runeImage.src = 'imgs/runes/Rune-' + upper + '.png';
         runeImages.push(runeImage);
     }
 
     // load binder page images
-    binderImages = {};
-    for (let [key, name] of Object.entries(allSpells)) {
-        let img = new Image();
-        img.src = 'imgs/binder/binder-' + name + '.png';
-        binderImages[name] = img;
-    }
+    binderImages = {
+        intro: new Image(),
+        cover: new Image(),
+        generic_page: new Image(),
+    };
+    binderImages[allSpells.BINDER_INTRO].src = 'imgs/binder/binder-intro.png';
+    binderImages[allSpells.BINDER_COVER].src = 'imgs/binder/binder-cover.png';
+    binderImages['generic_page'].src = 'imgs/binder/binder-page-blank.png'
 
     let bounds = canvas.getBoundingClientRect();
     canvasOffsetX = bounds.left; // + window.scrollX;
@@ -1184,10 +1274,43 @@ function initialize() {
 
     wordDivs = [];
     wordTimers = [];
-    for (let i=0; i<NUMBER_OF_CAPTION_DIVS; i++) {
+    for (let i = 0; i < NUMBER_OF_CAPTION_DIVS; i++) {
         wordDivs.push(document.getElementById('word-bubble-' + i.toString()));
         wordTimers.push(0);
     }
+
+    fixedMessages = [];
+    const messageY = canvasOffsetY + Math.round(CANVAS_HEIGHT / 8);
+    const messageXspacing = Math.round(CANVAS_WIDTH / 3.1);
+    const messageXoffset = Math.round(canvasOffsetX + (CANVAS_WIDTH / 12));
+    for (let i = 0; i < NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
+        fixedMessages.push(
+            {
+                divElement: document.getElementById('player-message-' + i.toString()),
+                timeAtMessageCreation: 0,
+                hideUponRoomChange: true,
+                duration: 0,
+            }
+        );
+        fixedMessages[i].divElement.style.top = messageY.toString() + 'px';
+        fixedMessages[i].divElement.style.left = ((i * messageXspacing) + messageXoffset).toString() + 'px';
+    }
+
+    binderPageHtml = {};
+    for (let [key, val] of Object.entries(allSpells)) {
+        binderPageHtml[val] = '<strong>LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> </strong>';
+    }
+    binderPageHtml[allSpells.SPELL_ADD_EDGE] = '<div class="spell-title">Add Edge</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word:</div>  <div class="spell-example">fan &gt; fang <br/> ink &gt; sink</div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
+    binderPageHtml[allSpells.SPELL_REMOVE_EDGE] = '<div class="spell-title">Remove Edge</div> <div class="spell-description">This spell removes the letter at the beginning or end of a word, and releases it into your care as a rune:</div>  <div class="spell-example">fang &gt; fan<br/> sink &gt; ink</div> <div class="spell-description">This is a good way to get more runes!</div>';
+    let leftPage = document.getElementById('binder-page-left');
+    let rightPage = document.getElementById('binder-page-right');
+    leftPage.style.display = 'none';
+    rightPage.style.display = 'none';
+    leftPage.style.top = (canvasOffsetY + 50).toString() + 'px';
+    leftPage.style.left = (canvasOffsetX + 50).toString() + 'px';
+    rightPage.style.top = (canvasOffsetY + 50).toString() + 'px';
+    rightPage.style.left = (canvasOffsetX + (CANVAS_WIDTH / 2) + 50).toString() + 'px';
+
 }
 
 function showIntroScreen() {
