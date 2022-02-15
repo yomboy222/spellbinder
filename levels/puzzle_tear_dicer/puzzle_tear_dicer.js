@@ -14,18 +14,42 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
                 displayMessage('Beep beep!');
             }
         }
+
+        window.Sleet = class Sleet extends Thing {
+
+        }
+
+        window.Treasure = class Treasure extends Thing {
+            tryToPickUp() {
+                completeLevel();
+                return super.tryToPickUp();
+            }
+
+            handleClick() {
+                completeLevel();
+                return super.handleClick();
+            }
+
+            handleCollision() {
+                completeLevel();
+                super.handleCollision();
+            }
+        }
+
     }
 
     level.getThing = function(word,room,x,y) {
         switch (word) {
             case 'car' : return new Car(word,room,x,y);
+            case 'treasure' : return new Treasure(word,room,x,y);
+            case 'sleet' : return new Sleet(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
         }
     }
 
     level.initialRoom = 'room1';
     level.initialX = 20; // expressed as % of way across x axis, i.e. value range is 0-100
-    level.initialY = 50;
+    level.initialY = 56;
     level.initialSpells = ['anagram', 'remove-edge', 'change-edge'];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
@@ -35,8 +59,9 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     level.bridgelikeObjects = [];
     level.otherGameData = {};
     level.initialThings = [
-        ['tear','room1', 48, 50],
-        ['dicer','room1',85,70],
+        ['tare','room1', 10, 72],
+        ['dicer','room1',25,70],
+        ['treasure','room1',92,60],
     ];
     level.initialRunes = [];
     level.rooms = {
@@ -48,7 +73,8 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     };
 
     level.initializationFunction = function() {
-        displayMessage('The goal of this puzzle is to create something to drive away in! Take a look at what spells are in the Binder (press B)');
+        displayMessage('The goal of this puzzle is to create something to drive away in!',3000);
+        level.displayLevelIntroMessage();
     };
 
     return level;

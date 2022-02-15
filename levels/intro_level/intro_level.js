@@ -13,8 +13,15 @@ getLevelFunctions['intro level'] = function() {
     level.defineThingSubclasses = function () {
 
         window.Asteroid = class Asteroid extends Thing {
-            displayCantPickUpMessage() {
-                displayMessage('Too heavy to move!');
+            constructor(word,thing,x,y) {
+                super(word,thing,x,y);
+                this.cannotPickUpMessage = 'Too heavy to move!';
+            }
+            handleCollision() {
+                if (otherData['steroid drunk'] !== true) {
+                    displayMessage('Too heavy to move!', DEFAULT_MESSAGE_DURATION, this.x, this.y);
+                }
+                return super.handleCollision();
             }
         }
 
@@ -24,7 +31,7 @@ getLevelFunctions['intro level'] = function() {
                     // don't display anything.
                 }
                 else {
-                    displayMessage("To turn the axle, you'd need to affix something to it first.", DEFAULT_MESSAGE_DURATION + 1000);
+                    displayMessage("To turn the axle, you'd need to affix something to it first.", DEFAULT_MESSAGE_DURATION + 1000, this.x, this.y);
                 }
             }
         }
@@ -32,6 +39,7 @@ getLevelFunctions['intro level'] = function() {
         window.Boar = class Boar extends Thing{
             extraTransformIntoBehavior() {
                 window.setTimeout(this.leaveRoom.bind(this),1200);
+                this.markedForDeletion = true; // so if player leaves room before running-away process is done, still deleted.
             }
 
             leaveRoom() {
@@ -69,7 +77,7 @@ getLevelFunctions['intro level'] = function() {
                 }
                 else if (Date.now() >= otherData['darts thrown time'] + 5000) {
                     // fully retracted, so delete:
-                    delete thingsHere['bulls-eyes'];
+                    delete thingsHere['dartboard'];
                     return;
                 }
                 else {
@@ -123,7 +131,7 @@ getLevelFunctions['intro level'] = function() {
 
         window.Darts = class Darts extends Thing {
             handleClick() {
-                if (('darts' in inventory) && (currentRoom === 'game room') && ('bulls-eyes' in thingsHere)) {
+                if (('darts' in inventory) && (currentRoom === 'game room') && ('dartboard' in thingsHere)) {
                     otherData['darts origin'] = [player.x, player.y];
                     otherData['darts thrown time'] = Date.now();
                     otherData['darts deltas'] = [];
@@ -179,8 +187,9 @@ getLevelFunctions['intro level'] = function() {
         window.Host = class Host extends Thing {
             constructor(word, room, x, y) {
                 super(word, room, x, y);
-                let sound = new Audio(levelPath + '/audio/host-speech.m4a');
-                sound.play();
+                this.sound = new Audio(levelPath + '/audio/host-speech.m4a');
+                this.sound.play();
+                this.markedForDeletion = true; // so if player leaves room before speech is over, this will still get deleted.
             }
             draw() {
                 let t = Date.now() - this.timeOfCreation;
@@ -205,8 +214,9 @@ getLevelFunctions['intro level'] = function() {
 
         window.Mantra = class Mantra extends Thing {
             extraTransformIntoBehavior() {
-                const om = new Audio(levelPath + '/audio/om.m4a');
-                om.play();
+                this.sound = new Audio(levelPath + '/audio/om.m4a');
+                this.sound.play();
+                this.markedForDeletion = true; // so will delete even if player leaves room while it's floating away
             }
             draw() {
                 let t = Date.now() - this.timeOfCreation;
@@ -234,8 +244,9 @@ getLevelFunctions['intro level'] = function() {
         }
 
         window.Meteor = class Meteor extends Thing {
-            displayCantPickUpMessage() {
-                displayMessage('Too heavy to move!');
+            constructor(word,thing,x,y) {
+                super(word,thing,x,y);
+                this.cannotPickUpMessage = 'Too heavy to move!';
             }
             handleCollision() {
                 if ((otherData['steroid drunk'] === true) && (typeof otherData['meteor moved'] === 'undefined' || otherData['meteor moved'] === false)) {
@@ -341,9 +352,13 @@ getLevelFunctions['intro level'] = function() {
         }
 
         window.Steroid = class Steroid extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.sound = new Audio(levelPath + '/audio/575527__dr19__cork-pop.wav');
+            }
             handleClick() {
-                // TODO: play "glug glug" sound
-                displayMessage('I feel so strong now!');
+                this.sound.play();
+                window.setTimeout(displayMessage('I feel so strong now!'), 1000);
                 delete thingsHere['steroid'];
                 delete inventory['steroid'];
                 otherData['steroid drunk'] = true;
@@ -411,7 +426,7 @@ getLevelFunctions['intro level'] = function() {
             case 'axle' : return new Axle(word, room, x, y);
             case 'boar' : return new Boar(word,room,x,y);
             case 'board' : return new Board(word,room,x,y,);
-            case 'bulls-eyes' : return new Bullseyes(word,room,x,y);
+            case 'dartboard' : return new Bullseyes(word,room,x,y);
             case 'cabinet' : return new Cabinet(word, room, x, y);
             case 'chive' : return new Chive(word,room,x,y);
             case 'darts' : return new Darts(word,room,x,y);
@@ -442,14 +457,14 @@ getLevelFunctions['intro level'] = function() {
         level.allWords= [ 'arts',  'asteroid',  'ace',  'adder',  'amp',  'axle', 'bat',  'bath',  'boar',  'board',  'brook',  'bulls-eyes',
             'carts',
             'cabinet',  'chive',
-            'clam',  'clamp',  'cow',  'cowl',  'crow',  'crown',  'darts',  'drawer',  'eel',  'flock',  'ghost',
+            'clam',  'clamp',  'cow',  'cowl',  'crow',  'crown',  'darts', 'dartboard',  'drawer',  'eel',  'flock',  'ghost',
             'heel',  'hive',  'host',
             'keel',  'ladder',  'lamp',  'leek',  'lock',  'mace',  'mantra',  'mantrap', 'maps', 'meteor',  'owl',  'pan',  'parts',
             'peel',  'portcullis',
             'rat',  'reed',  'reward',  'spa',  'spam',  'span',  'star',  'steroid',  'strad',  'strap',  'straw',  'stream',
             'tab',  'tar',  'taro',
             'tarot',  'toll machine',  'tuna',  'warts',  'wheel',  ];
-            level.solidObjects = [ 'brook', 'bulls-eyes','portcullis','cabinet','cow','lock','spa','bath','ceiling',
+         level.solidObjects = [ 'brook', 'bulls-eyes', 'dartboard', 'portcullis','cabinet','cow','lock','spa','bath','ceiling',
             'ghost','dresser','pools','mantrap','meteor','asteroid', 'stand',  ];
             level.immovableObjects= [ 'axle','brook','bulls-eyes','drawer','portcullis','cabinet','stream','flock','lock','cow','bath','spa',
             'span','ghost','host','meteor','asteroid','board','boar','pools','mantrap','dresser','stand','statue', 'toll machine', ];
@@ -473,7 +488,7 @@ getLevelFunctions['intro level'] = function() {
             ['axle','secret room',84,62],
             ['bath','bathroom',25,70],
             ['board','darkroom',90,62],
-            ['bulls-eyes', 'game room', 78, 51],
+            ['dartboard', 'game room', 78, 51],
             ['cabinet','bathroom',25,25],
             ['clam', 'kitchen', 42, 40],
             ['crown','crown room',50,50],

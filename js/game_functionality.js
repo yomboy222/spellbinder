@@ -59,7 +59,7 @@ let backgroundMusic = undefined;
 let musicPlaying = false;
 let normalPlayerInputSuppressed = false;
 let fixedMessages = [];
-let floatingMessageDisplayDivs = [];
+let floatingMessages = [];
 let wordTimers = []; // used to enforce duration of things' captions
 let wordDivs = []; // will have references to the divs used for Things' captions
 const NUMBER_OF_CAPTION_DIVS = 10;
@@ -74,7 +74,6 @@ let fadeinWord = '';
 let showingIntroPage = true;
 let levelComplete = false;
 let pageBeingShownInBinder = '';
-let pageToShow = '';
 let allWords = []; // individual level-data files will fill this array.
 let solidObjects = [];
 let immovableObjects = [];
@@ -118,7 +117,18 @@ class Level {
         this.getThing = function(word,room,x,y) {
             return undefined; // undefined indicates no special Thing subclass for this word
         };
-        this.initializationFunction = function() {};
+        this.displayLevelIntroMessage = function() {
+            let msg = 'You are starting with the following spells: ';
+            for (let i=0; i < this.initialSpells.length; i++) {
+                msg += (i > 0) ? ', ' : '';
+                msg += this.initialSpells[i];
+            }
+            msg += '. Press B to open the binder!';
+            displayMessage(msg, DEFAULT_MESSAGE_DURATION+ 1000);
+        };
+        this.initializationFunction = function() {
+           this.displayLevelIntroMessage();
+        };
         this.animateLoopFunction = function() {};
         this.keydownFunction = function(e) {
             return false; // false indicates keydown event not handled here
@@ -297,6 +307,8 @@ class Thing extends GameElement {
         this.messageToDisplayAfterMovement = undefined;
         this.deleteAfterMovement = false;
         this.playAudioWhenTransformed = true;
+        this.markedForDeletion = false; // used to delete even if player leaves while terminal sequence still going on
+        this.sound = undefined; // used for thing's primary sound. will be stopped if/when player leaves room where it is.
     }
     setDimensionsFromImage() { // this gets called as soon as image loads
         this.width = this.image.width; // take dimensions directly from image
@@ -413,7 +425,7 @@ class Thing extends GameElement {
     }
 
     displayCantPickUpMessage() {
-        displayMessage(this.cannotPickUpMessage, this.x, this.y);
+        displayMessage(this.cannotPickUpMessage, DEFAULT_MESSAGE_DURATION, this.x, this.y);
     }
 
     // particular Thing subclasses may override this:
@@ -449,7 +461,11 @@ class Thing extends GameElement {
         return true; // specific things could override this.
     }
 
-    extraTransformFromBehavior() {}
+    extraTransformFromBehavior() { // can be overridden.
+        if (typeof this.sound === 'object') {
+            this.sound.pause(); // by default, stop playing sound
+        }
+    }
 
     extraTransformIntoBehavior() {}
 }
@@ -523,15 +539,23 @@ function displayWord(word, x, y) {
 
     wordTimers[firstUsableIndex] = Date.now();
     wordDivs[firstUsableIndex].innerText = word;
-    wordDivs[firstUsableIndex].style = 'display:block; top:' + (y + canvasOffsetY + 20) + 'px; left:' + (x + canvasOffsetX - 35) + 'px; ' +
-        'height:' + divHeight;
+    wordDivs[firstUsableIndex].classList.remove('fade-to-hidden');
+    wordDivs[firstUsableIndex].classList.add('visible-now');
+    wordDivs[firstUsableIndex].style.display = 'block';
+    wordDivs[firstUsableIndex].style.top = (y + canvasOffsetY + 20).toString() + 'px';
+    wordDivs[firstUsableIndex].style.left = (x + canvasOffsetX - 35).toString() + 'px';
+    wordDivs[firstUsableIndex].style.height = divHeight;
     window.setTimeout(stopDisplayingWord, WORD_DURATION_MS);
 }
 
 function stopDisplayingWord(forceHideAll = false) {
+    console.log('stopping');
     for (let i = 0; i < NUMBER_OF_CAPTION_DIVS; i++) {
-        if (forceHideAll || Date.now() >= wordTimers[i] + WORD_DURATION_MS - 100) {
-            wordDivs[i].style = 'display:none';
+        if (forceHideAll) {
+            wordDivs[i].style.display = 'none';
+        }
+        else if (Date.now() >= wordTimers[i] + WORD_DURATION_MS - 100) {
+            wordDivs[i].classList.add('fade-to-hidden');
         }
     }
 }
@@ -549,52 +573,80 @@ function pickUpNearbyThings() {
     }
 }
 
-function stopDisplayingMsg() {
-    for (let i=0; i< NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
-        if (fixedMessages[i].timeAtMessageCreation !== 0 && Date.now() >= fixedMessages[i].timeAtMessageCreation + fixedMessages[i].duration) {
-            fixedMessages[i].divElement.style.display = 'none';
+function stopDisplayingMsg(forceStopAll = false) {
+
+    for (let i=0; i< fixedMessages.length; i++) {
+        if ( (forceStopAll === true) || (fixedMessages[i].timeAtMessageCreation !== 0 && Date.now() >= fixedMessages[i].timeAtMessageCreation + fixedMessages[i].duration)) {
+            fixedMessages[i].divElement.classList.remove('visible-now');
+            fixedMessages[i].divElement.classList.add('fade-to-hidden');
             fixedMessages[i].timeAtMessageCreation = 0;
+        }
+    }
+    for (let i=floatingMessages.length - 1; i >= 0; i--) {
+        if ( (forceStopAll === true) || Date.now() >= floatingMessages[i].timeAtMessageCreation + floatingMessages[i].duration) {
+            floatingMessages[i].divElement.remove();
+            floatingMessages.splice(i,1); // remove message. note we decrement to avoid re-indexing problems.
         }
     }
 }
 
 function displayMessage(msg, durationMS = DEFAULT_MESSAGE_DURATION, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
+    // use one of the fixedMessages if no x and y coordinates specified,
+    // otherwise create a new floatingMessage.
 
-    // find first unused fixed message div:
-    let index = 0;
-    for (i = 0; i < NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
-        if (fixedMessages[i].timeAtMessageCreation == 0) {
-            index = i;
-            break;
+    // see if message already being displayed; if so, return.
+    if (x == undefined) {
+        for (i = 0; i < fixedMessages.length; i++) {
+            if (fixedMessages[i].timeAtMessageCreation > 0 && fixedMessages[i].divElement.innerText == msg) {
+                return;
+            }
+        }
+    }
+    else {
+        for (i = 0; i < fixedMessages.length; i++) {
+            if (fixedMessages[i].divElement.innerText == msg) {
+                return;
+            }
         }
     }
 
-    console.log('index is ' + index);
-
-    /*
-    if (typeof x === 'undefined') {
-        x = CANVAS_WIDTH / 2;
-        y = CANVAS_HEIGHT / 4;
+    let messageObject, msgDiv;
+    if (x == undefined) {
+        // find first unused fixed message div:
+        let index = 0;
+        for (i = 0; i < NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
+            if (fixedMessages[i].timeAtMessageCreation == 0) {
+                index = i;
+                break;
+            }
+        }
+        messageObject = fixedMessages[index];
+        msgDiv = messageObject.divElement;
     }
-    else if (treatCoordinatesAsPercentages === true) {
-        x = x * xScaleFactor;
-        y = y * yScaleFactor;
+    else {
+        if (treatCoordinatesAsPercentages === true) {
+            x = x * xScaleFactor;
+            y = y * yScaleFactor;
+        }
+        messageObject = {};
+        messageObject.divElement = document.createElement('div');
+        msgDiv = messageObject.divElement;
+        msgDiv.classList.add('player-message');
+        msgDiv.style.left = (canvasOffsetX + x - 90).toString() + 'px';
+        msgDiv.style.top = (canvasOffsetY + y).toString() + 'px';
+        let outerDiv = document.getElementById('floating-message-holder');
+        outerDiv.appendChild(msgDiv);
+        floatingMessages.push(messageObject);
     }
 
-    x += canvasOffsetX - 90;
-    y += canvasOffsetY;
-    */
-
-    fixedMessages[index].timeAtMessageCreation = Date.now();
-    fixedMessages[index].duration = durationMS;
-    let msgDiv = fixedMessages[index].divElement; // document.getElementById('player-message');
+    messageObject.timeAtMessageCreation = Date.now();
+    messageObject.duration = durationMS;
     msgDiv.innerText = msg;
     msgDiv.style.display = 'block';
-    // msgDiv.style.top = y.toString() + 'px';
-    // msgDiv.style.left = x.toString() + 'px';
-    window.setTimeout(stopDisplayingMsg, DEFAULT_MESSAGE_DURATION);
+    msgDiv.classList.remove('fade-to-hidden');
+    msgDiv.classList.add('visible-now');
+    window.setTimeout(stopDisplayingMsg, durationMS);
     console.log(msg);
-
 }
 
 function getCanonicalAnagram(word) {
@@ -630,12 +682,7 @@ function addSpellToBinder(spellName) {
     displayMessage('You found a new binder page!');
     if (spellsAvailable.indexOf(spellName) < 0)
         spellsAvailable.push(spellName);
-    pageToShow = spellName;
-    window.setTimeout(showNewBinderPage,1300);
-}
-
-function showNewBinderPage() {
-    pageBeingShownInBinder = pageToShow;
+    showBinder(spellName);
 }
 
 function castSpell() {
@@ -814,8 +861,9 @@ function drawInventory() {
     }
 }
 
-function showBinder() {
-    pageBeingShownInBinder = allSpells.BINDER_COVER;
+function showBinder(page = allSpells.BINDER_COVER) {
+    pageBeingShownInBinder = page;
+    document.getElementById('binder-instructions').style.display = 'block';
 }
 
 function toggleMusic() {
@@ -896,13 +944,21 @@ function animate() {
     player.draw();
 
     if (pageBeingShownInBinder != '') {
-        if (pageBeingShownInBinder === allSpells.BINDER_COVER || pageBeingShownInBinder === allSpells.BINDER_INTRO)
+        if (pageBeingShownInBinder === allSpells.BINDER_COVER)
             ctx.drawImage(binderImages[pageBeingShownInBinder], 0, 0);
         else {
             ctx.drawImage(binderImages['generic_page'], 0, 0);
-            let pageDiv = document.getElementById('binder-page-right');
-            pageDiv.innerHTML = binderPageHtml[pageBeingShownInBinder];
-            pageDiv.style.display = 'block';
+        }
+        let leftPageDiv = document.getElementById('binder-page-left');
+        let rightPageDiv = document.getElementById('binder-page-right');
+        rightPageDiv.innerHTML = binderPageHtml[pageBeingShownInBinder];
+        rightPageDiv.style.display = 'block';
+        if (pageBeingShownInBinder === allSpells.BINDER_INTRO) {
+            leftPageDiv.innerHTML = binderPageHtml['binder-intro-left-page'];
+            leftPageDiv.style.display = 'block';
+        }
+        else {
+            leftPageDiv.style.display = 'none';
         }
     }
 
@@ -931,6 +987,7 @@ function completeLevel() {
 function confirmQuit() {
     let confirmed = levelComplete || (window.confirm('OK to leave this level and return to intro screen?'));
     if (confirmed === true) {
+        stopDisplayingMsg(true);
         let introDiv = document.getElementById('intro_screen_div');
         introDiv.style.display = 'block';
         document.getElementById('canvas1').style.display = 'none';
@@ -951,7 +1008,12 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
     }
 
     for (let [word, thing] of Object.entries(thingsHere)) {
-        thingsElsewhere[word] = thing;
+        if (!thing.markedForDeletion) {
+            thingsElsewhere[word] = thing;
+        }
+        if (typeof thing.sound === 'object') {
+            thing.sound.pause();
+        }
         delete thingsHere[word];
     }
     currentRoom = newRoomName;
@@ -1074,8 +1136,10 @@ function closeBinder() {
     pageBeingShownInBinder = '';
     let leftPage = document.getElementById('binder-page-left');
     let rightPage = document.getElementById('binder-page-right');
+    let instructionDiv = document.getElementById('binder-instructions');
     leftPage.style.display = 'none';
     rightPage.style.display = 'none';
+    instructionDiv.style.display = 'none';
     drawInventory(); // shouldn't be necessary when page images are scaled properly but for now they stray into inventory area.
 }
 
@@ -1152,13 +1216,13 @@ function showOrHideBinderPageDiv() {
     else {
         rightPageDiv.style.display = 'block';
     }
-
 }
 
 function handleKeyInBinderViewMode(e) {
     // in "show binder" mode so normal input suppressed.
     switch (e.code) {
         case 'ArrowRight' :
+            sounds['page turn'].play();
             if (pageBeingShownInBinder === allSpells.BINDER_COVER)
                 pageBeingShownInBinder = allSpells.BINDER_INTRO;
             else if (pageBeingShownInBinder === allSpells.BINDER_INTRO)
@@ -1169,6 +1233,7 @@ function handleKeyInBinderViewMode(e) {
             }
             break;
         case 'ArrowLeft' :
+            sounds['page turn'].play();
             if (pageBeingShownInBinder === allSpells.BINDER_INTRO)
                 pageBeingShownInBinder = allSpells.BINDER_COVER;
             else if (pageBeingShownInBinder === allSpells.BINDER_COVER)
@@ -1241,7 +1306,8 @@ function initialize() {
     for (let i = 0; i < soundlist.length; i++) {
         sounds[soundlist[i]] = new Audio('audio/' + soundlist[i] + '.wav');
     }
-    sounds['spell'] = new Audio('audio/magical_1.ogg')
+    sounds['spell'] = new Audio('audio/magical_1.ogg');
+    sounds['page turn'] = new Audio('audio/63318__flag2__page-turn-please-turn-over-pto-paper-turn-over.wav');
 
     document.addEventListener('keydown', handleKeydown);
     document.addEventListener('keyup', handleKeyup);
@@ -1297,19 +1363,31 @@ function initialize() {
     }
 
     binderPageHtml = {};
-    for (let [key, val] of Object.entries(allSpells)) {
-        binderPageHtml[val] = '<strong>LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> LoReM iPsUm LoReM iPsUm LoReM iPsUm LoReM iPsUm <br/> </strong>';
-    }
+    binderPageHtml[allSpells.BINDER_COVER] = '<div class="binder-cover-title"><span style="font-size:24px;">The</span><br/>Spell-<br/>Binder</div>';
+    binderPageHtml['binder-intro-left-page'] = '<div class="spell-description">To cast a spell, press C; then type what you wish to transform, followed by a greater-than sign and the word to transform into. For example, you might cast</div> <div class="spell-example">ox > fox</div> <div class="spell-description">For this to work, you need three things: a nearby ox, a spell for putting a letter in front of a word, and a rune of the letter F: <img style="display:inline;" height="46px" width="30px" src="imgs/runes/Rune-F.png"> </div>';
+    binderPageHtml[allSpells.BINDER_INTRO] = '<div class="spell-description">Each spell is written on a page in this binder; you may find more pages with new spells!</div>';
     binderPageHtml[allSpells.SPELL_ADD_EDGE] = '<div class="spell-title">Add Edge</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word:</div>  <div class="spell-example">fan &gt; fang <br/> ink &gt; sink</div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
     binderPageHtml[allSpells.SPELL_REMOVE_EDGE] = '<div class="spell-title">Remove Edge</div> <div class="spell-description">This spell removes the letter at the beginning or end of a word, and releases it into your care as a rune:</div>  <div class="spell-example">fang &gt; fan<br/> sink &gt; ink</div> <div class="spell-description">This is a good way to get more runes!</div>';
+    binderPageHtml[allSpells.SPELL_CHANGE_EDGE] = '<div class="spell-title">Change Edge</div> <div class="spell-description">This spell lets you change the first or last letter in a word:</div>  <div class="spell-example">cable &gt; table</div> <div class="spell-description">Keep in mind you need a rune of the new letter (in this example, a T).</div>';
+    binderPageHtml[allSpells.SPELL_REVERSAL] = '<div class="spell-title">Reversal</div> <div class="spell-description">Simply reverses a word:</div>  <div class="spell-example">auks &gt; skua</div>';
+    binderPageHtml[allSpells.SPELL_ANAGRAM] = '<div class="spell-title">Anagram</div> <div class="spell-description">This spell lets you rearrange the letters in a word:</div>  <div class="spell-example">flea &gt; leaf</div>';
+
     let leftPage = document.getElementById('binder-page-left');
     let rightPage = document.getElementById('binder-page-right');
+    let instructionDiv = document.getElementById('binder-instructions');
     leftPage.style.display = 'none';
     rightPage.style.display = 'none';
+    instructionDiv.style.display = 'none';
     leftPage.style.top = (canvasOffsetY + 50).toString() + 'px';
-    leftPage.style.left = (canvasOffsetX + 50).toString() + 'px';
+    leftPage.style.left = (canvasOffsetX + 25).toString() + 'px';
     rightPage.style.top = (canvasOffsetY + 50).toString() + 'px';
     rightPage.style.left = (canvasOffsetX + (CANVAS_WIDTH / 2) + 50).toString() + 'px';
+    instructionDiv.style.top = (canvasOffsetY + PLAY_AREA_HEIGHT + 15).toString() + 'px';
+    instructionDiv.style.left = (canvasOffsetX + 15).toString() + 'px';
+    instructionDiv.style.height = (CANVAS_HEIGHT - PLAY_AREA_HEIGHT - 45).toString() + 'px';
+    instructionDiv.style.width = (CANVAS_WIDTH.toString() - 45).toString() + 'px';
+    instructionDiv.innerText = "Use arrow keys to turn pages. Press B to close the Binder.";
+
 
 }
 

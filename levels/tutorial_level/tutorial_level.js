@@ -16,8 +16,12 @@ getLevelFunctions['tutorial level'] = function() {
         }
 
         window.Cur = class Cur extends Thing{
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.sound = new Audio(levelPath + '/audio/327666__juan-merie-venter__dog-bark.wav');
+            }
             handleCollision() {
-                level.sounds['dog bark'].play();
+                this.sound.play();
                 super.handleCollision();
             }
         }
@@ -72,7 +76,7 @@ getLevelFunctions['tutorial level'] = function() {
             handleCollision() {
                 if (otherData['grabbed binder'] === false) {
                     otherData['grabbed binder'] = true;
-                    displayMessage('You got the Spell Binder! Type B to look inside.', 2500);
+                    displayMessage('You got the Spell Binder! Press B to look inside.', 2500, this.x, this.y);
                     this.solid = false;
                     sounds['pickup'].play();
                     this.image.src = levelPath + '/things/stand-no-binder.png';
@@ -116,12 +120,12 @@ getLevelFunctions['tutorial level'] = function() {
     }
 
     level.showInitialTutorialMsg = function() {
-        displayMessage("Use arrow keys (or A-S-D-W) to move over to the Binder.", DEFAULT_MESSAGE_DURATION, 45, 10, true);
+        displayMessage("Use arrow keys (or A-S-D-W) to move over to the Binder.", DEFAULT_MESSAGE_DURATION, 50, 5, true);
     }
 
     level.showRoom2Message = function () {
         if ('bear' in thingsHere) {
-            displayMessage('Try to get past the cur by typing C and casting "cur > curb".', 3600);
+            displayMessage('Try to get past the cur by typing C and casting "cur > curb".', 3600, 80,56, true);
         }
     }
 
@@ -154,7 +158,6 @@ getLevelFunctions['tutorial level'] = function() {
     ];
     level.initialRunes = [];
     level.sounds = {
-        'dog bark': new Audio(levelPath + '/audio/327666__juan-merie-venter__dog-bark.wav'),
         'unlock': new Audio(levelPath + '/audio/410983__mihirfreesound__unlocking-door.wav'),
     };
     level.rooms = {
@@ -164,20 +167,21 @@ getLevelFunctions['tutorial level'] = function() {
             filledPolygons: [ ['r',0,0,10,100],['r',10,0,20,36],['p',30,36,42,18,42,0,30,0],['r',42,0,58,18],
                 ['p',54,18,66,36,100,36,100,18],  ['r',10,64,20,36], ['p',30,64,42,82,42,100,30,100],
                 ['r',42,82,58,18], ['p',54,82,66,64,100,64,100,82], ],
-            passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 50, 'room2', 50, 80)],
+            passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 50, 'room2', 12, 82)],
         },
         'room2': {
-            boundaries: [ ['n',10,26,100,26], ['n',100,54,64,54], ['n',64,54,64,100], ['n',36,100,36,54], ['n',36,54,10,54], ['n',10,54,10,26], ],
-            filledPolygons: [],
+            boundaries: [ ['n',10,26,100,26], ['n',100,54,64,54], ['n',64,54,64,95], ['n',0,95,64,95], ['n',0,70,36,70], ['n',36,70,36,54], ['n',36,54,10,54], ['n',10,54,10,26], ],
+            filledPolygons: [ ['r',0,0,100,26], ['r',0,26,10,44], ['r',10,54,26,16], ['r',0,95,100,5], ['r',64,54,36,41], ],
             passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 40, 'room3', 12, 50),
-            ],
+                new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 75, 'room1', 88,50),
+                ],
             specificNewRoomBehavior: function() {
-                window.setTimeout(level.showRoom2Message,1600);
+                window.setTimeout(level.showRoom2Message,2200);
             }
         },
         'room3': {
             boundaries: [ ['n',0,36,96,36], ['n',96,36,96,64], ['n',0,64,96,64], ],
-            filledPolygons: [],
+            filledPolygons: [ ['r',0,0,100,36], ['r',96,36,4,64], ['r',0,64,96,36], ],
             passages: [ new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'room2', 88, 40),
             ],
             specificNewRoomBehavior: function() {
@@ -193,7 +197,7 @@ getLevelFunctions['tutorial level'] = function() {
     };
 
     level.initializationFunction = function() {
-        window.setTimeout(level.showInitialTutorialMsg, 1200);
+        window.setTimeout(level.showInitialTutorialMsg, 500);
     };
 
     return level;
