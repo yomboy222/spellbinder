@@ -31,7 +31,7 @@ getLevelFunctions['ghost level'] = function() {
 
         window.Board = class Board extends Thing {
             okayToDisplayWord() {
-                if (currentRoom === 'darkroom' && 'board' in thingsHere && !('lamp' in inventory || 'lamp' in thingsHere)) {
+                if (currentRoom === 'darkroom' && 'board' in thingsHere && !(level.carryingLamp())) {
                     return false;
                 }
                 else
@@ -53,7 +53,7 @@ getLevelFunctions['ghost level'] = function() {
                     // draw normally
                     return super.draw();
                 }
-                else if (Date.now() >= otherData['darts thrown time'] + 5000) {
+                else if ((Date.now() >= otherData['darts thrown time'] + 5000)) {
                     // fully retracted, so delete:
                     delete thingsHere['dartboard'];
                     return;
@@ -114,8 +114,33 @@ getLevelFunctions['ghost level'] = function() {
                 otherData['hive in place'] = false;
             }
         }
+        window.Dart = class Dart extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.inventoryImageRatio = 1.5; // so doesn't show up too small in inventory
+            }
+            handleClick() {
+                if (('dart' in inventory) && (currentRoom === 'game room') && ('dartboard' in thingsHere)) {
+                    this.discard();
+                    this.movementDurationMS = 1000;
+                    this.beginMovementTime = Date.now();
+                    this.initialX = player.x;
+                    this.initialY = player.y;
+                    this.destX = otherData['bulls-eye coordinates'][0][0] + this.halfWidth;
+                    this.destY = otherData['bulls-eye coordinates'][0][1] + this.halfHeight;
+                    sounds['whoosh'].play();
+                }
+                else {
+                    return super.handleClick();
+                }
+            }
+        }
 
         window.Darts = class Darts extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.inventoryImageRatio = 1.5; // so doesn't show up too small in inventory
+            }
             handleClick() {
                 if (('darts' in inventory) && (currentRoom === 'game room') && ('dartboard' in thingsHere)) {
                     otherData['darts origin'] = [player.x, player.y];
@@ -174,6 +199,18 @@ getLevelFunctions['ghost level'] = function() {
             }
         }
 
+        window.Gun = class Gun extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.wordDisplayOffsetX = -15; // so "gun" and "musketeer" labels can both appear without overlapping
+                this.wordDisplayOffsetY = -23;
+            }
+            handleCollision() {
+                displayMessage('watch out!', DEFAULT_MESSAGE_DURATION, this.x, this.y);
+            }
+
+        }
+
         window.Host = class Host extends Thing {
             constructor(word, room, x, y) {
                 super(word, room, x, y);
@@ -198,7 +235,6 @@ getLevelFunctions['ghost level'] = function() {
                 let newY = (fractionOfTheWayToEnd * 100) * (Math.cos(fractionSquared * 25)) + (this.y - this.halfHeight);
                 ctx.drawImage(this.image, newX, newY, this.width, this.height);
                 ctx.globalAlpha = 1.0;
-
             }
         }
 
@@ -230,6 +266,14 @@ getLevelFunctions['ghost level'] = function() {
             }
             handleCollision() {
                 displayMessage('yikes!', DEFAULT_MESSAGE_DURATION, this.x, this.y);
+            }
+        }
+
+        window.Musketeer = class Musketeer extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.wordDisplayOffsetX = 15; // so "gun" and "musketeer" labels can both appear without overlapping
+                this.wordDisplayOffsetY = 15;
             }
         }
 
@@ -324,19 +368,26 @@ getLevelFunctions['ghost level'] = function() {
             }
         }
 
+        level.carryingLamp = function() {
+            return ('lamp' in inventory || 'lamp' in thingsHere || 'lamps' in inventory || 'lamps' in thingsHere);
+        }
+
         level.getThing = function (word, room, x, y) {
             switch (word) {
                 case 'boar' : return new Boar(word,room,x,y);
                 case 'board' : return new Board(word,room,x,y,);
+                case 'dart' : return new Dart(word,room,x,y);
+                case 'darts' : return new Darts(word,room,x,y);
                 case 'dartboard' : return new Bullseyes(word,room,x,y);
                 case 'chive' : return new Chive(word,room,x,y);
-                case 'darts' : return new Darts(word,room,x,y);
                 case 'drawer' : return new Drawer(word,room,x,y);
                 case 'dresser': return new Dresser(word,room,x,y);
                 case 'ghost' : return new Ghost (word, room, x, y);
+                case 'gun' : return new Gun (word,room,x,y);
                 case 'host' : return new Host (word, room, x, y);
                 case 'mantra' : return new Mantra (word, room, x, y);
                 case 'mantrap' : return new Mantrap (word, room, x, y);
+                case 'musketeer' : return new Musketeer (word, room, x, y);
                 case 'portcullis' : return new Portcullis(word,room,x,y);
                 case 'reward': return new Reward(word,room,x,y);
                 case 'stand' : return new Stand(word,room,x,y);
@@ -349,26 +400,24 @@ getLevelFunctions['ghost level'] = function() {
         level.initialX = 20; // expressed as % of way across x axis, i.e. value range is 0-100
         level.initialY = 50;
         level.initialSpells=  ['remove-edge', 'add-edge'];
-        level.initialInventory= { 'darts': new Darts('darts','inventory' , 0, 0)};
+        level.initialInventory= {}; // { 'darts': new Darts('darts','inventory' , 0, 0)};
         level.backgroundMusicFile = 'Sneaky Snitch.mp3';
-        level.allWords= [ 'amp', 'arts', 'axle', 'bat',  'bath',  'boar',  'board',
-            'carts',
-            'cabinet',  'chive',
-            'clam',  'clamp', 'darts', 'dartboard',  'drawer',  'eel', 'ghost',
-            'hive',  'host',
-            'keel', 'lamp',  'leek', 'mantra',  'mantrap', 'pan',  'parts',
+        level.allWords= [ 'amp', 'amps', 'art', 'arts', 'boar', 'board', 'cart', 'carts', 'chive', 'chives',
+            'clam', 'clams', 'clamp', 'clamps', 'dart', 'darts', 'dartboard', 'drawer', 'eel', 'ghost', 'gun', 'gunk',
+            'hive', 'hives', 'host',
+            'keel', 'lamp', 'leek', 'mantra', 'mantrap', 'musketeer', 'part', 'parts',
             'peel',  'portcullis',
-            'reward', 'strad',  'strap',  'straw',
-            'toll machine', 'warts', ];
-        level.solidObjects = [ 'dartboard', 'portcullis','cabinet',
-            'ghost','dresser','mantrap', 'stand',  ];
-        level.immovableObjects= [  'drawer','ghost','host','board','boar','mantra','dresser','stand', 'toll machine', ];
+            'reward', 'strad',  'strap', 'straw',
+            'toll machine', 'wart', 'warts', ];
+        level.solidObjects = [ 'dartboard', 'portcullis','cabinet','gun',
+            'ghost','dresser','mantrap', 'musketeer', 'stand',  ];
+        level.immovableObjects= [  'drawer','ghost','gun','gunk','host','board','boar','mantra','dresser','stand', 'toll machine', ];
         level.bridgelikeObjects= [ 'span', 'ladder' ];
         level.ellipticalObjects= [ 'clam', 'meteor', 'asteroid'];
         level.otherGameData= { 'hive in place':true,
             'last hive trigger time':0,
             'bee image':new Image(),
-            'bulls-eye coordinates':[ [435,170], [480,230], [525,295]],
+            'bulls-eye coordinates':[ [452,176], [497,236], [542,301]],
             'dart image':new Image(),
             'lamplight image': new Image(),
             'lamplight height':118,
@@ -385,14 +434,16 @@ getLevelFunctions['ghost level'] = function() {
                 ['dresser','beyond',26,80],
                 ['drawer','beyond', 26, 73],
                 ['ghost', 'entry hall 1', 40, 50] ,
+                ['gun', 'treasure room', 82, 23 ],
                 ['hive','hive room',43,35],
                 ['leek','armory',50,53],
                 ['mantrap', 'main', 50, 23] ,
+                ['musketeer', 'treasure room', 88, 29],
                 ['portcullis', 'beyond', 69, 37],
                 ['stand','entry point', 48, 50],
                 ['straw', 'hive room', 23, 65],
                 ['toll machine', 'beyond', 85,60],
-                ['treasure', 'treasure room', 80, 60],
+                ['treasure', 'treasure room', 83, 76],
             ];
         level.initialRunes = [];
         level.rooms = {
@@ -411,9 +462,9 @@ getLevelFunctions['ghost level'] = function() {
                 boundaries:[ ['n',10,20,90,20], ['n',90,20,90,82], ['n',90,82,10,82], ['n',10,82,10,20]],
                 filledPolygons: [ ['r',0,0,100,20], ['r',0,20,10,80], ['r',10,82,90,18], ['r',90,20,10,80], ],
                 passages:[ new Passage(PassageTypes.BASIC_HORIZONTAL, 50, 20, 'main', 50, 85),
-                    new Passage(PassageTypes.BASIC_RIGHT, 90, 60, 'treasure room', 11, 60, false)],
+                    new Passage(PassageTypes.BASIC_RIGHT, 90, 60, 'treasure room', 11, 23, false)],
                 specificNewRoomBehavior: function() {
-                    if (!('lamp' in inventory)) {
+                    if (!(level.carryingLamp())) {
                         displayMessage("It's dark here!");
                     }
                 },
@@ -464,9 +515,9 @@ getLevelFunctions['ghost level'] = function() {
                 ]
             },
             'treasure room':{
-                boundaries: [ ['n',0,30,10,30], ['n',10,30,10,20], ['n',10,20,90,20], ['n',90,20,90,80], ['n',90,80,10,80], ['n',10,80,10,70], ['n',10,70,0,70], ],
-                filledPolygons: [ ['r',0,0,10,30], ['r',0,70,10,30], ['r',10,0,100,20], ['r',10,80,90,20], ['r',90,0,10,100], ],
-                passages: [ new Passage(PassageTypes.BASIC_LEFT,3,50,'darkroom',76,65),],
+                boundaries: [ ['n',0,10,95,10], ['n',95,10,95,90], ['n',95,90,70,90], ['n',70,90,70,36], ['n',70,36,0,36], ],
+                filledPolygons: [ ['r',0,0,100,10], ['r',95,10,5,90], ['r',0,90,100,10], ['r',0,36,70,54], ],
+                passages: [ new Passage(PassageTypes.BASIC_LEFT,3,22,'darkroom',76,65),],
             },
 
         };
@@ -479,7 +530,7 @@ getLevelFunctions['ghost level'] = function() {
         level.animateLoopFunction = function() {
             if (currentRoom === 'darkroom') {
                 ctx.fillStyle = 'black';
-                if (!('lamp' in inventory || 'lamp' in thingsHere)) {
+                if (!(level.carryingLamp())) {
                     ctx.fillRect(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
                     player.draw(); // draw the player again ... inefficient but easier than setting up logic to determine layers relative to black rectangle
                     passages[0].draw();

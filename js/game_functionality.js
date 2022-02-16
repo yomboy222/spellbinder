@@ -58,6 +58,7 @@ let backgroundImage = new Image();
 let backgroundMusic = undefined;
 let musicPlaying = false;
 let normalPlayerInputSuppressed = false;
+let playerImageSuppressed = false;
 let fixedMessages = [];
 let floatingMessages = [];
 let wordTimers = []; // used to enforce duration of things' captions
@@ -240,7 +241,9 @@ class Player {
     }
 
     draw() {
-        ctx.drawImage(this.images[this.direction], this.x - this.halfWidth, this.y - this.halfHeight); // , this.width, this.height);
+        if (!playerImageSuppressed) {
+            ctx.drawImage(this.images[this.direction], this.x - this.halfWidth, this.y - this.halfHeight); // , this.width, this.height);
+        }
     }
 }
 
@@ -309,6 +312,8 @@ class Thing extends GameElement {
         this.playAudioWhenTransformed = true;
         this.markedForDeletion = false; // used to delete even if player leaves while terminal sequence still going on
         this.sound = undefined; // used for thing's primary sound. will be stopped if/when player leaves room where it is.
+        this.wordDisplayOffsetX = 0;
+        this.wordDisplayOffsetY = 0;
     }
     setDimensionsFromImage() { // this gets called as soon as image loads
         this.width = this.image.width; // take dimensions directly from image
@@ -415,7 +420,11 @@ class Thing extends GameElement {
         let adjustedHeight = this.halfHeight;
         if (this.word in inventory) {
             adjustedHeight = adjustedHeight / this.inventoryImageRatio;
+            if (adjustedHeight < 20)
+                adjustedHeight = 20;
             adjustedWidth = adjustedWidth / this.inventoryImageRatio;
+            if (adjustedWidth < 20)
+                adjustedWidth = 20;
         }
 
         return ( x >= (this.x - adjustedWidth) &&
@@ -821,6 +830,8 @@ function castSpell() {
 
     drawInventory();
 
+    displayWord(toWord, newObject.x, newObject.y);
+
     level.postTransformBehavior(fromWord,toWord); // might move this into extraTransformIntoBehavior
 
     newObject.extraTransformIntoBehavior();
@@ -883,8 +894,9 @@ function animate() {
 
     // clear and draw background for current room:
     ctx.clearRect(0, 0,  PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
-    // ctx.drawImage(backgroundImage, 0, 0, 2474, 2000, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
+    if (typeof backgroundImage === 'object') {
+        ctx.drawImage(backgroundImage, 0, 0);
+    }
     // fill all filledPolygons if any:
     if (typeof filledPolygons !== 'undefined') {
         ctx.fillStyle = 'black';
@@ -1023,7 +1035,7 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
             delete thingsElsewhere[word];
             // put up captions for all things in new word.
             if (thing.okayToDisplayWord())
-                displayWord(thing.word, thing.x, thing.y);
+                displayWord(thing.word, thing.x + thing.wordDisplayOffsetX, thing.y + thing.wordDisplayOffsetY);
         }
     }
     player.x = newPlayerX * xScaleFactor;
@@ -1036,9 +1048,9 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
         passages.push(p);
     }
 
-    if (typeof roomData.backgroundImage !== 'undefined') {
-        backgroundImage = new Image(CANVAS_WIDTH, CANVAS_HEIGHT);
-        backgroundImage.src = levelPath + '/imgs/rooms/' + roomData.backgroundImage;
+    if (typeof roomData.backgroundImageName !== 'undefined') {
+        backgroundImage = new Image();
+        backgroundImage.src = levelPath + '/rooms/' + newRoomName.replace(' ','_') + '/' + roomData.backgroundImageName;
     }
 
     filledPolygons = [];
@@ -1153,12 +1165,12 @@ function handleMouseMove(e) {
     // check all objects on screen; if hovering over, display object name.
     for (let [word, thing] of Object.entries(thingsHere)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas) && thing.okayToDisplayWord()) {
-            displayWord(thing.word, thing.x, thing.y);
+            displayWord(thing.word, thing.x + thing.wordDisplayOffsetX, thing.y + thing.wordDisplayOffsetY);
         }
     }
     for (let [word, thing] of Object.entries(inventory)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas)) {
-            displayWord(thing.word, thing.x, thing.y);
+            displayWord(thing.word, thing.x, thing.y); // note not applying offsets if the object is in inventory.
         }
     }
 }
