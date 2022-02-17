@@ -117,6 +117,12 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
 
     level.initializationFunction = function() {
         level.displayLevelIntroMessage();
+        window.setTimeout(
+            function() {
+                displayMessage("Hint: at one point in this short puzzle, you'll need to turn something into a kind of duck. It's not super-obscure but less common than 'mallard', say.", 7000 );
+            },
+            2500
+        )
     };
 
     return level;
