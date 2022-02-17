@@ -117,7 +117,7 @@ getLevelFunctions['ghost level'] = function() {
         window.Dart = class Dart extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
-                this.inventoryImageRatio = 1.5; // so doesn't show up too small in inventory
+                this.inventoryImageRatio = 1.0; // so doesn't show up too small in inventory
             }
             handleClick() {
                 if (('dart' in inventory) && (currentRoom === 'game room') && ('dartboard' in thingsHere)) {
@@ -139,7 +139,7 @@ getLevelFunctions['ghost level'] = function() {
         window.Darts = class Darts extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
-                this.inventoryImageRatio = 1.5; // so doesn't show up too small in inventory
+                this.inventoryImageRatio = 1.0; // so doesn't show up too small in inventory
             }
             handleClick() {
                 if (('darts' in inventory) && (currentRoom === 'game room') && ('dartboard' in thingsHere)) {
@@ -202,8 +202,8 @@ getLevelFunctions['ghost level'] = function() {
         window.Gun = class Gun extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
-                this.wordDisplayOffsetX = -15; // so "gun" and "musketeer" labels can both appear without overlapping
-                this.wordDisplayOffsetY = -23;
+                this.wordDisplayOffsetX = -25; // so "gun" and "musketeer" labels can both appear without overlapping
+                this.wordDisplayOffsetY = -65;
             }
             handleCollision() {
                 displayMessage('watch out!', DEFAULT_MESSAGE_DURATION, this.x, this.y);

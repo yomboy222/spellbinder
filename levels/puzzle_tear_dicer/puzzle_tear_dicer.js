@@ -13,15 +13,15 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 this.sound = new Audio(levelPath + '/audio/423990__amishrob__car-horn-beep-beep-two-beeps-honk-honk.wav');
-                this.imageEmpty = undefined;
-                this.imageWithPlayer = new Image();
-                this.imageWithPlayer.src = levelPath + '/things/car-with-player.png';
+                // this.imageEmpty = undefined;
+                // this.imageWithPlayer = new Image();
+                // this.imageWithPlayer.src = levelPath + '/things/car-with-player.png';
             }
             extraTransformIntoBehavior() {
                 this.sound.play();
                 displayMessage('Beep beep!');
-                this.imageEmpty = this.image;
-                this.image = this.imageWithPlayer;
+                // this.imageEmpty = this.image;
+                // this.image = this.imageWithPlayer;
                 // change image to player's head in window
                 normalPlayerInputSuppressed = true;
                 playerImageSuppressed = true;
@@ -34,7 +34,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             exitCar() {
                 normalPlayerInputSuppressed = false;
                 playerImageSuppressed = false;
-                this.image = this.imageEmpty;
+                // this.image = this.imageEmpty;
                 player.x = this.x;
                 player.y = this.y - 15;
             }
@@ -46,7 +46,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
                 this.frameCtr = 0;
             }
             update() {
-                this.y = this.initialY + (Math.round(Date.now() / 10 ) % 60);
+                this.y = this.initialY - 190 + (Math.round(Date.now() / 5 ) % 356);
             //    this.frameCtr = ( Math.round(Date.now() / 40 ) % 6 );
             //    if (this.frameCtr > 5)
             //        this.frameCtr = 0;
@@ -71,7 +71,6 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
                 completeLevel();
                 return super.handleClick();
             }
-
             handleCollision() {
                 completeLevel();
                 super.handleCollision();
@@ -92,7 +91,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     level.initialRoom = 'room1';
     level.initialX = 20; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 70;
-    level.initialSpells = ['anagram', 'remove-edge', 'change-edge'];
+    level.initialSpells = ['anagram', 'remove-edge', 'add-edge', 'change-edge'];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
     level.allWords = [ 'tear', 'tare', 'tar', 'rat', 'art', 'tea', 'ear', 'dicer', 'dice', 'ice', 'cider', 'eider', 'car', ];
@@ -101,7 +100,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     level.bridgelikeObjects = [];
     level.otherGameData = {};
     level.initialThings = [
-        ['tare','room1', 6, 73],
+        ['tare','room1', 8, 73],
         ['dicer','room1',28,73],
         ['treasure','room1',90,86],
         ['mysterious-precipitation', 'room1', 50, 50],
@@ -117,7 +116,6 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     };
 
     level.initializationFunction = function() {
-        displayMessage('The goal of this puzzle is to create something to drive away in!',3000);
         level.displayLevelIntroMessage();
     };
 

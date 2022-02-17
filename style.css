@@ -30,6 +30,10 @@
     transform:translate(-50%,-50%); /* trick for centering, from v. krokhmansky */
 }
 
+#music-toggle-div{
+    display:none;
+}
+
 .word-bubble{
     display:none;
     visibility: visible;

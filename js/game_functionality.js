@@ -13,7 +13,7 @@ const CANVAS_WIDTH = 700; const CANVAS_HEIGHT = 600;
 const PLAY_AREA_WIDTH = 700; const PLAY_AREA_HEIGHT = 500;
 const xScaleFactor = PLAY_AREA_WIDTH / 100; const yScaleFactor = PLAY_AREA_HEIGHT / 100;
 const INVENTORY_WIDTH = 700; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
-const INVENTORY_TOP_MARGIN = 58; const INVENTORY_LEFT_MARGIN = 55; const INVENTORY_SPACING = 95;
+const INVENTORY_TOP_MARGIN = 58; const INVENTORY_LEFT_MARGIN = 65; const INVENTORY_SPACING = 95;
 const MAX_ITEMS_IN_INVENTORY = 6;
 const RUNE_WIDTH = 65; const RUNE_HEIGHT = 92;
 const PASSAGE_WIDTH = 55;
@@ -301,7 +301,7 @@ class Thing extends GameElement {
         this.collisionProfile = (ellipticalObjects.indexOf(word) >= 0) ? CollisionProfile.ELLIPTICAL : CollisionProfile.RECTANGULAR;
         this.displayingWord = false;
         this.cannotPickUpMessage = 'This object cannot be picked up.';
-        this.inventoryImageRatio = 2.5; // factor by which to reduce each dimension when drawing in inventory.
+        this.inventoryImageRatio = 1.7; // factor by which to reduce each dimension when drawing in inventory.
         this.destX = 0; // used if moving
         this.destY = 0;
         this.beginMovementTime = 0;
@@ -370,9 +370,9 @@ class Thing extends GameElement {
     //TODO: FADEIN / FADEOUT OF INVENTORY ITEMS
     drawInInventory(index) {
         this.setCoordinatesInInventory(index);
-        ctx.drawImage(this.image, this.x - this.width / this.inventoryImageRatio, this.y - this.height / this.inventoryImageRatio,
-            this.halfWidth,
-            this.halfHeight);
+        ctx.drawImage(this.image, this.x - (this.halfWidth / this.inventoryImageRatio), this.y - (this.halfHeight / this.inventoryImageRatio),
+            this.width / this.inventoryImageRatio,
+            this.height / this.inventoryImageRatio);
     }
 
     // tryToPickUp() returns 1 if successful else 0 :
@@ -714,7 +714,7 @@ function castSpell() {
     } else if (fromWord in thingsHere) {
         sourceThing = thingsHere[fromWord];
         if (!sourceThing.inRangeOfPlayer(EXTRA_SPELL_RADIUS)) {
-            displayMessage('Too far away to transform.');
+            displayMessage('You need to move closer to transform that.');
             return;
         }
     }
@@ -993,6 +993,7 @@ function teleport() {
 
 function completeLevel() {
     levelComplete = true;
+    sounds['fanfare'].play();
     displayMessage('Congratulations, you completed the level! Press R to return to intro screen.');
 }
 
@@ -1051,6 +1052,9 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
     if (typeof roomData.backgroundImageName !== 'undefined') {
         backgroundImage = new Image();
         backgroundImage.src = levelPath + '/rooms/' + newRoomName.replace(' ','_') + '/' + roomData.backgroundImageName;
+    }
+    else {
+        backgroundImage = undefined;
     }
 
     filledPolygons = [];
@@ -1137,6 +1141,7 @@ function loadLevel(lName = 'intro level') {
 
     if (typeof level.backgroundMusicFile !== 'undefined') {
         backgroundMusic = new Audio(levelPath + '/audio/' + level.backgroundMusicFile);
+        document.getElementById('music-toggle-div').style.display = 'block';
     }
 
     newRoom(level.initialRoom, level.initialX, level.initialY);
@@ -1320,6 +1325,7 @@ function initialize() {
     }
     sounds['spell'] = new Audio('audio/magical_1.ogg');
     sounds['page turn'] = new Audio('audio/63318__flag2__page-turn-please-turn-over-pto-paper-turn-over.wav');
+    sounds['fanfare'] = new Audio('audio/524849__mc5__short-brass-fanfare-1.wav');
 
     document.addEventListener('keydown', handleKeydown);
     document.addEventListener('keyup', handleKeyup);
@@ -1407,6 +1413,7 @@ function showIntroScreen() {
     canvas.style.display = 'none';
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'block';
+    document.getElementById('music-toggle-div').style.display = 'none';
    // document.getElementById('loadLevelButton').addEventListener('click',loadLevel);
 }
 

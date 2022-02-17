@@ -151,7 +151,7 @@ getLevelFunctions['tutorial level'] = function() {
     level.initialThings = [
         ['stand','room1', 48, 50],
         ['cur','room2',85,40],
-        ['bear','room2',25,40],
+        ['bear','room2',59,42],
         ['gate','room3',63,50],
         ['key','room3',25,50],
         ['treasure','room3',90,47],
@@ -170,8 +170,8 @@ getLevelFunctions['tutorial level'] = function() {
             passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 50, 'room2', 12, 82)],
         },
         'room2': {
-            boundaries: [ ['n',10,26,100,26], ['n',100,54,64,54], ['n',64,54,64,95], ['n',0,95,64,95], ['n',0,70,36,70], ['n',36,70,36,54], ['n',36,54,10,54], ['n',10,54,10,26], ],
-            filledPolygons: [ ['r',0,0,100,26], ['r',0,26,10,44], ['r',10,54,26,16], ['r',0,95,100,5], ['r',64,54,36,41], ],
+            boundaries: [ ['n',30,26,100,26], ['n',100,54,84,54], ['n',84,54,84,95], ['n',0,95,84,95], ['n',0,70,56,70], ['n',56,70,56,54], ['n',56,54,30,54], ['n',30,54,30,26], ],
+            filledPolygons: [ ['r',0,0,100,26], ['r',0,26,30,44], ['r',30,54,26,16], ['r',0,95,100,5], ['r',84,54,16,41], ],
             passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 40, 'room3', 12, 50),
                 new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 75, 'room1', 88,50),
                 ],
