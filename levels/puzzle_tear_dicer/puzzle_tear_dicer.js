@@ -19,7 +19,6 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             }
             extraTransformIntoBehavior() {
                 this.sound.play();
-                displayMessage('Beep beep!');
                 // this.imageEmpty = this.image;
                 // this.image = this.imageWithPlayer;
                 // change image to player's head in window
@@ -53,7 +52,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             //    this.image = this.images[this.frameCtr];
             }
             handleCollision() {
-                displayMessage('This mysterious precipitation stings!');
+                displayMessage('This magical precipitation stings!');
             }
 
             okayToDisplayWord() {
@@ -94,9 +93,9 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     level.initialSpells = ['anagram', 'remove-edge', 'add-edge', 'change-edge'];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
-    level.allWords = [ 'tear', 'tare', 'tar', 'rat', 'art', 'tea', 'ear', 'dicer', 'dice', 'ice', 'cider', 'eider', 'car', ];
+    level.allWords = [ 'arc', 'rice', 'cart', 'dart', 'tear', 'tare', 'tar', 'rat', 'art', 'tea', 'ear', 'dicer', 'dice', 'ice', 'cider', 'eider', 'car', ];
     level.solidObjects  = ['mysterious-precipitation'];
-    level.immovableObjects = [ 'car', 'tear', 'tare', 'tar', 'rat', 'art', 'tea', 'ear', 'dicer', 'dice', 'ice', 'cider', 'eider', ];
+    level.immovableObjects = [ 'arc', 'rice', 'car', 'cart', 'dart', 'tear', 'tare', 'tar', 'rat', 'art', 'tea', 'ear', 'dicer', 'dice', 'ice', 'cider', 'eider', ];
     level.bridgelikeObjects = [];
     level.otherGameData = {};
     level.initialThings = [

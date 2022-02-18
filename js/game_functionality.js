@@ -679,8 +679,8 @@ function parseCommand(command) {
     let index = command.indexOf('>');
     if (index < 0)
         return { error: 'Spells must have form "fromWord > toWord".'};
-    fromWord = command.substring(0,index).trim();
-    toWord = command.substring(index+1).trim();
+    fromWord = command.substring(0,index).trim().toLowerCase();
+    toWord = command.substring(index+1).trim().toLowerCase();
     if (fromWord.length < 1 || toWord.length < 1)
         return { error: 'Spells must have form "fromWord > toWord".'};
     return {fromWord : fromWord, toWord : toWord};
@@ -994,6 +994,9 @@ function teleport() {
 function completeLevel() {
     levelComplete = true;
     sounds['fanfare'].play();
+    if (typeof backgroundMusic === 'object') {
+        backgroundMusic.pause();
+    }
     displayMessage('Congratulations, you completed the level! Press R to return to intro screen.');
 }
 
