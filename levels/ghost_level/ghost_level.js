@@ -357,11 +357,6 @@ getLevelFunctions['ghost level'] = function() {
                 completeLevel();
                 return super.tryToPickUp();
             }
-
-            handleClick() {
-                completeLevel();
-                return super.handleClick();
-            }
             handleCollision() {
                 completeLevel();
                 return super.handleCollision();

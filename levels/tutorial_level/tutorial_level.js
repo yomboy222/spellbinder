@@ -87,18 +87,11 @@ getLevelFunctions['tutorial level'] = function() {
             }
         }
 
-
         window.Treasure = class Treasure extends Thing {
             tryToPickUp() {
                 completeLevel();
                 return super.tryToPickUp();
             }
-
-            handleClick() {
-                completeLevel();
-                return super.handleClick();
-            }
-
             handleCollision() {
                 completeLevel();
                 super.handleCollision();
@@ -125,7 +118,7 @@ getLevelFunctions['tutorial level'] = function() {
 
     level.showRoom2Message = function () {
         if ('bear' in thingsHere) {
-            displayMessage('Try to get past the cur by typing C and casting "cur > curb".', 3600, 80,56, true);
+            displayMessage('Try to get past the cur by typing C and casting "cur > curb".', 6000, 80,56, true);
         }
     }
 

@@ -43,6 +43,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 this.frameCtr = 0;
+                this.cannotPickUpMessage = '';
             }
             update() {
                 this.y = this.initialY - 190 + (Math.round(Date.now() / 5 ) % 356);
@@ -52,7 +53,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             //    this.image = this.images[this.frameCtr];
             }
             handleCollision() {
-                displayMessage('This magical precipitation stings!');
+                displayMessage('This magical precipitation stings!', DEFAULT_MESSAGE_DURATION, this.initialX, this.initialY);
             }
 
             okayToDisplayWord() {
@@ -64,11 +65,6 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             tryToPickUp() {
                 completeLevel();
                 return super.tryToPickUp();
-            }
-
-            handleClick() {
-                completeLevel();
-                return super.handleClick();
             }
             handleCollision() {
                 completeLevel();
@@ -118,7 +114,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
         level.displayLevelIntroMessage();
         window.setTimeout(
             function() {
-                displayMessage("Hint: at one point in this short puzzle, you'll need to turn something into a kind of duck. It's not super-obscure but less common than 'mallard', say.", 7000 );
+                displayMessage("Hint: at one point in this 'one-room' puzzle, you'll need to turn something into a kind of duck. It's not super-obscure, but less common than 'mallard', say.", 7000 );
             },
             2500
         )

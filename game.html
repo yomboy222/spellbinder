@@ -10,24 +10,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Griffy&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="word-bubble-0" class="word-bubble"></div>
-    <div id="word-bubble-1" class="word-bubble"></div>
-    <div id="word-bubble-2" class="word-bubble"></div>
-    <div id="word-bubble-3" class="word-bubble"></div>
-    <div id="word-bubble-4" class="word-bubble"></div>
-    <div id="word-bubble-5" class="word-bubble"></div>
-    <div id="word-bubble-6" class="word-bubble"></div>
-    <div id="word-bubble-7" class="word-bubble"></div>
-    <div id="word-bubble-8" class="word-bubble"></div>
-    <div id="word-bubble-9" class="word-bubble"></div>
     <div id="binder-instructions"></div>
     <div id="music-toggle-div">
         <button id="musicToggleButton" name="music toggle" value="music on/off" onclick="toggleMusic()">music on/off</button>
+    </div>
+    <div id="spell-input-div">
+        <form id="spell-form" action="#" autocomplete="off">
+            Change <input type="text" name="fromWord" id="fromWord" autocomplete="off">
+            into <input type="text" name="toWord" id="toWord" autocomplete="off">
+            <br/>
+            <input type="submit" name="Cast!" id="cast-button" value="Cast!">
+        </form>
     </div>
     <div id="player-message-0" class="player-message"></div>
     <div id="player-message-1" class="player-message"></div>
     <div id="player-message-2" class="player-message"></div>
     <div id="floating-message-holder"></div>
+    <div id="caption-div-holder"></div>
 
     <div id="binder-page-left" class="binder-page"></div>
     <div id="binder-page-right" class="binder-page"></div>
@@ -40,8 +39,8 @@
         Inside are strange stone runes, and old tomes ... bearing the name-plate of
         the fabled alchemist, Gombrecht the Irrefrugnable! Gombrecht had
         researched spells for transmutation, hoping eventually to turn lead into gold. His idea was
-        that by altering the letters in an object's True Name, you alter the object itself. For instance
-        he thought he could turn a Tier (beast) into a Bier (beer). His fatal mistake &mdash; obvious,
+        that by altering the letters in an object's True Name, you alter the object itself, for instance turning
+        a Tier (beast) into a Bier (beer). His fatal mistake &mdash; obvious,
         in retrospect &mdash; is that an object's True Name is the word for it in English, not in German
         or any other weird peripheral language.
         <br/><br/>
@@ -54,9 +53,9 @@
         you can click it to drop it, or to use it, if it has some special use (or can be eaten etc.).
         <br/><br/>
 
-        <button id="loadTutorialButton" name="yo2" value="load tutorial level" onclick="loadLevel('tutorial level')">tutorial level</button>
-        &nbsp;&nbsp;&nbsp;&nbsp; <button id="loadLevelButton" name="yo" value="tear-dicer" onclick="loadLevel('tear/dicer puzzle')">tare/dicer puzzle</button>
-        &nbsp;&nbsp;&nbsp;&nbsp; <button id="loadLevelButton" name="yo" value="ghost level" onclick="loadLevel('ghost level')">ghost level</button>
+        <button class="loadLevelButton" name="yo2" value="load tutorial level" onclick="loadLevel('tutorial level')">tutorial level</button>
+        &nbsp;&nbsp;&nbsp;&nbsp; <button class="loadLevelButton" name="yo" value="tear-dicer" onclick="loadLevel('tear/dicer puzzle')">tare/dicer puzzle</button>
+        &nbsp;&nbsp;&nbsp;&nbsp; <button class="loadLevelButton" name="yo" value="ghost level" onclick="loadLevel('ghost level')">ghost level</button>
 
         <br/>
         <br/>
