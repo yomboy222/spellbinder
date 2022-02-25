@@ -11,7 +11,7 @@ getLevelFunctions['tutorial level'] = function() {
 
         window.Bear = class Bear extends Thing{
             extraTransformFromBehavior() {
-                displayMessage('Now you can cast "cur > curb".', 3600);
+                displayMessage('Now you can change "cur" into "curb".', 3600);
             }
         }
 
@@ -36,7 +36,8 @@ getLevelFunctions['tutorial level'] = function() {
                     this.beginMovementTime = Date.now();
                     this.movementDurationMS = 1200;
                     this.solid = false;
-                    displayMessage('The gate is now unlocked. In general, if an object can be used, you use it by clicking on it when it is in your inventory.', 3600);
+                    displayMessage('The gate is now unlocked. In general, if an object can be used, you use it by clicking on it when it is in your inventory.',
+                        3 * DEFAULT_MESSAGE_DURATION);
                 }
             }
         }
@@ -45,9 +46,9 @@ getLevelFunctions['tutorial level'] = function() {
             tryToPickUp() {
                 let returnValue = super.tryToPickUp();
                 if (returnValue === 1) { // indicates it was picked up.
-                    displayMessage('The key is now in your inventory. You can click it to drop it.',3000);
+                    displayMessage('The key is now in your inventory. You can click it to drop it.', 2 * DEFAULT_MESSAGE_DURATION);
                     setTimeout(function () {
-                            displayMessage('To unlock the gate, go over to it and click on the key in your inventory.',3600);
+                            displayMessage('To unlock the gate, go over to it and click on the key in your inventory.',2 * DEFAULT_MESSAGE_DURATION);
                         },
                         2500);
                 };
@@ -77,6 +78,7 @@ getLevelFunctions['tutorial level'] = function() {
                 if (otherData['grabbed binder'] === false) {
                     otherData['grabbed binder'] = true;
                     displayMessage('You got the Spell Binder! Press B to look inside.', 2500, this.x, this.y);
+                    document.getElementById('binder-icon-holder').style.display = 'block';
                     this.solid = false;
                     sounds['pickup'].play();
                     this.image.src = levelPath + '/things/stand-no-binder.png';
@@ -118,7 +120,7 @@ getLevelFunctions['tutorial level'] = function() {
 
     level.showRoom2Message = function () {
         if ('bear' in thingsHere) {
-            displayMessage('Try to get past the cur by typing C and casting "cur > curb".', 6000, 80,56, true);
+            displayMessage('Try to get past the cur by typing C and changing "cur" into "curb".', 6000, 80,56, true);
         }
     }
 
@@ -190,6 +192,7 @@ getLevelFunctions['tutorial level'] = function() {
     };
 
     level.initializationFunction = function() {
+        document.getElementById('binder-icon-holder').style.display = 'none';
         window.setTimeout(level.showInitialTutorialMsg, 500);
     };
 

@@ -17,7 +17,7 @@ getLevelFunctions['ghost level'] = function() {
         window.Boar = class Boar extends Thing{
             extraTransformIntoBehavior() {
                 window.setTimeout(this.leaveRoom.bind(this),1200);
-                this.markedForDeletion = true; // so if player leaves room before running-away process is done, still deleted.
+                this.deleteAfterMovement = true; // so if player leaves room before running-away process is done, still deleted.
             }
 
             leaveRoom() {
@@ -216,7 +216,11 @@ getLevelFunctions['ghost level'] = function() {
                 super(word, room, x, y);
                 this.sound = new Audio(levelPath + '/audio/host-speech.m4a');
                 this.sound.play();
-                this.markedForDeletion = true; // so if player leaves room before speech is over, this will still get deleted.
+                this.deleteAfterMovement = true; // so if player leaves room before speech is over, this will still get deleted.
+                this.movementDurationMS = 5000 + 3000;
+                this.beginMovementTime = Date.now();
+                this.destX = this.initialX;
+                this.destY = this.initialY;
             }
             draw() {
                 let t = Date.now() - this.timeOfCreation;
@@ -231,10 +235,19 @@ getLevelFunctions['ghost level'] = function() {
                 let fractionOfTheWayToEnd = (t - 5000) / 3001;
                 let fractionSquared = fractionOfTheWayToEnd * fractionOfTheWayToEnd;
                 ctx.globalAlpha = 1.0 - fractionSquared;
-                let newX = (fractionOfTheWayToEnd * 100) * (Math.sin(fractionSquared * 25)) + (this.x - this.halfWidth);
-                let newY = (fractionOfTheWayToEnd * 100) * (Math.cos(fractionSquared * 25)) + (this.y - this.halfHeight);
+                let newX = (fractionOfTheWayToEnd * 100) * (Math.sin(fractionSquared * 25)) + (this.initialX - this.halfWidth);
+                let newY = (fractionOfTheWayToEnd * 100) * (Math.cos(fractionSquared * 25)) + (this.initialY - this.halfHeight);
                 ctx.drawImage(this.image, newX, newY, this.width, this.height);
                 ctx.globalAlpha = 1.0;
+            }
+        }
+
+        window.Lamp = class Lamp extends Thing {
+            extraTransformIntoBehavior() {
+                if ('board' in thingsHere && typeof thingsHere['board'].captionDiv == 'undefined') {
+                    thingsHere['board'].captionDiv = getNewCaptionDiv('board');
+                    thingsHere['board'].setCaptionPositionInThingsHere();
+                }
             }
         }
 
@@ -242,19 +255,22 @@ getLevelFunctions['ghost level'] = function() {
             extraTransformIntoBehavior() {
                 this.sound = new Audio(levelPath + '/audio/om.m4a');
                 this.sound.play();
-                this.markedForDeletion = true; // so will delete even if player leaves room while it's floating away
+                this.beginMovementTime = Date.now();
+                this.movementDurationMS = 3000;
+                this.destX = this.x;
+                this.destY = this.y - 180;
+                this.deleteAfterMovement = true; // so will delete even if player leaves room while it's floating away
+                this.captionDiv.classList.add('fade-to-hidden');
+            }
+            update() {
+                super.update();
             }
             draw() {
                 let t = Date.now() - this.timeOfCreation;
-                if (t >= 3000) {
-                    delete thingsHere['mantra'];
-                    return;
-                }
                 let fractionOfTheWayToEnd =  t / 3001;
                 ctx.globalAlpha = 1.0 - fractionOfTheWayToEnd;
                 let newX = 30 * (Math.sin(fractionOfTheWayToEnd * 25)) + (this.x - this.halfWidth);
-                let newY = (this.y - this.halfHeight) - (fractionOfTheWayToEnd * 180);
-                ctx.drawImage(this.image, newX, newY, this.width, this.height);
+                ctx.drawImage(this.image, newX, this.y, this.width, this.height);
                 ctx.globalAlpha = 1.0;
             }
         }
@@ -342,6 +358,7 @@ getLevelFunctions['ghost level'] = function() {
                 if (otherData['grabbed binder'] === false) {
                     otherData['grabbed binder'] = true;
                     displayMessage('You got the Spell Binder! Type B to look inside.');
+                    document.getElementById('binder-icon-holder').style.display = 'block';
                     this.solid = false;
                     sounds['pickup'].play();
                     this.image.src = levelPath + '/things/stand-no-binder.png';
@@ -380,6 +397,7 @@ getLevelFunctions['ghost level'] = function() {
                 case 'ghost' : return new Ghost (word, room, x, y);
                 case 'gun' : return new Gun (word,room,x,y);
                 case 'host' : return new Host (word, room, x, y);
+                case 'lamp' : return new Lamp(word,room,x,y);
                 case 'mantra' : return new Mantra (word, room, x, y);
                 case 'mantrap' : return new Mantrap (word, room, x, y);
                 case 'musketeer' : return new Musketeer (word, room, x, y);
@@ -521,6 +539,8 @@ getLevelFunctions['ghost level'] = function() {
             otherData['bee sound'] = new Audio( 'audio/481647__joncon-library__bee-buzzing.wav');
             otherData['dart image'].src = levelPath + '/things/dart.png';
             otherData['lamplight image'].src = levelPath + '/things/Ellipse.png';
+            // since this is an introductory level we make the player pick up the spell binder at the start. see class "Stand" above.
+            document.getElementById('binder-icon-holder').style.display = 'none';
         };
         level.animateLoopFunction = function() {
             if (currentRoom === 'darkroom') {
