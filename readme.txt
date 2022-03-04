@@ -3,9 +3,10 @@ Doug McLellan, created 2/4/2022
 https://github.com/yomboy222/spellbinder.git
 
 TODO:
-give hint to open cabinet ... and in general to click things to open
+
 draw piece of paper in drawer when first opening
 re-record host message to say goal is to get treasure chest
+(or otherwise convey that that's how to complete a level.)
 
 PHASE 2 STUFF:
 use flip-a-clip to get walking player images

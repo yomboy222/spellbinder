@@ -111,7 +111,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     };
 
     level.initializationFunction = function() {
-        level.displayLevelIntroMessage();
+        displayMessage("Remember to mouse over the binder icon to see what spells you have available!");
         window.setTimeout(
             function() {
                 displayMessage("Hint: at one point in this 'one-room' puzzle, you'll need to turn something into a kind of duck. It's not super-obscure, but less common than 'mallard', say.", 7000 );

@@ -60,6 +60,7 @@ getLevelFunctions['ghost level'] = function() {
                 }
                 else {
                     // otherwise draw the "retracting" behavior:
+                    this.deleteCaptionIfAny();
                     let deltaY = 200 * ((Date.now() - otherData['darts thrown time'] - 1000) / 4000);
                     ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight + deltaY);
                     for (let i=0; i<3; i++) {
@@ -150,7 +151,8 @@ getLevelFunctions['ghost level'] = function() {
                         otherData['darts deltas'].push( [otherData['bulls-eye coordinates'][i][0] - player.x, otherData['bulls-eye coordinates'][i][1] - player.y] );
                     }
                     sounds['whoosh'].play();
-                    delete inventory['darts'];
+                    this.deleteCaptionIfAny();
+                    this.removeFromInventory();
                 }
                 else {
                     return super.handleClick();
@@ -311,11 +313,15 @@ getLevelFunctions['ghost level'] = function() {
 
         window.Reward = class Reward extends Thing {
             handleClick() {
+                if (this.movable === false) {
+                    return; // if it's not movable it's because it's on its way to the toll machine, so ignore any further clicks.
+                }
                 if (currentRoom === 'beyond' && 'reward' in inventory) {
                     let tollMachine = thingsHere['toll machine'];
                     if (tollMachine.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
                         thingsHere['reward'] = this;
-                        delete inventory['reward'];
+                        this.deleteCaptionIfAny();
+                        this.removeFromInventory();
                         this.movable = false; // so player can't pick up again as it moves into toll machine
                         this.beginMovementTime = Date.now();
                         this.movementDurationMS = 1000;
@@ -470,6 +476,11 @@ getLevelFunctions['ghost level'] = function() {
                 filledPolygons: [ ['r',0,0,4,35], ['r',0,65,4,35], ['p',30,0,61,46,61,0], ['p',61,0,61,5,76,28,76,69,100,100,100,0], ],
                 passages: [ new Passage(PassageTypes.INVISIBLE_VERTICAL,4,50,'entry hall 1',88,50),
                     new Passage(PassageTypes.INVISIBLE_HORIZONTAL,78,50,'main',12,50),],
+                specificNewRoomBehavior: function() {
+                    if (!spellAvailable(allSpells.SPELL_REVERSAL)) {
+                        displayMessage('Click on the drawer to open it!');
+                    }
+                },
             },
             'darkroom':{
                 boundaries:[ ['n',10,20,90,20], ['n',90,20,90,82], ['n',90,82,10,82], ['n',10,82,10,20]],

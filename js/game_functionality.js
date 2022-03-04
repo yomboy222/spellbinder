@@ -25,7 +25,7 @@ let canvasOffsetY = 0;
 let binderIconLeft = 0;
 const PLAYER_HEIGHT = 90;
 const PLAYER_WIDTH = 60;
-const EXTRA_SPELL_RADIUS = 45;
+let EXTRA_SPELL_RADIUS = 250; // currently don't want to make distance an issue. in the future might need to reduce this though.
 const EXTRA_PICKUP_RADIUS = 20;
 const DISTANCE_TO_MOVE = 4;
 const allSpells = { SPELL_ADD_EDGE:'add-edge', SPELL_REMOVE_EDGE:'remove-edge', SPELL_REVERSAL : 'reversal', SPELL_ANAGRAM : 'anagram',
@@ -33,6 +33,7 @@ const allSpells = { SPELL_ADD_EDGE:'add-edge', SPELL_REMOVE_EDGE:'remove-edge', 
         BINDER_COVER : 'cover', BINDER_INTRO : 'intro' };
 let binderImages = {};
 let binderPageHtml = {};
+let timeOfLastBinderOpening = 0;
 let CollisionProfile = { RECTANGULAR : 'RECTANGULAR', ELLIPTICAL : 'ELLIPTICAL'};
 let BoundaryType = { VERTICAL : 'v', HORIZONTAL : 'h', DIAGONAL : 'd'};
 let levelList = [];
@@ -119,15 +120,7 @@ class Level {
         this.getThing = function(word,room,x,y) {
             return undefined; // undefined indicates no special Thing subclass for this word
         };
-        this.displayLevelIntroMessage = function() {
-            let msg = 'You are starting with the following spells: ';
-            for (let i=0; i < this.initialSpells.length; i++) {
-                msg += (i > 0) ? ', ' : '';
-                msg += this.initialSpells[i];
-            }
-            msg += '. Press B to open the binder!';
-            displayMessage(msg, DEFAULT_MESSAGE_DURATION+ 1000);
-        };
+        this.displayLevelIntroMessage = function() {};
         this.initializationFunction = function() {
            this.displayLevelIntroMessage();
         };
@@ -139,6 +132,7 @@ class Level {
             return false; // false indicates click event not handled here
         };
         this.postTransformBehavior = function(fromWord,toWord) {};
+        this.levelCompleteMessage = 'Congratulations, you completed the level! Press R to return to intro screen.';
     }
 }
 
@@ -405,8 +399,19 @@ class Thing extends GameElement {
         }
     }
 
-    discard() {
+    removeFromInventory() {
+        // note this is a *subset* of "discard" behavior, in fact discard() calls this method.
+        // discard() furthermore moves the thing into thingsHere; but this is not always desired (like when throwing darts e.g.)
         delete inventory[this.word];
+        window.setTimeout( function() {
+                repositionInventoryItems();
+                drawInventory();
+            },
+            100); // waiting 100 MS to redraw this so click won't affect whatever item slides into this item's place in the inventory
+    }
+
+    discard() {
+        this.removeFromInventory();
         this.room = currentRoom;
         this.x = player.x;
         this.y = player.y;
@@ -606,9 +611,12 @@ function pickUpNearbyThings() {
 }
 
 function stopDisplayingMsg(forceStopAll = false) {
-
     for (let i=0; i< fixedMessages.length; i++) {
-        if ( (forceStopAll === true) || (fixedMessages[i].timeAtMessageCreation !== 0 && Date.now() >= fixedMessages[i].timeAtMessageCreation + fixedMessages[i].duration)) {
+        if (forceStopAll === true) {
+            fixedMessages[i].divElement.classList.remove('visible-now');
+            fixedMessages[i].divElement.style.display = 'none';
+        }
+        else if (fixedMessages[i].timeAtMessageCreation !== 0 && Date.now() >= fixedMessages[i].timeAtMessageCreation + fixedMessages[i].duration) {
             fixedMessages[i].divElement.classList.remove('visible-now');
             fixedMessages[i].divElement.classList.add('fade-to-hidden');
             fixedMessages[i].timeAtMessageCreation = 0;
@@ -625,6 +633,9 @@ function stopDisplayingMsg(forceStopAll = false) {
 function displayMessage(msg, durationMS = DEFAULT_MESSAGE_DURATION, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
     // use one of the fixedMessages if no x and y coordinates specified,
     // otherwise create a new floatingMessage.
+
+    if (showingIntroPage === true)
+        return; // sometimes displayMessage will be triggered by a setTimeout; if in the meantime the player has returned to intro page, don't show.
 
     // see if message already being displayed; if so, return.
     if (x == undefined) {
@@ -705,7 +716,8 @@ function addSpellToBinder(spellName) {
     displayMessage('You found a new binder page!');
     if (spellsAvailable.indexOf(spellName) < 0)
         spellsAvailable.push(spellName);
-    showBinder(spellName);
+    window.setTimeout( function() { showBinder(spellName); }, 2000);
+//    showBinder(spellName);
 }
 
 function toggleSpellInputWindow(forceClose = false) {
@@ -863,6 +875,7 @@ function castSpell() {
         runeAcquisitionTime = Date.now();
     }
 
+    repositionInventoryItems();
     drawInventory();
 
     if (newObject.okayToDisplayWord()) {
@@ -880,6 +893,15 @@ function castSpell() {
 
     fadeinTimer = Date.now();
     fadeinWord = toWord;
+}
+
+function repositionInventoryItems() {
+    let index = 0;
+    for (let [word, thing] of Object.entries(inventory)) {
+        thing.setCoordinatesInInventory(index);
+        thing.moveCaptionDivIfAnyToInventory();
+        index++;
+    }
 }
 
 function drawInventory() {
@@ -915,22 +937,33 @@ function drawInventory() {
 }
 
 function showBinder(page = allSpells.BINDER_COVER) {
-    // console.log('!' + page + '!');
+    timeOfLastBinderOpening = Date.now();
+    stopDisplayingMsg(true); // "true" forces all messages to stop displaying
     pageBeingShownInBinder = page;
     document.getElementById('binder-instructions').style.display = 'block';
+    document.getElementById('binder-icon-holder').style.display = 'none';
+    hideAllCaptions();
     // console.log('should be showing ...');
     // alert('hey');
     return false; // will prevent links from being followed if this is called from a hyperlink
 }
 
 function handleBinderIconMouseover(e) {
-    let spellListDiv = document.getElementById('spell-list');
-    spellListDiv.style.display = 'block';
-    spellListDiv.style.maxHeight = '250px';
-    spellListDiv.style.transition = 'max-height 1s linear';
+    if (pageBeingShownInBinder == '') {
+        let binderIconDiv = document.getElementById('binder-icon-holder');
+        binderIconDiv.classList.remove('binder-roll-up');
+        binderIconDiv.classList.add('binder-drop-down');
+        let spellListDiv = document.getElementById('spell-list');
+        spellListDiv.style.display = 'block';
+        spellListDiv.style.maxHeight = '250px';
+        spellListDiv.style.transition = 'max-height 1s linear';
+    }
 }
 
 function handleBinderIconMouseout(e) {
+    let binderIconDiv = document.getElementById('binder-icon-holder');
+    binderIconDiv.classList.remove('binder-drop-down');
+    binderIconDiv.classList.add('binder-roll-up');
     document.getElementById('spell-list').style.display = 'none';
 }
 
@@ -1054,7 +1087,7 @@ function completeLevel() {
     if (typeof backgroundMusic === 'object') {
         backgroundMusic.pause();
     }
-    displayMessage('Congratulations, you completed the level! Press R to return to intro screen.', DEFAULT_MESSAGE_DURATION * 2);
+    displayMessage(level.levelCompleteMessage, DEFAULT_MESSAGE_DURATION * 20);
 }
 
 function confirmQuit() {
@@ -1219,13 +1252,16 @@ function loadLevel(lName = 'intro level') {
 }
 
 function closeBinder() {
+    console.log('closing binder');
     pageBeingShownInBinder = '';
+    document.getElementById('binder-icon-holder').style.display = 'block';
     let leftPage = document.getElementById('binder-page-left');
     let rightPage = document.getElementById('binder-page-right');
     let instructionDiv = document.getElementById('binder-instructions');
     leftPage.style.display = 'none';
     rightPage.style.display = 'none';
     instructionDiv.style.display = 'none';
+    displayAllCaptions();
     drawInventory(); // shouldn't be necessary when page images are scaled properly but for now they stray into inventory area.
 }
 
@@ -1236,7 +1272,10 @@ function handleKeydown(e) {
         handleKeyInBinderViewMode(e);
         return;
     }
-    else if (normalPlayerInputSuppressed === false) {
+    else if (e.code === 'KeyR' && levelComplete === true) {
+        confirmQuit();
+    }
+    else if (normalPlayerInputSuppressed === false && levelComplete === false) {
         switch (e.code) {
             case 'ArrowRight' :
             case 'KeyD' :
@@ -1266,9 +1305,7 @@ function handleKeydown(e) {
             case 'KeyT' : teleport(); break;
             case 'KeyX' : cheating = !cheating; break; // use to toggle cheating on and off.
             case 'KeyQ' : confirmQuit(); break;
-            case 'KeyR' : if (levelComplete === true) {
-                confirmQuit();
-            }
+
         }
     }
 }
@@ -1334,7 +1371,9 @@ function handleClick(e) {
     // TODO: maybe handle clicks on intro page programatically here??
         return;
     }
-    else if (pageBeingShownInBinder != '') {
+    else if (pageBeingShownInBinder != '' && Date.now() > timeOfLastBinderOpening + 200 ) {
+        // the reason for checking  Date.now() > timeOfLastBinderOpening + 200 is that clicking on the name of a spell in the
+        // new binder-icon-holder div will open the binder, but this handler will also fire, and immediately close binder without this check.
         closeBinder();
         return;
     }
@@ -1354,9 +1393,10 @@ function handleClick(e) {
     for ([word, thing] of Object.entries(thingsHere)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             thing.handleClick();
-        }
-        drawInventory(); // important not to call this in individual Things' implementations of handleClick()!
-     }
+    }
+
+    drawInventory(); // important not to call this in individual Things' implementations of handleClick()!
+}
 
 // this is for the very first, non-level-specific setup tasks:
 function initialize() {
@@ -1365,11 +1405,12 @@ function initialize() {
 
     player = new Player();
     sounds = {};
-    const soundlist = ['pickup', 'add-spell', 'whoosh'];
+    const soundlist = ['pickup', 'whoosh'];
 
     for (let i = 0; i < soundlist.length; i++) {
         sounds[soundlist[i]] = new Audio('audio/' + soundlist[i] + '.wav');
     }
+    sounds['add-spell'] = new Audio('audio/magical_1.ogg');
     sounds['spell'] = new Audio('audio/magical_1.ogg');
     sounds['page turn'] = new Audio('audio/63318__flag2__page-turn-please-turn-over-pto-paper-turn-over.wav');
     sounds['fanfare'] = new Audio('audio/524849__mc5__short-brass-fanfare-1.wav');
@@ -1377,7 +1418,6 @@ function initialize() {
     document.addEventListener('keydown', handleKeydown);
     document.addEventListener('keyup', handleKeyup);
     document.addEventListener('click', handleClick);
-    document.addEventListener('blur',closeBinder);
 
     // load rune images
     for (i = 0; i < 26; i++) {
@@ -1405,7 +1445,7 @@ function initialize() {
     fixedMessages = [];
     const messageY = canvasOffsetY + Math.round(CANVAS_HEIGHT / 8);
     const messageXspacing = Math.round(CANVAS_WIDTH / 3.1);
-    const messageXoffset = Math.round(canvasOffsetX + (CANVAS_WIDTH / 12));
+    const messageXoffset = Math.round(canvasOffsetX + 25 );
     for (let i = 0; i < NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
         fixedMessages.push(
             {
@@ -1426,13 +1466,13 @@ function initialize() {
 
     binderPageHtml = {};
     binderPageHtml[allSpells.BINDER_COVER] = '<div class="binder-cover-title"><span style="font-size:24px;">The</span><br/>Spell-<br/>Binder</div>';
-    binderPageHtml['binder-intro-left-page'] = '<div class="spell-description">To cast a spell, press C; then type what you wish to transform, followed by a greater-than sign and the word to transform into. For example, you might cast</div> <div class="spell-example">ox > fox</div> <div class="spell-description">For this to work, you need three things: a nearby ox, a spell for putting a letter in front of a word, and a rune of the letter F: <img style="display:inline;" height="46px" width="30px" src="imgs/runes/Rune-F.png"> </div>';
+    binderPageHtml['binder-intro-left-page'] = '<div class="spell-description">To cast a spell, press C; then type what you wish to transform and the word to transform it into. For example, you might change <span class="monospace">ox</span> into <span class="monospace">fox</span>. For this to work, you need three things: a nearby ox, a spell for putting a letter in front of a word, and a rune of the letter F: <img class="inline-rune" src="imgs/runes/Rune-F.png"> </div>';
     binderPageHtml[allSpells.BINDER_INTRO] = '<div class="spell-description">Each spell is written on a page in this binder; you may find more pages with new spells!</div>';
-    binderPageHtml[allSpells.SPELL_ADD_EDGE] = '<div class="spell-title">Add Edge</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word:</div>  <div class="spell-example">fan &gt; fang <br/> ink &gt; sink</div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
-    binderPageHtml[allSpells.SPELL_REMOVE_EDGE] = '<div class="spell-title">Remove Edge</div> <div class="spell-description">This spell removes the letter at the beginning or end of a word, and releases it into your care as a rune:</div>  <div class="spell-example">fang &gt; fan<br/> sink &gt; ink</div> <div class="spell-description">This is a good way to get more runes!</div>';
-    binderPageHtml[allSpells.SPELL_CHANGE_EDGE] = '<div class="spell-title">Change Edge</div> <div class="spell-description">This spell lets you change the first or last letter in a word:</div>  <div class="spell-example">cable &gt; table</div> <div class="spell-description">Keep in mind you need a rune of the new letter (in this example, a T).</div>';
-    binderPageHtml[allSpells.SPELL_REVERSAL] = '<div class="spell-title">Reversal</div> <div class="spell-description">Simply reverses a word:</div>  <div class="spell-example">auks &gt; skua</div>';
-    binderPageHtml[allSpells.SPELL_ANAGRAM] = '<div class="spell-title">Anagram</div> <div class="spell-description">This spell lets you rearrange the letters in a word:</div>  <div class="spell-example">flea &gt; leaf</div>';
+    binderPageHtml[allSpells.SPELL_ADD_EDGE] = '<div class="spell-title">Add Edge</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word:</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fang</span></div> <div class="spell-example">change <span class="monospace">ink</span> into <span class="monospace">sink</span></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
+    binderPageHtml[allSpells.SPELL_REMOVE_EDGE] = '<div class="spell-title">Remove Edge</div> <div class="spell-description">This spell removes the letter at the beginning or end of a word, and releases it into your care as a rune:</div>  <div class="spell-example">change <span class="monospace">fang</span> into <span class="monospace">fan</span> </div><div class="spell-example"> change <span class="monospace">sink</span> into <span class="monospace">ink</span></div> <div class="spell-description">This is a good way to get more runes!</div>';
+    binderPageHtml[allSpells.SPELL_CHANGE_EDGE] = '<div class="spell-title">Change Edge</div> <div class="spell-description">This spell lets you change the first or last letter in a word:</div>  <div class="spell-example">change <span class="monospace">cable</span> into <span class="monospace">table</span> </div> <div class="spell-description">Keep in mind you need a rune of the new letter (in this example, <img class="inline-rune" src="imgs/runes/Rune-T.png">); the old rune is released to you (here, <img class="inline-rune" src="imgs/runes/Rune-C.png">).</div>';
+    binderPageHtml[allSpells.SPELL_REVERSAL] = '<div class="spell-title">Reversal</div> <div class="spell-description">Simply reverses a word:</div>  <div class="spell-example">change <span class="monospace">auks</span> into <span class="monospace">skua</span></div>';
+    binderPageHtml[allSpells.SPELL_ANAGRAM] = '<div class="spell-title">Anagram</div> <div class="spell-description">This spell lets you rearrange the letters in a word:</div>  <div class="spell-example">change <span class="monospace">flea</span> into <span class="monospace">leaf</span></div>';
 
     let binderIconHolder = document.getElementById('binder-icon-holder');
     binderIconLeft = canvasOffsetX + CANVAS_WIDTH - BINDER_ICON_WIDTH;

@@ -122,6 +122,17 @@
     background-color: rgba(200, 200, 200, 0.9);
 }
 
+.binder-drop-down{
+    max-height:300px;
+    transition: max-height 1s linear;
+}
+
+.binder-roll-up{
+    max-height:50px;
+    transition: max-height 2s linear;
+}
+
+
 #spell-list{
     display:none;
     overflow: hidden;
@@ -173,11 +184,33 @@
 }
 
 .spell-example{
-    font-family:monospace;
+    border:2px solid purple;
+    font-family: 'Griffy', cursive;
     font-size:20px;
-    margin-left:65px;
-    margin-top: 18px;
-    margin-bottom: 18px;
+    width:auto;
+    height:auto;
+    padding: 4px;
+    background-color: orchid;
+    margin-left:15px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.monospace {
+    font-family:monospace;
+}
+
+.spell-example > .monospace {
+    padding:2px;
+    border:2px solid black;
+    background-color: white;
+}
+
+.inline-rune {
+    display:inline;
+    height:33px;
+    width:22px;
+    vertical-align:middle;
 }
 
 .binder-cover-title{

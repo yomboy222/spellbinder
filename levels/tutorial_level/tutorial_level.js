@@ -57,7 +57,7 @@ getLevelFunctions['tutorial level'] = function() {
             handleClick() {
                 if ('gate' in thingsHere && 'key' in inventory) {
                     let gate = thingsHere['gate'];
-                    if (gate.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
+                    if (gate.inRangeOfPlayer(EXTRA_PICKUP_RADIUS)) {
                         gate.unlock();
                     }
                     else {
@@ -77,7 +77,7 @@ getLevelFunctions['tutorial level'] = function() {
             handleCollision() {
                 if (otherData['grabbed binder'] === false) {
                     otherData['grabbed binder'] = true;
-                    displayMessage('You got the Spell Binder! Press B to look inside.', 2500, this.x, this.y);
+                    displayMessage('You got the Spell Binder! Mouse over the binder icon to see what spells are in it. Click on spell name or press B to look inside.', 7500, this.x, this.y);
                     document.getElementById('binder-icon-holder').style.display = 'block';
                     this.solid = false;
                     sounds['pickup'].play();
