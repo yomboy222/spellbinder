@@ -110,6 +110,28 @@ maybe
 no, too gimmicky and/or beside the point
 
 
+==============
+
+ideas for redoing runes so that they can zip to/from inventory
+for simplicity, don't set up system to allow dropping runes.
+might want to make spell-execution interval a period when normal input is suppressed, so wouldn't have to worry about leaving room while spell is executing.
+
+let spellCurrentlyExecuting = false;
+runesComingToInventory = []; // each will be a game element
+runesLeavingInventory = []
+
+class Rune extends GameElement
+
+letter:
+
+
+when spell is cast:
+spellCurrentlyExecuting = true;
+
+for the rune being used, create a new Rune object, set destination & time etc.
+
+
+
 
 
 

@@ -4,7 +4,7 @@
 */
 
 /* TODO: deal with issue of doing setTimeouts whose handlers may not exist if you exit level.
-
+TODO: prevent player input while spell is executing or waiting to execute.
  */
 /* global-scope variables: */
 const canvas = document.getElementById('canvas1');
@@ -17,7 +17,7 @@ const RUNE_X_SPACING = 38; const RUNE_Y_SPACING = 42;
 const INVENTORY_TOP_MARGIN = 42; const INVENTORY_LEFT_MARGIN = 65; const INVENTORY_SPACING = 95;
 const BINDER_ICON_WIDTH = 132;
 const MAX_ITEMS_IN_INVENTORY = 6;
-const RUNE_WIDTH = 65; const RUNE_HEIGHT = 92;
+const RUNE_IMAGE_WIDTH = 65; const RUNE_IMAGE_HEIGHT = 92; const RUNE_DISPLAY_WIDTH = 30; const RUNE_DISPLAY_HEIGHT = 42;
 const PASSAGE_WIDTH = 55;
 const PASSAGE_LENGTH = 150;
 let canvasOffsetX = 0; // will be set in initialize()
@@ -51,6 +51,9 @@ let runes = [];
 let runeImages = [];
 let runeAcquisitionTime = 0;
 let newRuneIndex = -1;
+let runesBeingReleased = [];
+let runesBeingAbsorbed = [];
+let transformationToExecute = undefined;
 let rooms = {};
 let passages = [];
 let passageImages = {}; // probably a good idea to load these in "initialize" function, but not doing this now.
@@ -245,13 +248,23 @@ class Player {
 }
 
 class GameElement {
-    constructor() {
-        this.x = 0;
-        this.y = 0;
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.initialX = x;
+        this.initialY = y;
         this.halfWidth = 0;
         this.halfHeight = 0;
-        this.image = undefined;
-        this.collisionProfile = CollisionProfile.RECTANGULAR
+        this.image = new Image();
+        this.collisionProfile = CollisionProfile.RECTANGULAR;
+        this.destX = 0; // used if moving
+        this.destY = 0;
+        this.beginMovementTime = 0;
+        this.movementDurationMS = 0;
+        this.movementType = MOVEMENT_TYPE_LINEAR;
+        this.soundToPlayAfterMovement = undefined;
+        this.messageToDisplayAfterMovement = undefined;
+        this.deleteAfterMovement = false;
     }
     inRangeOfPlayer(extraRadius = 0) {
         if (this.collisionProfile === CollisionProfile.RECTANGULAR) {
@@ -277,18 +290,76 @@ class GameElement {
             y >= this.y - this.halfHeight &&
             y <= this.y + this.halfHeight );
     }
+
+    update() {
+        if (this.beginMovementTime != 0) {
+            if (Date.now() > this.beginMovementTime + this.movementDurationMS) {
+                this.methodToCallAfterMovement();
+            } else {
+                let fractionTraversed = (Date.now() - this.beginMovementTime) / this.movementDurationMS;
+                this.x = this.initialX + ((this.destX - this.initialX) * fractionTraversed);
+                if (this.movementType === MOVEMENT_TYPE_LINEAR) {
+                    this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed);
+                } else if (this.movementType === MOVEMENT_TYPE_PARABOLIC) {
+                    this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed) - 100 +
+                        (400 * (fractionTraversed - 0.5) * (fractionTraversed - 0.5));
+                }
+            }
+        }
+    }
+
+    methodToCallAfterMovement() {
+        this.beginMovementTime = 0;
+        this.x = this.destX;
+        this.y = this.destY;
+        if (typeof this.soundToPlayAfterMovement !== 'undefined')
+            this.soundToPlayAfterMovement.play();
+        if (typeof this.messageToDisplayAfterMovement !== 'undefined')
+            displayMessage(this.messageToDisplayAfterMovement);
+    }
+}
+
+class Rune extends GameElement {
+    constructor(x,y,destX,destY,letter,beingReleasedRatherThanAbsorbed) {
+        super(x,y);
+        this.image = runeImages[letter.charCodeAt(0) - 97];
+        this.destX = destX;
+        this.destY = destY;
+        this.letter = letter;
+        this.movementDurationMS = 1000;
+        this.beginMovementTime = Date.now();
+        this.deleteAfterMovement = true;
+        this.beingReleasedRatherThanAbsorbed = beingReleasedRatherThanAbsorbed;
+        this.height = RUNE_DISPLAY_HEIGHT;
+        this.width = RUNE_DISPLAY_WIDTH;
+        this.halfWidth = this.width / 2;
+        this.halfHeight = this.height / 2;
+    }
+
+    methodToCallAfterMovement() {
+        super.methodToCallAfterMovement();
+        if (this.beingReleasedRatherThanAbsorbed === true) {
+            runesBeingReleased = [];
+        }
+        else {
+            executeTransformation(); // this means the rune has moved across the screen to target, so now commit the actual transformation.
+            runesBeingAbsorbed = [];
+        }
+    }
+
+    draw() {
+        ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+    }
+
 }
 
 class Thing extends GameElement {
     constructor(word, room, x, y) {
-        super();
+        super(x, y);
         this.word = word;
         this.room = room;
         this.x = x;
         this.y = y;
-        this.initialX = x;
-        this.initialY = y;
-        this.image = new Image();
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
         this.image.src = levelPath + '/things/' + word.replace(' ', '_') + '.png';
         this.timeOfCreation = Date.now();
@@ -299,14 +370,6 @@ class Thing extends GameElement {
         this.cannotPickUpMessage = 'This object cannot be picked up.';
         this.captionDiv = undefined;
         this.inventoryImageRatio = 1.7; // factor by which to reduce each dimension when drawing in inventory.
-        this.destX = 0; // used if moving
-        this.destY = 0;
-        this.beginMovementTime = 0;
-        this.movementDurationMS = 0;
-        this.movementType = MOVEMENT_TYPE_LINEAR;
-        this.soundToPlayAfterMovement = undefined;
-        this.messageToDisplayAfterMovement = undefined;
-        this.deleteAfterMovement = false;
         this.playAudioWhenTransformed = true;
         this.sound = undefined; // used for thing's primary sound. will be stopped if/when player leaves room where it is.
         this.wordDisplayOffsetX = -28; // where to set "left" property of captionDev rel. to this.x. subclasses may redefine.
@@ -337,33 +400,11 @@ class Thing extends GameElement {
         }
     }
 
-    update() {
-        if (this.beginMovementTime != 0) {
-            if (Date.now() > this.beginMovementTime + this.movementDurationMS) {
-                // console.log('deleting after movement');
-                this.x = this.destX;
-                this.y = this.destY;
-                if (typeof this.soundToPlayAfterMovement !== 'undefined')
-                    this.soundToPlayAfterMovement.play();
-                if (typeof this.messageToDisplayAfterMovement !== 'undefined')
-                    displayMessage(this.messageToDisplayAfterMovement);
-                if (typeof this.methodToCallAfterMovement === 'function')
-                    this.methodToCallAfterMovement();
-                if (this.deleteAfterMovement === true)
-                    this.deleteFromThingsHere();
-                this.setCaptionPositionInThingsHere();
-                this.beginMovementTime = 0;
-            } else {
-                let fractionTraversed = (Date.now() - this.beginMovementTime) / this.movementDurationMS;
-                this.x = this.initialX + ((this.destX - this.initialX) * fractionTraversed);
-                if (this.movementType === MOVEMENT_TYPE_LINEAR) {
-                    this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed);
-                } else if (this.movementType === MOVEMENT_TYPE_PARABOLIC) {
-                    this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed) - 100 +
-                        (400 * (fractionTraversed - 0.5) * (fractionTraversed - 0.5));
-                }
-            }
-        }
+    methodToCallAfterMovement() {
+        super.methodToCallAfterMovement();
+        if (this.deleteAfterMovement === true)
+            this.deleteFromThingsHere();
+        this.setCaptionPositionInThingsHere();
     }
 
     draw() {
@@ -525,16 +566,13 @@ class Thing extends GameElement {
 
     extraTransformIntoBehavior() {}
 
-    methodToCallAfterMovement() {}
 }
 
 class Passage extends GameElement {
     constructor(type, xAsPercent, yAsPercent, destinationRoom, destXAsPercent, destYAsPercent, activated = true) {
-        super();
+        super(xAsPercent * xScaleFactor, yAsPercent * yScaleFactor );
         // this.originRoom = originRoom; note -- currently don't need to specify originRoom because passage data will be packaged into room data.
         this.type = type;
-        this.x = xAsPercent * xScaleFactor;
-        this.y = yAsPercent * yScaleFactor;
         this.destinationRoom = destinationRoom;
         this.destXAsPercent = destXAsPercent;
         this.destYAsPercent = destYAsPercent;
@@ -860,12 +898,47 @@ function castSpell() {
 
     // *** if we got here then the spell worked ***
 
-    if (typeof runeNeeded != 'undefined')
-    {
+    transformationToExecute = {
+        'sourceThing' : sourceThing,
+        'toWord' : toWord,
+        'runeNeeded' : runeNeeded,
+        'runeReleased' : runeReleased,
+    };
+
+    if (typeof runeNeeded === 'undefined') {
+        // if no runes to shuffle around graphically, just execute the transformation now:
+        executeTransformation();
+    }
+
+    runesBeingReleased = [];
+    runesBeingAbsorbed = [];
+
+    if (typeof runeNeeded != 'undefined') {
         const indexToDelete = runes.indexOf(runeNeeded);
         if (indexToDelete >= 0) // this should already have been checked, but just to be sure ...
             runes.splice(indexToDelete,1); // removes the needed rune from player's collection.
+        let coords = getRuneCoordinates(indexToDelete);
+        let runeToUse = new Rune(coords.x, coords.y, sourceThing.x, sourceThing.y, runeNeeded, false);
+        runesBeingAbsorbed.push(runeToUse);
     }
+
+    if (typeof runeReleased != 'undefined') {
+        runes.push(runeReleased);
+        newRuneIndex = runes.length-1;
+        runeAcquisitionTime = Date.now();
+        let coords = getRuneCoordinates(newRuneIndex);
+        let runeToUse = new Rune( sourceThing.x, sourceThing.y, coords.x, coords.y, runeReleased, true);
+        runesBeingReleased.push(runeToUse);
+    }
+}
+
+function executeTransformation() {
+    let sourceThing = transformationToExecute.sourceThing;
+    let toWord = transformationToExecute.toWord;
+    let runeReleased = transformationToExecute.runeReleased;
+    let runeNeeded = transformationToExecute.runeNeeded;
+
+    let inInventory = (sourceThing.word in inventory);
 
     sourceThing.extraTransformFromBehavior();
 
@@ -900,12 +973,6 @@ function castSpell() {
         inInventory = false;
     }
 
-    if (typeof runeReleased != 'undefined') {
-        runes.push(runeReleased);
-        newRuneIndex = runes.length-1;
-        runeAcquisitionTime = Date.now();
-    }
-
     repositionInventoryItems();
     drawInventory();
 
@@ -924,6 +991,8 @@ function castSpell() {
 
     fadeinTimer = Date.now();
     fadeinWord = toWord;
+
+    transformationToExecute = undefined;
 }
 
 function repositionInventoryItems() {
@@ -932,6 +1001,13 @@ function repositionInventoryItems() {
         thing.setCoordinatesInInventory(index);
         thing.moveCaptionDivIfAnyToInventory();
         index++;
+    }
+}
+
+function getRuneCoordinates(index) {
+    return {
+        x : INVENTORY_LEFT + INVENTORY_WIDTH - INVENTORY_LEFT_MARGIN - (RUNE_X_SPACING * Math.round((index-1)/2)),
+        y : INVENTORY_TOP + 5 + (RUNE_Y_SPACING * (index % 2))
     }
 }
 
@@ -949,8 +1025,8 @@ function drawInventory() {
     }
     for (let i = 0; i < runes.length; i++)
     {
-        let x = INVENTORY_LEFT + INVENTORY_WIDTH - INVENTORY_LEFT_MARGIN - (RUNE_X_SPACING * Math.round((i-1)/2));
-        let y = INVENTORY_TOP + 5 + (RUNE_Y_SPACING * (i % 2));
+
+        /* not making rune flash when acquired now.
         let showRune = true;
         if (runeAcquisitionTime !== 0 && newRuneIndex === i) {
             if (Date.now() > runeAcquisitionTime + 2000) {
@@ -961,8 +1037,19 @@ function drawInventory() {
                 showRune = (Math.round(Date.now() / 180) % 2 === 0);
             }
         }
-        if (showRune) {
-            ctx.drawImage(runeImages[runes[i].charCodeAt(0) - 97], x, y, RUNE_WIDTH / 2.3, RUNE_HEIGHT / 2.3);
+
+         */
+        let isInMotion = false;
+        if (runesBeingReleased.length > 0) { // if the rune is being represented as in motion, don't draw it in usual static position.
+            for (let j=0; j < runesBeingReleased.length; j++) {
+                if (runes[i] === runesBeingReleased[j].letter)
+                    isInMotion = true;
+            }
+        }
+
+        if (!isInMotion) {
+            let coords = getRuneCoordinates(i);
+            ctx.drawImage(runeImages[runes[i].charCodeAt(0) - 97], coords.x, coords.y, RUNE_DISPLAY_WIDTH, RUNE_DISPLAY_HEIGHT);
         }
     }
 }
@@ -1099,6 +1186,18 @@ function animate() {
     level.animateLoopFunction();
 
     drawInventory();
+
+    // draw any runes being moved on screen (do this after inventory because these may move into inventory area
+    for (let i = 0; i < runesBeingReleased.length; i++) {
+        let runeObject = runesBeingReleased[i];
+        runeObject.update(); // note this may clear the runesBeingReleased array.
+        runeObject.draw();
+    }
+    for (let i = 0; i < runesBeingAbsorbed.length; i++) {
+        let runeObject = runesBeingAbsorbed[i];
+        runeObject.update();
+        runeObject.draw();
+    }
 
     if (!showingIntroPage)
         requestAnimationFrame(animate);
@@ -1452,7 +1551,7 @@ function initialize() {
     for (i = 0; i < 26; i++) {
         let lower = String.fromCharCode(i + 97);
         let upper = String.fromCharCode(i + 65);
-        let runeImage = new Image(RUNE_WIDTH, RUNE_HEIGHT);
+        let runeImage = new Image(RUNE_IMAGE_WIDTH, RUNE_IMAGE_HEIGHT);
         runeImage.src = 'imgs/runes/Rune-' + upper + '.png';
         runeImages.push(runeImage);
     }

@@ -111,6 +111,7 @@ getLevelFunctions['ghost level'] = function() {
                         if (boundaries[i][0] === 'i')
                             boundaries.splice(i);
                     }
+                    otherData['bee sound'].pause();
                 }
                 otherData['hive in place'] = false;
             }
@@ -308,6 +309,9 @@ getLevelFunctions['ghost level'] = function() {
                 let relY = player.y - this.y;
                 let inEmptyPart = (relY > .6 * this.halfHeight) && (relX + this.halfHeight < relY);
                 return (! inEmptyPart);
+            }
+            okayToDisplayWord() { // don't mislead player into thinking you can do wordplay on "portcullis"!
+                return false;
             }
         }
 
