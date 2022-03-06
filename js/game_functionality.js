@@ -1124,13 +1124,7 @@ function completeLevel() {
 function confirmQuit() {
     let confirmed = levelComplete || (window.confirm('OK to leave this level and return to intro screen?'));
     if (confirmed === true) {
-        stopDisplayingMsg(true);
-        deleteCaptions(true); // "true" here forces deletion of captions in inventory too
-        let introDiv = document.getElementById('intro_screen_div');
-        introDiv.style.display = 'block';
-        document.getElementById('binder-icon-holder').style.display = 'none';
-        document.getElementById('canvas1').style.display = 'none';
-        showingIntroPage = true;
+        showIntroScreen();
     }
 }
 
@@ -1276,7 +1270,8 @@ function loadLevel(lName = 'intro level') {
     level.initializationFunction();
 
     if (typeof level.backgroundMusicFile !== 'undefined') {
-        backgroundMusic = new Audio(levelPath + '/audio/' + level.backgroundMusicFile);
+        let path = (level.backgroundMusicFile === 'Sneaky Snitch.mp3') ? 'audio/Sneaky Snitch.mp3' : levelPath + '/audio/' + level.backgroundMusicFile;
+        backgroundMusic = new Audio(path);
         document.getElementById('music-toggle-div').style.display = 'block';
     }
 
@@ -1533,10 +1528,21 @@ function initialize() {
 }
 
 function showIntroScreen() {
+    stopDisplayingMsg(true);
+    deleteCaptions(true); // "true" here forces deletion of captions in inventory too
+    document.getElementById('binder-icon-holder').style.display = 'none';
+    document.getElementById('music-toggle-div').style.display = 'none';
     canvas.style.display = 'none';
+
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'block';
-    document.getElementById('music-toggle-div').style.display = 'none';
+    showingIntroPage = true;
+    if (typeof backgroundMusic === 'object' && musicPlaying === true) {
+        musicPlaying = false;
+        backgroundMusic.pause();
+    }
+
+
     // document.getElementById('loadLevelButton').addEventListener('click',loadLevel);
 }
 
