@@ -126,7 +126,7 @@ getLevelFunctions['trash/lobster level'] = function() {
     };
 
     level.initializationFunction = function() {
-        displayMessage('You need to add some sausages to the cauldron!', DEFAULT_MESSAGE_DURATION * 200);
+        displayMessage('You need to add some kind of sausages to the cauldron!', DEFAULT_MESSAGE_DURATION * 200);
         level.sounds = {
             'splash' : new Audio(levelPath + '/audio/416710__inspectorj__splash-small-a.wav'),
         };
