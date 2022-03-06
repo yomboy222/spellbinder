@@ -5,7 +5,7 @@ levelList.push( { name:'tutorial level', difficulty:1 });
 getLevelFunctions['tutorial level'] = function() {
 
     let level = new Level('tutorial level');
-    levelPath = 'levels/tutorial_level';
+    level.levelPath = 'tutorial_level';
 
     level.defineThingSubclasses = function() {
 
@@ -152,9 +152,6 @@ getLevelFunctions['tutorial level'] = function() {
         ['treasure','room3',90,47],
     ];
     level.initialRunes = [];
-    level.sounds = {
-        'unlock': new Audio(levelPath + '/audio/410983__mihirfreesound__unlocking-door.wav'),
-    };
     level.rooms = {
         'room1': {
             boundaries: [ ['n',10, 36, 30, 36], ['n',10,64,30,64], ['n',10,36,10,64], ['d',30,36,42,18], ['n',42,18,54,18],
@@ -192,6 +189,9 @@ getLevelFunctions['tutorial level'] = function() {
     };
 
     level.initializationFunction = function() {
+        level.sounds = {
+            'unlock': new Audio(levelPath + '/audio/410983__mihirfreesound__unlocking-door.wav'),
+        };
         document.getElementById('binder-icon-holder').style.display = 'none';
         window.setTimeout(level.showInitialTutorialMsg, 500);
     };

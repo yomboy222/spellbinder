@@ -10,7 +10,7 @@ levelList.push( {name:'ghost level', difficulty:5});
 getLevelFunctions['ghost level'] = function() {
 
     let level = new Level('ghost level');
-    levelPath = 'levels/ghost_level';
+    level.levelPath = 'ghost_level';
 
     level.defineThingSubclasses = function () {
 
@@ -323,6 +323,7 @@ getLevelFunctions['ghost level'] = function() {
                         this.deleteCaptionIfAny();
                         this.removeFromInventory();
                         this.movable = false; // so player can't pick up again as it moves into toll machine
+                        this.movementType = MOVEMENT_TYPE_PARABOLIC;
                         this.beginMovementTime = Date.now();
                         this.movementDurationMS = 1000;
                         this.initialX = player.x;
@@ -338,22 +339,17 @@ getLevelFunctions['ghost level'] = function() {
                     return super.handleClick();
                 }
             }
-            update() {
-                if (this.beginMovementTime > 0 && Date.now() > this.beginMovementTime + this.movementDurationMS) {
-                    let sound = new Audio(levelPath + '/audio/kaching.wav');
-                    sound.play();
-                    otherData['toll paid time'] = Date.now();
-                    let portcullis = thingsHere['portcullis'];
-                    portcullis.beginMovementTime = Date.now();
-                    portcullis.movementDurationMS = 4000;
-                    portcullis.destX = portcullis.x;
-                    portcullis.destY = portcullis.y - 300;
-                    portcullis.deleteAfterMovement = true;
-                    this.deleteFromThingsHere();
-                }
-                else {
-                    return super.update();
-                }
+            methodToCallAfterMovement() {
+                let sound = new Audio(levelPath + '/audio/kaching.wav');
+                sound.play();
+                otherData['toll paid time'] = Date.now();
+                let portcullis = thingsHere['portcullis'];
+                portcullis.beginMovementTime = Date.now();
+                portcullis.movementDurationMS = 4000;
+                portcullis.destX = portcullis.x;
+                portcullis.destY = portcullis.y - 300;
+                portcullis.deleteAfterMovement = true;
+                this.deleteFromThingsHere();
             }
         }
         window.Stand = class Stand extends Thing {

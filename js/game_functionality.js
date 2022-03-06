@@ -28,8 +28,10 @@ const PLAYER_WIDTH = 60;
 let EXTRA_SPELL_RADIUS = 250; // currently don't want to make distance an issue. in the future might need to reduce this though.
 const EXTRA_PICKUP_RADIUS = 20;
 const DISTANCE_TO_MOVE = 4;
+const MOVEMENT_TYPE_LINEAR = 0;
+const MOVEMENT_TYPE_PARABOLIC = 1;
 const allSpells = { SPELL_ADD_EDGE:'add-edge', SPELL_REMOVE_EDGE:'remove-edge', SPELL_REVERSAL : 'reversal', SPELL_ANAGRAM : 'anagram',
-    SPELL_SYNONYM : 'synonym', SPELL_ADD : 'add', SPELL_REMOVE : 'remove', SPELL_CHANGE_EDGE : 'change-edge', SPELL_CHANGE : 'change',
+    SPELL_SYNONYM : 'synonym', SPELL_ADD : 'add', SPELL_REMOVE : 'remove', SPELL_CHANGE_EDGE : 'change-edge', SPELL_CHANGE : 'change-letter',
         BINDER_COVER : 'cover', BINDER_INTRO : 'intro' };
 let binderImages = {};
 let binderPageHtml = {};
@@ -288,7 +290,7 @@ class Thing extends GameElement {
         this.initialY = y;
         this.image = new Image();
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
-        this.image.src = levelPath + '/things/' + word.replace(' ','_')  + '.png';
+        this.image.src = levelPath + '/things/' + word.replace(' ', '_') + '.png';
         this.timeOfCreation = Date.now();
         this.movable = (immovableObjects.indexOf(word) < 0 && solidObjects.indexOf(word) < 0);
         this.solid = (solidObjects.indexOf(word) >= 0);
@@ -301,6 +303,7 @@ class Thing extends GameElement {
         this.destY = 0;
         this.beginMovementTime = 0;
         this.movementDurationMS = 0;
+        this.movementType = MOVEMENT_TYPE_LINEAR;
         this.soundToPlayAfterMovement = undefined;
         this.messageToDisplayAfterMovement = undefined;
         this.deleteAfterMovement = false;
@@ -309,6 +312,7 @@ class Thing extends GameElement {
         this.wordDisplayOffsetX = -28; // where to set "left" property of captionDev rel. to this.x. subclasses may redefine.
         this.wordDisplayOffsetY = 32;// where to set "top" property of captionDev rel. to this.y. subclasses may redefine.
     }
+
     setDimensionsFromImage() { // this gets called as soon as image loads
         this.width = this.image.width; // take dimensions directly from image
         this.height = this.image.height;
@@ -316,20 +320,23 @@ class Thing extends GameElement {
         this.halfHeight = this.height / 2;
         drawInventory();
     }
+
     deleteFromThingsHere() {
         this.deleteCaptionIfAny();
-        for (let [word,thing] of Object.entries(thingsHere)) {
+        for (let [word, thing] of Object.entries(thingsHere)) {
             if (thing === this) {
                 delete thingsHere[word];
             }
         }
     }
+
     deleteCaptionIfAny() {
         if (typeof this.captionDiv !== 'undefined') {
             this.captionDiv.remove(); // take div out of DOM hierarchy
             this.captionDiv = undefined; // ... and mark for garbage removal
         }
     }
+
     update() {
         if (this.beginMovementTime != 0) {
             if (Date.now() > this.beginMovementTime + this.movementDurationMS) {
@@ -340,18 +347,25 @@ class Thing extends GameElement {
                     this.soundToPlayAfterMovement.play();
                 if (typeof this.messageToDisplayAfterMovement !== 'undefined')
                     displayMessage(this.messageToDisplayAfterMovement);
+                if (typeof this.methodToCallAfterMovement === 'function')
+                    this.methodToCallAfterMovement();
                 if (this.deleteAfterMovement === true)
                     this.deleteFromThingsHere();
                 this.setCaptionPositionInThingsHere();
                 this.beginMovementTime = 0;
-            }
-            else {
+            } else {
                 let fractionTraversed = (Date.now() - this.beginMovementTime) / this.movementDurationMS;
                 this.x = this.initialX + ((this.destX - this.initialX) * fractionTraversed);
-                this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed);
+                if (this.movementType === MOVEMENT_TYPE_LINEAR) {
+                    this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed);
+                } else if (this.movementType === MOVEMENT_TYPE_PARABOLIC) {
+                    this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed) - 100 +
+                        (400 * (fractionTraversed - 0.5) * (fractionTraversed - 0.5));
+                }
             }
         }
     }
+
     draw() {
         if (this.word === fadeinWord) {
             let newAlpha = (Date.now() - fadeinTimer) / FADEOUT_DURATION_MS;
@@ -364,6 +378,7 @@ class Thing extends GameElement {
         ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
         ctx.globalAlpha = 1.0;
     }
+
     setCoordinatesInInventory(index) {
         this.x = (index * INVENTORY_SPACING) + INVENTORY_LEFT_MARGIN;
         this.y = INVENTORY_TOP + INVENTORY_TOP_MARGIN;
@@ -383,8 +398,7 @@ class Thing extends GameElement {
         if (this.movable) {
             if (Object.keys(inventory).length >= MAX_ITEMS_IN_INVENTORY) {
                 displayMessage('Too many things in inventory!');
-            }
-            else {
+            } else {
                 inventory[this.word] = this;
                 this.setCoordinatesInInventory(Object.keys(inventory).length - 1);
                 console.log(this.x);
@@ -393,8 +407,7 @@ class Thing extends GameElement {
                 delete thingsHere[this.word];
                 return 1;
             }
-        }
-        else {
+        } else {
             return 0;
         }
     }
@@ -403,7 +416,7 @@ class Thing extends GameElement {
         // note this is a *subset* of "discard" behavior, in fact discard() calls this method.
         // discard() furthermore moves the thing into thingsHere; but this is not always desired (like when throwing darts e.g.)
         delete inventory[this.word];
-        window.setTimeout( function() {
+        window.setTimeout(function () {
                 repositionInventoryItems();
                 drawInventory();
             },
@@ -459,10 +472,10 @@ class Thing extends GameElement {
                 adjustedWidth = 20;
         }
 
-        return ( x >= (this.x - adjustedWidth) &&
-                x <= (this.x + adjustedWidth) &&
-                y >= (this.y - adjustedHeight) &&
-                y <= (this.y + adjustedHeight) );
+        return (x >= (this.x - adjustedWidth) &&
+            x <= (this.x + adjustedWidth) &&
+            y >= (this.y - adjustedHeight) &&
+            y <= (this.y + adjustedHeight));
     }
 
     displayCantPickUpMessage() {
@@ -475,8 +488,7 @@ class Thing extends GameElement {
         if (this.word in inventory) {
             if (currentRoom === 'darkroom') {
                 displayMessage("Don't put anything down here, you might lose it!");
-            }
-            else {
+            } else {
                 this.discard();
             }
             return;
@@ -495,7 +507,9 @@ class Thing extends GameElement {
 
     // placeholder methods that subclasses needing specific behavior can override:
 
-    okayToDisplayWord() { return true; }
+    okayToDisplayWord() {
+        return true;
+    }
 
     handleCollision() {}
 
@@ -510,6 +524,8 @@ class Thing extends GameElement {
     }
 
     extraTransformIntoBehavior() {}
+
+    methodToCallAfterMovement() {}
 }
 
 class Passage extends GameElement {
@@ -740,11 +756,26 @@ function toggleSpellInputWindow(forceClose = false) {
     }
 }
 
+function indexOfSoleChangedLetterIfAny(fromWord, toWord) {
+    // for example, "cart > cast" would return 2 (counting from first letter = 0)
+    // return -1 if not of this form.
+
+    if (fromWord.length !== toWord.length)
+        return -1;
+
+    for (let i = 0; i < toWord.length; i++) {
+        if (toWord.slice(0, i) === fromWord.slice(0,i) && toWord.slice(i+1) === fromWord.slice(i+1))
+            return i;
+    }
+
+    return -1;
+}
+
 function castSpell() {
     toggleSpellInputWindow(true); // close the window
     toWord = document.getElementById('toWord').value.toLowerCase().trim();
     fromWord = document.getElementById('fromWord').value.toLowerCase().trim();
-    if (typeof toWord != 'string' || typeof fromWord != 'string' || toWord.length < 1 || fromWord.length < 1)
+    if (typeof toWord != 'string' || typeof fromWord != 'string' || toWord.length < 1 || fromWord.length < 1 || fromWord == toWord )
         return;
     let inInventory = (fromWord in inventory);
     let sourceThing = undefined;
@@ -773,6 +804,7 @@ function castSpell() {
     let spellRequested = '';
     let runeNeeded = undefined;
     let runeReleased = undefined;
+    let indexOfSoleChangedLetter = indexOfSoleChangedLetterIfAny(fromWord, toWord);
 
     if (toWord === fromWord + toWord.substr(toWord.length - 1)) {
         spellRequested = allSpells.SPELL_ADD_EDGE;
@@ -796,16 +828,14 @@ function castSpell() {
     else if (getCanonicalAnagram(toWord) === getCanonicalAnagram(fromWord)) {
         spellRequested = allSpells.SPELL_ANAGRAM;
     }
-    else if (toWord == fromWord.substr(0,fromWord.length - 1) + toWord.substr(toWord.length - 1, 1)) {
-        spellRequested = allSpells.SPELL_CHANGE_EDGE;
-        runeNeeded = toWord.substr(toWord.length - 1, 1);
-        runeReleased = fromWord.substr(fromWord.length - 1, 1);
+    else if (indexOfSoleChangedLetter >= 0) {
+        runeNeeded = toWord.substr(indexOfSoleChangedLetter, 1);
+        runeReleased = fromWord.substr(indexOfSoleChangedLetter, 1);
+        spellRequested = (indexOfSoleChangedLetter == 0 || indexOfSoleChangedLetter == toWord.length-1) ? allSpells.SPELL_CHANGE_EDGE : allSpells.SPELL_CHANGE;
     }
-    else if (toWord == toWord.substr(0,1) + fromWord.substr(1,fromWord.length - 1) ) {
-        spellRequested = allSpells.SPELL_CHANGE_EDGE;
-        runeNeeded = toWord.substr(0, 1);
-        runeReleased = fromWord.substr(0, 1);
-    }
+
+
+    console.log(spellRequested);
 
     // TODO: check for SPELL_SYNONYM, etc.
 
@@ -867,6 +897,7 @@ function castSpell() {
 
     if (inInventory && !newObject.movable) {
         newObject.discard();
+        inInventory = false;
     }
 
     if (typeof runeReleased != 'undefined') {
@@ -1120,6 +1151,9 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
         if (typeof thing.sound === 'object') {
             thing.sound.pause();
         }
+        // todo: if a thing is movement and some method is supposed to called at end of movement,
+        // but the movement won't end because room was exited, should call that method now before deleting thingsHere[word].
+
         delete thingsHere[word];
     }
     currentRoom = newRoomName;
