@@ -82,6 +82,9 @@ getLevelFunctions['ghost level'] = function() {
                 }
             }
             inRangeOfPlayer(extraRadius = 0) {
+                if (extraRadius === EXTRA_SPELL_RADIUS) {
+                    return true; // can't change this using spells anyway so don't suggest otherwise by saying "too far away to transform this".
+                }
                 // weirdly shaped so need custom collision detection.
                 let inRectangle =  (player.x > (this.x - this.halfWidth - player.halfWidth - extraRadius) &&
                     player.x < (this.x + this.halfWidth + player.halfWidth + extraRadius) &&
@@ -192,6 +195,9 @@ getLevelFunctions['ghost level'] = function() {
 
         window.Dresser = class Dresser extends Thing {
             handleClick() { // don't do anything; don't interfere with clicking drawer which is superimposed on this.
+            }
+            okayToDisplayWord() {
+                return false;
             }
         }
 
@@ -363,7 +369,7 @@ getLevelFunctions['ghost level'] = function() {
             handleCollision() {
                 if (otherData['grabbed binder'] === false) {
                     otherData['grabbed binder'] = true;
-                    displayMessage('You got the Spell Binder! Type B to look inside.');
+                    displayMessage('You got the Spell Binder! Mouse over the Spell Binder icon to see what spells are in it.');
                     document.getElementById('binder-icon-holder').style.display = 'block';
                     this.solid = false;
                     sounds['pickup'].play();

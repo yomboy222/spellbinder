@@ -25,7 +25,7 @@ let canvasOffsetY = 0;
 let binderIconLeft = 0;
 const PLAYER_HEIGHT = 90;
 const PLAYER_WIDTH = 60;
-let EXTRA_SPELL_RADIUS = 250; // currently don't want to make distance an issue. in the future might need to reduce this though.
+let EXTRA_SPELL_RADIUS = 260; // currently don't want to make distance an issue. in the future might need to reduce this though.
 const EXTRA_PICKUP_RADIUS = 20;
 const DISTANCE_TO_MOVE = 4;
 const MOVEMENT_TYPE_LINEAR = 0;
@@ -1085,12 +1085,17 @@ function handleBinderIconMouseout(e) {
     document.getElementById('spell-list').style.display = 'none';
 }
 
+function startMusic() {
+     musicPlaying = true;
+     backgroundMusic.loop = true;
+     backgroundMusic.play();
+ }
+
 function toggleMusic() {
     if (typeof backgroundMusic === 'object') {
         if (musicPlaying === false) {
             musicPlaying = true;
-            backgroundMusic.loop = true;
-            backgroundMusic.play();
+            startMusic();
         } else {
             musicPlaying = false;
             backgroundMusic.pause();
@@ -1372,6 +1377,7 @@ function loadLevel(lName = 'intro level') {
         let path = (level.backgroundMusicFile === 'Sneaky Snitch.mp3') ? 'audio/Sneaky Snitch.mp3' : levelPath + '/audio/' + level.backgroundMusicFile;
         backgroundMusic = new Audio(path);
         document.getElementById('music-toggle-div').style.display = 'block';
+        startMusic();
     }
 
     newRoom(level.initialRoom, level.initialX, level.initialY);
