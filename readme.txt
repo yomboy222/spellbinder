@@ -4,15 +4,24 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
-draw piece of paper in drawer when first opening
-re-record host message to say goal is to get treasure chest
-(or otherwise convey that that's how to complete a level.)
+screen-resizing issues
+
+better click-on-arrow detection
+
+finish upgrading tutorial level
+
+make binder icon replacement on top
+
+convey how to complete a level.
+
+obstacle things should have "obstacleDeactivated" property. this will help deal with things like the gate that gets pushed aside,
+or the meteor that gets pushed aside.
+
+handle cases where one obstacle is replaced by another (the passage affected won't automatically change to Active)
 
 PHASE 2 STUFF:
 use flip-a-clip to get walking player images
-make released runes zip from the point of transformation into the inventory box
-make stuff not pile up when you discard multiple things
-check to make sure you can't discard something through a wall etc.
+
 
 
 ––––––––––––––––––––––––––––––

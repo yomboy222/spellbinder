@@ -11,7 +11,7 @@ getLevelFunctions['tutorial level'] = function() {
 
         window.Bear = class Bear extends Thing{
             extraTransformFromBehavior() {
-                displayMessage('Now you can change "cur" into "curb".', 3600);
+                displayMessage('Now you can change "cur" into "curb".');
             }
         }
 
@@ -20,9 +20,9 @@ getLevelFunctions['tutorial level'] = function() {
                 super(word,room,x,y);
                 this.sound = new Audio(levelPath + '/audio/327666__juan-merie-venter__dog-bark.wav');
             }
-            handleCollision() {
+            passageBlockingBehavior() {
                 this.sound.play();
-                super.handleCollision();
+                displayMessage('yikes!', DEFAULT_MESSAGE_DURATION);
             }
         }
 
@@ -36,8 +36,7 @@ getLevelFunctions['tutorial level'] = function() {
                     this.beginMovementTime = Date.now();
                     this.movementDurationMS = 1200;
                     this.solid = false;
-                    displayMessage('The gate is now unlocked. In general, if an object can be used, you use it by clicking on it when it is in your inventory.',
-                        3 * DEFAULT_MESSAGE_DURATION);
+                    displayMessage('The gate is now unlocked. In general, if an object can be used, you use it by double-clicking on it when it is in your inventory.');
                 }
             }
         }
@@ -46,26 +45,26 @@ getLevelFunctions['tutorial level'] = function() {
             tryToPickUp() {
                 let returnValue = super.tryToPickUp();
                 if (returnValue === 1) { // indicates it was picked up.
-                    displayMessage('The key is now in your inventory. You can click it to drop it.', 2 * DEFAULT_MESSAGE_DURATION);
+                    displayMessage('The key is now in your inventory. You can double-click it to use it.');
                     setTimeout(function () {
-                            displayMessage('To unlock the gate, go over to it and click on the key in your inventory.',2 * DEFAULT_MESSAGE_DURATION);
+                            displayMessage('To unlock the gate, double-click on the key in your inventory.');
                         },
                         2500);
                 };
                 return returnValue;
             }
-            handleClick() {
+            handleDblclick() {
                 if ('gate' in thingsHere && 'key' in inventory) {
                     let gate = thingsHere['gate'];
                     if (gate.inRangeOfPlayer(EXTRA_PICKUP_RADIUS)) {
                         gate.unlock();
                     }
                     else {
-                        return super.handleClick();
+                        return super.handleDblclick();
                     }
                 }
                 else {
-                    return super.handleClick();
+                    return super.handleDblclick();
                 }
             }
         }
@@ -115,18 +114,18 @@ getLevelFunctions['tutorial level'] = function() {
     }
 
     level.showInitialTutorialMsg = function() {
-        displayMessage("Use arrow keys (or A-S-D-W) to move over to the Binder.", DEFAULT_MESSAGE_DURATION, 50, 5, true);
+        displayMessage("Click on arrow to move right, into the next room.", 0, 50, 5, true);
     }
 
     level.showRoom2Message = function () {
         if ('bear' in thingsHere) {
-            displayMessage('Try to get past the cur by typing C and changing "cur" into "curb".', 6000, 80,56, true);
+            displayMessage('Try to get past the cur by clicking on it and changing "cur" into "curb".', 0, 80,56, true);
         }
     }
 
     level.showRoom3Message = function () {
         if ('key' in thingsHere) {
-            displayMessage('Go to the key, and pick it up, either by clicking it or by pressing space bar.', 3600);
+            displayMessage('Pick up the key by DOUBLE-clicking it.', 0);
         }
     }
 
@@ -145,8 +144,8 @@ getLevelFunctions['tutorial level'] = function() {
     };
     level.initialThings = [
         ['stand','room1', 48, 50],
-        ['cur','room2',85,40],
-        ['bear','room2',59,42],
+        ['cur','room2',82,40],
+        ['bear','room2',56,42],
         ['gate','room3',63,50],
         ['key','room3',25,50],
         ['treasure','room3',90,47],
@@ -159,13 +158,15 @@ getLevelFunctions['tutorial level'] = function() {
             filledPolygons: [ ['r',0,0,10,100],['r',10,0,20,36],['p',30,36,42,18,42,0,30,0],['r',42,0,58,18],
                 ['p',54,18,66,36,100,36,100,18],  ['r',10,64,20,36], ['p',30,64,42,82,42,100,30,100],
                 ['r',42,82,58,18], ['p',54,82,66,64,100,64,100,82], ],
-            passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 50, 'room2', 12, 82)],
+            passages: [new Passage(PassageTypes.BASIC_RIGHT, 'E',95, 50, 'room2', 12, 80,
+                true, 73, 80)],
         },
         'room2': {
             boundaries: [ ['n',30,26,100,26], ['n',100,54,84,54], ['n',84,54,84,95], ['n',0,95,84,95], ['n',0,70,56,70], ['n',56,70,56,54], ['n',56,54,30,54], ['n',30,54,30,26], ],
             filledPolygons: [ ['r',0,0,100,26], ['r',0,26,30,44], ['r',30,54,26,16], ['r',0,95,100,5], ['r',84,54,16,41], ],
-            passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 100, 40, 'room3', 12, 50),
-                new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 75, 'room1', 88,50),
+            passages: [new Passage(PassageTypes.BASIC_RIGHT, 'E', 95, 40, 'room3', 12, 50,
+                true, 20, 50, 'cur', PASSAGE_STATE_BLOCKED, 78, 53),
+                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 5, 80, 'room1', 88,50),
                 ],
             specificNewRoomBehavior: function() {
                 window.setTimeout(level.showRoom2Message,2200);
@@ -174,17 +175,12 @@ getLevelFunctions['tutorial level'] = function() {
         'room3': {
             boundaries: [ ['n',0,36,96,36], ['n',96,36,96,64], ['n',0,64,96,64], ],
             filledPolygons: [ ['r',0,0,100,36], ['r',96,36,4,64], ['r',0,64,96,36], ],
-            passages: [ new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'room2', 88, 40),
+            passages: [ new Passage(PassageTypes.INVISIBLE_VERTICAL,'W',5, 50, 'room2', 88, 40),
+                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',51,50, 'room3'),
             ],
             specificNewRoomBehavior: function() {
                 window.setTimeout(level.showRoom3Message, 1200);
             }
-        },
-        'pirate room': {
-            boundaries: [ ['n',0,36,100,36], ['n',0,64,75,64], ['n',75,64,75,100], ['n',92,100,92,64], ['n',92,64,100,64]] ,
-            filledPolygons: [ ['r',0,0,100,36], ['r',0,64,75,36], ['r',92,64,8,36], ],
-            passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 0, 50, 'entry point', 90, 50),
-            ],
         },
     };
 

@@ -9,7 +9,7 @@ TODO: prevent player input while spell is executing or waiting to execute.
 /* global-scope variables: */
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
-const CANVAS_WIDTH = 700; const CANVAS_HEIGHT = 600;
+const CANVAS_WIDTH = 700; const CANVAS_HEIGHT = 700; const TOP_BINDER_AREA_HEIGHT = 100;
 const PLAY_AREA_WIDTH = 700; const PLAY_AREA_HEIGHT = 500;
 const xScaleFactor = PLAY_AREA_WIDTH / 100; const yScaleFactor = PLAY_AREA_HEIGHT / 100;
 const INVENTORY_WIDTH = 700; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
@@ -20,6 +20,7 @@ const MAX_ITEMS_IN_INVENTORY = 6;
 const RUNE_IMAGE_WIDTH = 65; const RUNE_IMAGE_HEIGHT = 92; const RUNE_DISPLAY_WIDTH = 30; const RUNE_DISPLAY_HEIGHT = 42;
 const PASSAGE_WIDTH = 55;
 const PASSAGE_LENGTH = 150;
+const PASSAGE_STATE_INACTIVE = 0; const PASSAGE_STATE_BLOCKED = 1; const PASSAGE_STATE_ACTIVE = 2; const PASSAGE_STATE_OCCUPIED = 3;
 let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
 let binderIconLeft = 0;
@@ -48,7 +49,7 @@ let inventory = {};
 let thingsHere = {};
 let spellsAvailable = [];
 let runes = [];
-let runeImages = [];
+let runeImages = []; let arrowImages = {};
 let runeAcquisitionTime = 0;
 let newRuneIndex = -1;
 let runesBeingReleased = [];
@@ -56,12 +57,14 @@ let runesBeingAbsorbed = [];
 let transformationToExecute = undefined;
 let rooms = {};
 let passages = [];
-let passageImages = {}; // probably a good idea to load these in "initialize" function, but not doing this now.
 let boundaries = [];
 let filledPolygons = [];
 let otherData = {};
 let currentRoom = '';
 let player = {};
+let destinationPassage = undefined;
+let timeMod2200 = 0;
+let arrowsAlpha = 0;
 let sounds = {};
 let backgroundImage = new Image();
 let backgroundMusic = undefined;
@@ -70,13 +73,13 @@ let normalPlayerInputSuppressed = false;
 let playerImageSuppressed = false;
 let fixedMessages = [];
 let floatingMessages = [];
+let messages = {}; // switching to strategy of having messages in a dictionary, indexed by messageCounter
+let messageCounter = 0;
+let standardMessagePositions = [];
 const NUMBER_OF_FIXED_MESSAGE_DIVS = 3;
 const DEFAULT_MESSAGE_DURATION = 2600;
-const WORD_DURATION_MS = 1500;
 const FADEOUT_DURATION_MS = 1200;
-let fadeoutTimer = 0;
 let fadeinTimer = 0;
-let fadeoutWord = '';
 let fadeinWord = '';
 let showingIntroPage = true;
 let showingSpellInput = false;
@@ -87,6 +90,9 @@ let solidObjects = [];
 let immovableObjects = [];
 let bridgelikeObjects = [];
 let ellipticalObjects = [];
+let lastClickTime = 0;
+let initialClickEvent = undefined; // used in a more-or-less-necessary hack to distinguish short click from long click
+let MAX_DOUBLE_CLICK_TIME_SEPARATION = 375; // MS
 
 let cheating = false; // turn on to allow teleporting etc for debugging purposes
 
@@ -141,112 +147,6 @@ class Level {
     }
 }
 
-class Player {
-    constructor(props) {
-        this.x = 50;
-        this.y = 50;
-        this.width = PLAYER_WIDTH;
-        this.height = PLAYER_HEIGHT;
-        this.halfWidth = this.width / 2;
-        this.halfHeight = this.height / 2;
-        this.direction = Directions.RIGHT;
-        this.goingUp = false;
-        this.goingDown = false;
-        this.goingLeft = false;
-        this.goingRight = false;
-        this.images = [ new Image(), new Image(), new Image(), new Image() ];
-
-        // this.images = [ new Image(90,130), new Image(70,134), new Image(92,132), new Image(70, 132) ];
-        this.images[Directions.UP].src = 'imgs/player-back.png';
-        this.images[Directions.RIGHT].src = 'imgs/player-right.png';
-        this.images[Directions.DOWN].src = 'imgs/player-front.png';
-        this.images[Directions.LEFT].src = 'imgs/player-left.png';
-    }
-
-    update() {
-        let deltaX = 0;
-        let deltaY = 0;
-        if (this.goingUp) deltaY = -DISTANCE_TO_MOVE;
-        if (this.goingDown) deltaY = DISTANCE_TO_MOVE;
-        if (this.goingRight) deltaX = DISTANCE_TO_MOVE;
-        if (this.goingLeft) deltaX = - DISTANCE_TO_MOVE;
-
-        if (deltaX === 0 && deltaY === 0)
-            return; // nothing else needed to update
-
-        this.x += deltaX;
-        this.y += deltaY;
-
-        // first check if touching passages to other rooms.
-        for (let i=0; i<passages.length; i++) {
-            if (passages[i].activated && passages[i].inRangeOfPlayer(-20)) {
-                newRoom(passages[i].destinationRoom, passages[i].destXAsPercent, passages[i].destYAsPercent);
-                return;
-            }
-        }
-
-        // check collisions and undo the move if collision detected.
-        let collisionDetected = false;
-        let touchingBridgeObject = false;
-
-        for (let [word, thing] of Object.entries(thingsHere)) {
-            if (thing.solid && thing.inRangeOfPlayer()) {
-                collisionDetected = true;
-                thing.handleCollision();
-            }
-            else if (thing.bridgelike && thing.inRangeOfPlayer(-40)) { // TODO: use defined const here
-                    touchingBridgeObject = true;
-            }
-        }
-
-        for (const boundary of boundaries) {
-            if (boundary[5] === BoundaryType.HORIZONTAL || boundary[5] === BoundaryType.DIAGONAL) {
-                if (this.x > (boundary[1] - DISTANCE_TO_MOVE) && this.x < (boundary[3] + DISTANCE_TO_MOVE)) {
-                    const slope = (boundary[4] - boundary[2]) / (boundary[3] - boundary[1]);
-                    const relX = this.x - boundary[1];
-                    const boundaryYHere = boundary[2] + (relX * slope);
-                    if (Math.abs(this.y - boundaryYHere) < this.halfHeight) {
-                        collisionDetected = true;
-                    }
-                }
-            }
-            else if (boundary[5] === BoundaryType.VERTICAL) {
-                if (this.x > (boundary[1] - this.halfWidth) &&
-                    this.x < (boundary[1] + this.halfWidth) &&
-                    this.y > (boundary[2] - this.halfHeight) &&
-                    this.y < (boundary[4] + this.halfHeight)
-                )
-                    collisionDetected = true;
-            }
-        }
-
-        // a collision with a solid thing or boundary is cancelled if player touches bridge-like object:
-        if (touchingBridgeObject) {
-            collisionDetected = false;
-        }
-
-        // check edge-of-play-area conditions; these aren't affected by bridge-like objects
-        if (this.x < this.halfWidth ||
-            this.x > PLAY_AREA_WIDTH - this.halfWidth ||
-            this.y < this.halfHeight ||
-            this.y > PLAY_AREA_HEIGHT - this.halfHeight) {
-            collisionDetected = true;
-        }
-
-        if (collisionDetected && !cheating) {
-            // undo the movement:
-            this.x -= deltaX;
-            this.y -= deltaY;
-        }
-    }
-
-    draw() {
-        if (!playerImageSuppressed) {
-            ctx.drawImage(this.images[this.direction], this.x - this.halfWidth, this.y - this.halfHeight); // , this.width, this.height);
-        }
-    }
-}
-
 class GameElement {
     constructor(x, y) {
         this.x = x;
@@ -292,8 +192,9 @@ class GameElement {
     }
 
     update() {
-        if (this.beginMovementTime != 0) {
+        if (this.beginMovementTime > 0) {
             if (Date.now() > this.beginMovementTime + this.movementDurationMS) {
+                this.beginMovementTime = 0;
                 this.methodToCallAfterMovement();
             } else {
                 let fractionTraversed = (Date.now() - this.beginMovementTime) / this.movementDurationMS;
@@ -304,10 +205,23 @@ class GameElement {
                     this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed) - 100 +
                         (400 * (fractionTraversed - 0.5) * (fractionTraversed - 0.5));
                 }
+/*
+                if (isNaN(this.x)) {
+                    console.log('uh-oh');
+                    console.log(fractionTraversed);
+                    console.log(this.movementDurationMS);
+                    console.log(this.beginMovementTime);
+                }
+
+ */
             }
         }
     }
-
+    initiateMovement(relSpeed = 1) {
+        let distanceAsFractionOfPlayAreaWidth = Math.sqrt( ( (this.x - this.destX) * (this.x - this.destX)) + ((this.y - this.destY) * (this.y - this.destY)) )  / PLAY_AREA_WIDTH;
+        this.movementDurationMS = distanceAsFractionOfPlayAreaWidth * 2000 * relSpeed;
+        this.beginMovementTime = Date.now();
+    }
     methodToCallAfterMovement() {
         this.beginMovementTime = 0;
         this.x = this.destX;
@@ -316,6 +230,9 @@ class GameElement {
             this.soundToPlayAfterMovement.play();
         if (typeof this.messageToDisplayAfterMovement !== 'undefined')
             displayMessage(this.messageToDisplayAfterMovement);
+    }
+    handleDblclick(e) {
+        console.log('dblclick');
     }
 }
 
@@ -352,6 +269,41 @@ class Rune extends GameElement {
     }
 
 }
+
+class Player extends GameElement {
+     constructor() {
+         super(50,50);
+         this.width = PLAYER_WIDTH;
+         this.height = PLAYER_HEIGHT;
+         this.halfWidth = this.width / 2;
+         this.halfHeight = this.height / 2;
+         this.direction = Directions.RIGHT;
+         this.blockingThing = undefined;
+         this.retreatX = 0;
+         this.retreatY = 0;
+         this.images = [ new Image(), new Image(), new Image(), new Image() ];
+
+         // this.images = [ new Image(90,130), new Image(70,134), new Image(92,132), new Image(70, 132) ];
+         this.images[Directions.UP].src = 'imgs/player-back.png';
+         this.images[Directions.RIGHT].src = 'imgs/player-right.png';
+         this.images[Directions.DOWN].src = 'imgs/player-front.png';
+         this.images[Directions.LEFT].src = 'imgs/player-left.png';
+     }
+
+     update() {
+         super.update();
+     }
+
+     methodToCallAfterMovement() {
+         super.methodToCallAfterMovement();
+     }
+
+     draw() {
+         if (!playerImageSuppressed) {
+             ctx.drawImage(this.images[this.direction], this.x - this.halfWidth, this.y - this.halfHeight); // , this.width, this.height);
+         }
+     }
+ }
 
 class Thing extends GameElement {
     constructor(word, room, x, y) {
@@ -398,6 +350,17 @@ class Thing extends GameElement {
             this.captionDiv.remove(); // take div out of DOM hierarchy
             this.captionDiv = undefined; // ... and mark for garbage removal
         }
+    }
+
+    dispose() {
+        for (let i=0; i<passages.length; i++) {
+            if (passages[i].obstacle === this.word) {
+                passages[i].unblock();
+            }
+        }
+        this.deleteCaptionIfAny();
+        this.deleteFromThingsHere();
+        this.removeFromInventory();
     }
 
     methodToCallAfterMovement() {
@@ -526,6 +489,12 @@ class Thing extends GameElement {
 
     // particular Thing subclasses may override this:
     handleClick() {
+
+        toggleSpellInputWindow(false,this.word);
+
+    }
+
+    handleDblclick(e) {
         if (this.word in inventory) {
             if (currentRoom === 'darkroom') {
                 displayMessage("Don't put anything down here, you might lose it!");
@@ -544,6 +513,10 @@ class Thing extends GameElement {
         }
         this.tryToPickUp();
         sounds['pickup'].play();
+    }
+
+    passageBlockingBehavior() {
+        displayMessage('blocked!');
     }
 
     // placeholder methods that subclasses needing specific behavior can override:
@@ -566,17 +539,34 @@ class Thing extends GameElement {
 
     extraTransformIntoBehavior() {}
 
+    deactivateObstacle() {
+        for (let i=0; i<passages.length; i++) {
+            if (passages[i].obstacle === this.word) {
+                passages[i].unblock();
+            }
+        }
+    }
 }
 
 class Passage extends GameElement {
-    constructor(type, xAsPercent, yAsPercent, destinationRoom, destXAsPercent, destYAsPercent, activated = true) {
+    constructor(type, direction, xAsPercent, yAsPercent, destinationRoom, destXAsPercent, destYAsPercent, activated = true,
+                newRoomDestXAsPercent = -1, newRoomDestYAsPercent = -1, obstacle = undefined,
+                state = PASSAGE_STATE_ACTIVE, blockedXAsPercent = -1, blockedYAsPercent = -1) {
         super(xAsPercent * xScaleFactor, yAsPercent * yScaleFactor );
         // this.originRoom = originRoom; note -- currently don't need to specify originRoom because passage data will be packaged into room data.
         this.type = type;
+        this.direction = direction;
         this.destinationRoom = destinationRoom;
         this.destXAsPercent = destXAsPercent;
         this.destYAsPercent = destYAsPercent;
+        this.newRoomDestXAsPercent = newRoomDestXAsPercent;
+        this.newRoomDestYAsPercent = newRoomDestYAsPercent;
         this.activated = activated;
+        this.state = state;
+        this.blockedX = blockedXAsPercent * xScaleFactor;
+        this.blockedY = blockedYAsPercent * yScaleFactor;
+        this.obstacle = obstacle; // the thing (if any) whose transformation or disposal unblocks this passage
+
         if ( this.type.indexOf('left') >= 0 || this.type.indexOf('right') >= 0 || this.type.indexOf('vertical') >= 0) {
             this.height = PASSAGE_LENGTH;
             this.width = PASSAGE_WIDTH;
@@ -591,16 +581,92 @@ class Passage extends GameElement {
             this.image = undefined;
         } else {
             this.image = new Image(this.width,this.height);
-            this.image.src = 'imgs/passages/passage-' + this.type + '.png'; // IF STICKING WITH THIS STRATEGY, CAN DELETE passageImages VARIABLE.
+            this.image.src = 'imgs/passages/passage-' + this.type + '.png';
         }
     }
     draw() {
         if (typeof this.image != 'undefined')
             ctx.drawImage(this.image,this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
+        if (this.activated && this.state !== PASSAGE_STATE_OCCUPIED) {
+            ctx.globalAlpha = arrowsAlpha;
+            ctx.drawImage(arrowImages[this.direction],this.x - 55, this.y - 36);
+            ctx.globalAlpha = 1.0;
+        }
+    }
+    handleClick() {
+        if (this.state === PASSAGE_STATE_ACTIVE || this.state === PASSAGE_STATE_BLOCKED) {
+            // move to the passage or to "blocked" point. first, if player currently "occupying" a passage, unoccupy it:
+            for (let i=0; i<passages.length;i++) {
+                if (passages[i].state == PASSAGE_STATE_OCCUPIED)
+                    passages[i].state = PASSAGE_STATE_ACTIVE;
+            }
+            player.beginMovementTime = Date.now();
+            player.initialX = player.x;
+            player.initialY = player.y;
+            player.destX = (this.state === PASSAGE_STATE_BLOCKED) ? this.blockedX : this.x;
+            player.destY = (this.state === PASSAGE_STATE_BLOCKED) ? this.blockedY : this.y;
+            if (this.state === PASSAGE_STATE_BLOCKED) {
+                player.blockingThing = thingsHere[this.obstacle];
+                player.methodToCallAfterMovement = playerBlocked;
+                player.retreatX = player.x;
+                player.retreatY = player.y;
+            }
+            else {
+                player.blockingThing = undefined;
+                player.methodToCallAfterMovement = arriveAtPassage;
+            }
+            switch (this.direction) {
+                case 'N' : player.direction = Directions.UP; break;
+                case 'NE' :
+                case 'E' :
+                case 'SE' : player.direction = Directions.RIGHT; break;
+                case 'NW' :
+                case 'W' :
+                case 'SW' : player.direction = Directions.LEFT; break;
+                case 'S' : player.direction = Directions.DOWN; break;
+            }
+            player.initiateMovement();
+            destinationPassage = this;
+        }
+    }
+    unblock() {
+        this.activated = true;
+        this.state = PASSAGE_STATE_ACTIVE;
     }
 }
 
 /* end class definitions; begin global functions */
+
+function arriveAtPassage() {
+    // TODO: check whether this passage actually leads to new room.
+    if (destinationPassage.destinationRoom == currentRoom) {
+        // this is a passage that can be "occupied" / doesn't go to another room.
+        destinationPassage.state = PASSAGE_STATE_OCCUPIED;
+    }
+    else {
+        newRoom(destinationPassage.destinationRoom, destinationPassage.destXAsPercent, destinationPassage.destYAsPercent);
+
+        if (destinationPassage.newRoomDestXAsPercent > 0 && destinationPassage.newRoomDestYAsPercent > 0) {
+            player.initialX = player.x;
+            player.initialY = player.y;
+            player.destX = destinationPassage.newRoomDestXAsPercent * xScaleFactor;
+            player.destY = destinationPassage.newRoomDestYAsPercent * yScaleFactor;
+            player.methodToCallAfterMovement = function () {
+            };
+            player.initiateMovement();
+        }
+    }
+}
+
+function playerBlocked() {
+    player.blockingThing.passageBlockingBehavior();
+    player.initialX = player.x;
+    player.initialY = player.y;
+    player.destX = player.retreatX;
+    player.destY = player.retreatY;
+    player.methodToCallAfterMovement = function(){}; // TODO: this should be a function that orients player image so not facing "backwards"
+    player.initiateMovement();
+}
 
 function getThing(word, room, x, y, treatXandYasPercentages = true, otherArgs = undefined) {
     if (treatXandYasPercentages) {
@@ -651,6 +717,7 @@ function displayAllCaptions() {
     }
 }
 
+/*
 function pickUpNearbyThings() {
     let numberOfThingsPickedUp = 0;
     for (let [word, thing] of Object.entries(thingsHere)) {
@@ -663,87 +730,96 @@ function pickUpNearbyThings() {
         drawInventory();
     }
 }
+*/
 
 function stopDisplayingMsg(forceStopAll = false) {
-    for (let i=0; i< fixedMessages.length; i++) {
-        if (forceStopAll === true) {
-            fixedMessages[i].divElement.classList.remove('visible-now');
-            fixedMessages[i].divElement.style.display = 'none';
-        }
-        else if (fixedMessages[i].timeAtMessageCreation !== 0 && Date.now() >= fixedMessages[i].timeAtMessageCreation + fixedMessages[i].duration) {
-            fixedMessages[i].divElement.classList.remove('visible-now');
-            fixedMessages[i].divElement.classList.add('fade-to-hidden');
-            fixedMessages[i].timeAtMessageCreation = 0;
-        }
-    }
-    for (let i=floatingMessages.length - 1; i >= 0; i--) {
-        if ( (forceStopAll === true) || Date.now() >= floatingMessages[i].timeAtMessageCreation + floatingMessages[i].duration) {
-            floatingMessages[i].divElement.remove();
-            floatingMessages.splice(i,1); // remove message. note we decrement to avoid re-indexing problems.
+
+    /* TODO: fade-out messages like this
+    fixedMessages[i].divElement.classList.remove('visible-now');
+    fixedMessages[i].divElement.classList.add('fade-to-hidden');
+    fixedMessages[i].timeAtMessageCreation = 0;
+    */
+
+    for (let [id, messageObj] of Object.entries(messages)) {
+        if ( (forceStopAll === true) ||
+            (messageObj.duration > 0 && Date.now() >= messageObj.timeAtMessageCreation + messageObj.duration) ) {
+            closeMessage(id);
         }
     }
 }
 
-function displayMessage(msg, durationMS = DEFAULT_MESSAGE_DURATION, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
+function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
     // use one of the fixedMessages if no x and y coordinates specified,
     // otherwise create a new floatingMessage.
+
+    messageCounter++;
 
     if (showingIntroPage === true)
         return; // sometimes displayMessage will be triggered by a setTimeout; if in the meantime the player has returned to intro page, don't show.
 
     // see if message already being displayed; if so, return.
-    if (x == undefined) {
-        for (i = 0; i < fixedMessages.length; i++) {
-            if (fixedMessages[i].timeAtMessageCreation > 0 && fixedMessages[i].divElement.innerText == msg) {
-                return;
-            }
-        }
-    }
-    else {
-        for (i = 0; i < floatingMessages.length; i++) {
-            if (floatingMessages[i].divElement.innerText == msg) {
-                return;
-            }
+    for (let [id, messageObj] of Object.entries(messages)) {
+        if (messageObj.msg == msg) {
+            return;
         }
     }
 
-    let messageObject, msgDiv;
-    if (x == undefined) {
-        // find first unused fixed message div:
-        let index = 0;
-        for (i = 0; i < NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
-            if (fixedMessages[i].timeAtMessageCreation == 0) {
-                index = i;
+    let messageObject = {};
+    messageObject.msg = msg;
+    messageObject.standardIndex = undefined;
+
+    if (typeof x === 'undefined') {
+        let standardIndex = 0;
+        x = standardMessagePositions[0].x; // i.e. will overlap by default if can't find any open place
+        y = standardMessagePositions[0].y;
+        // find first open "standard" message position:
+        for (let i=0; i<standardMessagePositions.length; i++) {
+            if (standardMessagePositions[i].occupied !== true) {
+                standardIndex = i;
+                messageObject.standardIndex = i;
+                standardMessagePositions[i].occupied = true;
+                x = standardMessagePositions[i].x;
+                y = standardMessagePositions[i].y;
                 break;
             }
         }
-        messageObject = fixedMessages[index];
-        msgDiv = messageObject.divElement;
     }
-    else {
-        if (treatCoordinatesAsPercentages === true) {
-            x = x * xScaleFactor;
-            y = y * yScaleFactor;
-        }
-        messageObject = {};
-        messageObject.divElement = document.createElement('div');
-        msgDiv = messageObject.divElement;
-        msgDiv.classList.add('player-message');
-        msgDiv.style.left = (canvasOffsetX + x - 90).toString() + 'px';
-        msgDiv.style.top = (canvasOffsetY + y).toString() + 'px';
-        let outerDiv = document.getElementById('floating-message-holder');
-        outerDiv.appendChild(msgDiv);
-        floatingMessages.push(messageObject);
+
+    if (treatCoordinatesAsPercentages === true) {
+        x = x * xScaleFactor;
+        y = y * yScaleFactor;
     }
+
+    messageObject.divElement = document.createElement('div');
+    let msgDiv = messageObject.divElement;
+    msgDiv.classList.add('player-message');
+    msgDiv.style.left = (canvasOffsetX + x - 90).toString() + 'px';
+    msgDiv.style.top = (canvasOffsetY + y).toString() + 'px';
+    let outerDiv = document.getElementById('floating-message-holder');
+    outerDiv.appendChild(msgDiv);
+    floatingMessages.push(messageObject);
 
     messageObject.timeAtMessageCreation = Date.now();
     messageObject.duration = durationMS;
-    msgDiv.innerText = msg;
+    msgDiv.innerHTML = '<div class="window-closing-div"><a href="#" onclick="closeMessage(' + messageCounter.toString( ) + ')">X</a></div>' +  msg;
     msgDiv.style.display = 'block';
     msgDiv.classList.remove('fade-to-hidden');
     msgDiv.classList.add('visible-now');
-    window.setTimeout(stopDisplayingMsg, durationMS);
+    if (durationMS > 0) {
+        window.setTimeout(stopDisplayingMsg, durationMS);
+    }
+    messages[messageCounter] = messageObject;
     console.log(msg);
+}
+
+function closeMessage(messageNumber) {
+    if (typeof messages[messageNumber] !== 'undefined') {
+        messages[messageNumber].divElement.remove();
+        if (typeof messages[messageNumber]['standardIndex'] != 'undefined') {
+            standardMessagePositions[messages[messageNumber]['standardIndex']].occupied = false;
+        }
+        delete messages[messageNumber];
+    }
 }
 
 function getCanonicalAnagram(word) {
@@ -774,23 +850,20 @@ function addSpellToBinder(spellName) {
 //    showBinder(spellName);
 }
 
-function toggleSpellInputWindow(forceClose = false) {
+function toggleSpellInputWindow(forceClose = false, fromWord = '') {
     let spellDiv = document.getElementById('spell-input-div');
 
     if (showingSpellInput || forceClose) {
         showingSpellInput = false;
-        document.getElementById('fromWord').focus(); // so that next time SpellInputWindow is opened, focus goes to "fromWord" not "toWord"
+        document.getElementById('toWord').focus();
         spellDiv.style.display = 'none';
     }
     else {
         showingSpellInput = true;
         spellDiv.style.display = 'block';
-        // wait 1/5 second before focusing on input box, otherwise "c" used to open the box will show up in the box.
-        window.setTimeout( function() {
-            document.getElementById('fromWord').focus();
-            }, 200);
+        document.getElementById('toWord').focus();
         document.getElementById('toWord').value = '';
-        document.getElementById('fromWord').value = '';
+        document.getElementById('fromWord').innerText = fromWord;
     }
 }
 
@@ -812,7 +885,7 @@ function indexOfSoleChangedLetterIfAny(fromWord, toWord) {
 function castSpell() {
     toggleSpellInputWindow(true); // close the window
     toWord = document.getElementById('toWord').value.toLowerCase().trim();
-    fromWord = document.getElementById('fromWord').value.toLowerCase().trim();
+    fromWord = document.getElementById('fromWord').innerText.toLowerCase().trim();
     if (typeof toWord != 'string' || typeof fromWord != 'string' || toWord.length < 1 || fromWord.length < 1 || fromWord == toWord )
         return;
     let inInventory = (fromWord in inventory);
@@ -823,10 +896,6 @@ function castSpell() {
         sourceThing = inventory[fromWord];
     } else if (fromWord in thingsHere) {
         sourceThing = thingsHere[fromWord];
-        if (!sourceThing.inRangeOfPlayer(EXTRA_SPELL_RADIUS)) {
-            displayMessage('You need to move closer to transform that.');
-            return;
-        }
     }
     else {
         displayMessage('Nothing called "' + fromWord + '" is available here.');
@@ -834,7 +903,7 @@ function castSpell() {
     }
 
     if (allWords.indexOf(toWord) < 0) { // target word not recognized as a possible object
-        displayMessage("Sorry, that didn't work.");
+        displayMessage("Sorry, that didn't work.", DEFAULT_MESSAGE_DURATION);
         return;
     }
 
@@ -878,15 +947,15 @@ function castSpell() {
     // TODO: check for SPELL_SYNONYM, etc.
 
     if (!spellAvailable(spellRequested)) {
-        displayMessage("Sorry, that didn't work!");
+        displayMessage("Sorry, that didn't work!", DEFAULT_MESSAGE_DURATION);
         return;
     }
 
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
-        displayMessage("Sorry, you need a rune: " + runeNeeded);
+        displayMessage("Sorry, you need a rune: " + runeNeeded, DEFAULT_MESSAGE_DURATION);
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
             setTimeout(
-                function() { displayMessage('To get a "b" rune, change "bear" into "ear".', 5000); },
+                function() { displayMessage('To get a "b" rune, change "bear" into "ear".', 0); },
                 1200
             );
         }
@@ -939,6 +1008,8 @@ function executeTransformation() {
     let runeNeeded = transformationToExecute.runeNeeded;
 
     let inInventory = (sourceThing.word in inventory);
+
+    sourceThing.deactivateObstacle();
 
     sourceThing.extraTransformFromBehavior();
 
@@ -1025,20 +1096,6 @@ function drawInventory() {
     }
     for (let i = 0; i < runes.length; i++)
     {
-
-        /* not making rune flash when acquired now.
-        let showRune = true;
-        if (runeAcquisitionTime !== 0 && newRuneIndex === i) {
-            if (Date.now() > runeAcquisitionTime + 2000) {
-                runeAcquisitionTime = 0;
-                newRuneIndex = -1;
-            }
-            else {
-                showRune = (Math.round(Date.now() / 180) % 2 === 0);
-            }
-        }
-
-         */
         let isInMotion = false;
         if (runesBeingReleased.length > 0) { // if the rune is being represented as in motion, don't draw it in usual static position.
             for (let j=0; j < runesBeingReleased.length; j++) {
@@ -1105,6 +1162,9 @@ function toggleMusic() {
 
 function animate() {
 
+    timeMod2200 = Date.now() % 2200;
+    arrowsAlpha = 0.25 * Math.sin(timeMod2200 * 0.002856) + 0.5
+
     // clear and draw background for current room:
     ctx.clearRect(0, 0,  PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     if (typeof backgroundImage === 'object') {
@@ -1164,7 +1224,6 @@ function animate() {
         thing.draw();
     }
 
-    // COLLISION DETECTION NOW DONE IN PLAYER.UPDATE
     player.update();
     player.draw();
 
@@ -1232,7 +1291,7 @@ function confirmQuit() {
     }
 }
 
-function newRoom(newRoomName, newPlayerX, newPlayerY) {
+function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent) {
 
     // note that in level data, x and y coordinates have values 0-100, to facilitate rescaling.
     // we convert to actual pixel values here.
@@ -1254,6 +1313,14 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
 
         delete thingsHere[word];
     }
+
+    // delete any messages that don't have timeout set:
+    for (let [id, messageObj] of Object.entries(messages)) {
+        if ( messageObj.duration === 0) {
+            closeMessage(id);
+        }
+    }
+
     currentRoom = newRoomName;
     for (let [word, thing] of Object.entries(thingsElsewhere)) {
         if (thing.room === currentRoom) {
@@ -1266,8 +1333,8 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
             }
         }
     }
-    player.x = newPlayerX * xScaleFactor;
-    player.y = newPlayerY * yScaleFactor;
+    player.x = newPlayerXAsPercent * xScaleFactor;
+    player.y = newPlayerYAsPercent * yScaleFactor;
 
     let roomData = rooms[newRoomName];
     passages = [];
@@ -1321,16 +1388,22 @@ function newRoom(newRoomName, newPlayerX, newPlayerY) {
         roomData.specificNewRoomBehavior();
 }
 
+function drawTopBinderImage() {
+    ctx.drawImage(binderImages['side_view_for_top'],0,-50);
+}
+
 function loadLevel(lName = 'intro level') {
     console.log('loading level ' + lName);
     canvas.style.display = 'block';
+    // document.getElementById('game-area').style.display = 'block';
     levelName = lName;
     levelComplete = false;
 
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'none';
     showingIntroPage = false;
-    document.getElementById('binder-icon-holder').style.display = 'block';
+    //document.getElementById('binder-icon-holder').style.display = 'block';
+    // document.getElementById('top-binder-div').style.display = 'block';
 
     level = getLevelFunctions[lName]();
     levelPath = (typeof level.levelPath === 'string') ? 'levels/' + level.levelPath : 'levels/' + lName.replace(' ','_');
@@ -1380,6 +1453,8 @@ function loadLevel(lName = 'intro level') {
         startMusic();
     }
 
+    drawTopBinderImage();
+
     newRoom(level.initialRoom, level.initialX, level.initialY);
 
     animate();
@@ -1399,7 +1474,12 @@ function closeBinder() {
     drawInventory(); // shouldn't be necessary when page images are scaled properly but for now they stray into inventory area.
 }
 
+
 function handleKeydown(e) {
+    if (e.code === 'Escape') {
+        toggleSpellInputWindow(true);
+    }
+    /*
     if (showingIntroPage || showingSpellInput)
         return;
     if (pageBeingShownInBinder !== '') {
@@ -1442,7 +1522,10 @@ function handleKeydown(e) {
 
         }
     }
+
+     */
 }
+
 
 function showOrHideBinderPageDiv() {
     let rightPageDiv = document.getElementById('binder-page-right');
@@ -1487,20 +1570,24 @@ function handleKeyInBinderViewMode(e) {
     showOrHideBinderPageDiv();
 }
 
-function handleKeyup(e) {
-    switch (e.code) {
-        case 'ArrowRight':
-        case 'KeyD' : player.goingRight = false; break;
-        case 'ArrowLeft':
-        case 'KeyA' : player.goingLeft = false; break;
-        case 'ArrowUp':
-        case 'KeyW' : player.goingUp = false; break;
-        case 'ArrowDown' :
-        case 'KeyS' : player.goingDown = false; break;
-    }
+function checkIfClickWasMadeDouble() {
+    // if Single click was made a double click, the initial click event Will have been made undefined
+    if (typeof initialClickEvent !== 'undefined')
+        processSingleOrDoubleClick(initialClickEvent, false);
 }
 
 function handleClick(e) {
+    if (Date.now() < lastClickTime + MAX_DOUBLE_CLICK_TIME_SEPARATION) {
+        initialClickEvent = undefined;
+        return processSingleOrDoubleClick(e, true);
+    }
+    initialClickEvent = e;
+    lastClickTime = Date.now();
+    window.setTimeout( checkIfClickWasMadeDouble, MAX_DOUBLE_CLICK_TIME_SEPARATION);
+}
+
+function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
+
     if (showingIntroPage) {
     // TODO: maybe handle clicks on intro page programatically here??
         return;
@@ -1511,6 +1598,14 @@ function handleClick(e) {
         closeBinder();
         return;
     }
+
+    if (document.getElementById('spell-input-div').style.display == 'block')
+        return;
+
+    // while player is moving, disable further clicks
+    if (player.beginMovementTime > 0 && Date.now() <= player.beginMovementTime + player.movementDurationMS)
+        return;
+
     let xWithinCanvas = e.x - canvasOffsetX;
     let yWithinCanvas = e.y - canvasOffsetY;
 
@@ -1521,12 +1616,23 @@ function handleClick(e) {
 
     for ([word, thing] of Object.entries(inventory)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
-            thing.handleClick();
+            if (doubleRatherThanSingle)
+                thing.handleDblclick();
+            else
+                thing.handleClick();
     }
 
     for ([word, thing] of Object.entries(thingsHere)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
-            thing.handleClick();
+            if (doubleRatherThanSingle)
+                thing.handleDblclick();
+            else
+                thing.handleClick();
+    }
+
+    for (i = 0; i < passages.length; i++) {
+        if (passages[i].occupiesPoint(xWithinCanvas, yWithinCanvas))
+            passages[i].handleClick();
     }
 
     drawInventory(); // important not to call this in individual Things' implementations of handleClick()!
@@ -1549,9 +1655,8 @@ function initialize() {
     sounds['page turn'] = new Audio('audio/63318__flag2__page-turn-please-turn-over-pto-paper-turn-over.wav');
     sounds['fanfare'] = new Audio('audio/524849__mc5__short-brass-fanfare-1.wav');
 
-    document.addEventListener('keydown', handleKeydown);
-    document.addEventListener('keyup', handleKeyup);
     document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleKeydown);
 
     // load rune images
     for (i = 0; i < 26; i++) {
@@ -1562,12 +1667,22 @@ function initialize() {
         runeImages.push(runeImage);
     }
 
+    // load arrow images
+    arrowImages = {};
+    let directions = ['N','NE','E','SE','S','SW','W','NW'];
+    for (let i=0; i<8; i++) {
+        arrowImages[directions[i]] = new Image();
+        arrowImages[directions[i]].src = 'imgs/arrow-' + directions[i] + '.png';
+    }
+
     // load binder page images
     binderImages = {
+        side_view_for_top: new Image(),
         intro: new Image(),
         cover: new Image(),
         generic_page: new Image(),
     };
+    binderImages['side_view_for_top'].src = 'imgs/binder/binder-large.png';
     binderImages[allSpells.BINDER_INTRO].src = 'imgs/binder/binder-intro.png';
     binderImages[allSpells.BINDER_COVER].src = 'imgs/binder/binder-cover.png';
     binderImages['generic_page'].src = 'imgs/binder/binder-page-blank.png'
@@ -1576,27 +1691,24 @@ function initialize() {
     canvasOffsetX = bounds.left; // + window.scrollX;
     canvasOffsetY = bounds.top; // + window.scrollY;
 
-    fixedMessages = [];
+    standardMessagePositions = [];
     const messageY = canvasOffsetY + Math.round(CANVAS_HEIGHT / 8);
     const messageXspacing = Math.round(CANVAS_WIDTH / 3.1);
-    const messageXoffset = Math.round(canvasOffsetX + 25 );
     for (let i = 0; i < NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
-        fixedMessages.push(
+        standardMessagePositions.push(
             {
-                divElement: document.getElementById('player-message-' + i.toString()),
-                timeAtMessageCreation: 0,
-                hideUponRoomChange: true,
-                duration: 0,
+                x : (i * messageXspacing) + 100,
+                y : messageY,
+                occupied : false
             }
         );
-        fixedMessages[i].divElement.style.top = messageY.toString() + 'px';
-        fixedMessages[i].divElement.style.left = ((i * messageXspacing) + messageXoffset).toString() + 'px';
     }
 
     document.getElementById('spell-form').onsubmit = function() { castSpell(); return false; };
     let spellDiv = document.getElementById('spell-input-div');
     spellDiv.style.top = (canvasOffsetY + (0.7 * CANVAS_HEIGHT)).toString() + 'px';
     spellDiv.style.left = (canvasOffsetX + (CANVAS_WIDTH / 2) - 110).toString() + 'px';
+    document.getElementById('spell-cancel-link').onclick = function () { toggleSpellInputWindow(true); }
 
     binderPageHtml = {};
     binderPageHtml[allSpells.BINDER_COVER] = '<div class="binder-cover-title"><span style="font-size:24px;">The</span><br/>Spell-<br/>Binder</div>';
@@ -1608,12 +1720,14 @@ function initialize() {
     binderPageHtml[allSpells.SPELL_REVERSAL] = '<div class="spell-title">Reversal</div> <div class="spell-description">Simply reverses a word:</div>  <div class="spell-example">change <span class="monospace">auks</span> into <span class="monospace">skua</span></div>';
     binderPageHtml[allSpells.SPELL_ANAGRAM] = '<div class="spell-title">Anagram</div> <div class="spell-description">This spell lets you rearrange the letters in a word:</div>  <div class="spell-example">change <span class="monospace">flea</span> into <span class="monospace">leaf</span></div>';
 
+    /*
     let binderIconHolder = document.getElementById('binder-icon-holder');
     binderIconLeft = canvasOffsetX + CANVAS_WIDTH - BINDER_ICON_WIDTH;
     binderIconHolder.style.top = canvasOffsetY.toString() + 'px';
     binderIconHolder.style.left = binderIconLeft.toString() + 'px';
     binderIconHolder.addEventListener( 'mouseover', handleBinderIconMouseover );
     binderIconHolder.addEventListener('mouseout', handleBinderIconMouseout);
+    */
 
     let leftPage = document.getElementById('binder-page-left');
     let rightPage = document.getElementById('binder-page-right');
@@ -1646,7 +1760,6 @@ function showIntroScreen() {
         musicPlaying = false;
         backgroundMusic.pause();
     }
-
 
     // document.getElementById('loadLevelButton').addEventListener('click',loadLevel);
 }

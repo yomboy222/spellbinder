@@ -16,10 +16,11 @@
     </div>
     <div id="spell-input-div">
         <form id="spell-form" action="#" autocomplete="off">
-            Change <input type="text" name="fromWord" id="fromWord" autocomplete="off">
+            Change <span id="fromWord"></span>
             into <input type="text" name="toWord" id="toWord" autocomplete="off">
             <br/>
-            <input type="submit" name="Cast!" id="cast-button" value="Cast!">
+            <div class="spell-cancel-div"><a href="#" id="spell-cancel-link">cancel</a></div>
+            <div class="spell-cast-button-div"><input type="submit" name="Cast!" id="cast-button" value="Cast!"></div>
         </form>
     </div>
     <div id="binder-icon-holder">
@@ -41,22 +42,20 @@
             Spell-Binder Game Prototype
         </div>
 
-        While hiking in the Black Forest of Germany, you stumble upon a crumbling Medieval tower.
+        While hiking in the Black Forest of Germany, you stumble upon a Medieval tower.
         Inside are strange stone runes, and old tomes ... bearing the name-plate of
         the fabled alchemist, Gombrecht the Irrefrugnable! Gombrecht had
         researched spells for transmutation, hoping eventually to turn lead into gold. His idea was
         that by altering the letters in an object's True Name, you alter the object itself, for instance turning
-        a Tier (beast) into a Bier (beer). His fatal mistake &mdash; obvious,
-        in retrospect &mdash; is that an object's True Name is the word for it in English, not in German
-        or any other weird peripheral language.
+        a Tier (beast) into a Bier (beer). His fatal mistake &mdash; obvious to us Americans &mdash; is that an object's True Name
+        is the word for it in English, not in German or any other weird peripheral language.
         <br/><br/>
         Like any self-respecting German alchemist, Gombrecht was highly organized, and kept his spells
         on separate pages in a Binder, which you find just inside the tower. As you explore the tower
         you may find more pages!
         <br/><br/>
-        Use arrow keys (or A-S-D-W) to move. Mouse over the binder in the upper-right corner to see what spells you can use.
-        Press C to cast a spell. Click on a nearby object to pick it up. Once you have it in your inventory
-        you can click it to drop it, or to use it, if it has some special use (or can be eaten etc.).
+        Click on an object to cast a spell on it; double-click it to pick it up. Once you have it in your inventory
+        you can double-click it to drop it, or to use it, if it has some special use (or can be eaten etc.).
         <br/><br/>
 
         <button class="loadLevelButton" name="yo2" value="load tutorial level" onclick="loadLevel('tutorial level')">tutorial level</button>
@@ -75,6 +74,10 @@
 
         Copyright 2022, Doug McLellan. <a href="rights_and_acknowledgments.html">Rights, acknowledgments, etc.</a>
     </div>
+    <!--div id="game-area">
+        <div id="top-binder-div"></div>
+        <canvas id="canvas1" width="700px" height="600px"></canvas>
+    </div-->
     <canvas id="canvas1" width="700px" height="600px"></canvas>
     <script type="text/javascript" src="js/game_functionality.js"></script>
     <script type="text/javascript" src="levels/ghost_level/ghost_level.js"></script>
