@@ -62,6 +62,7 @@
         <button class="loadLevelButton" name="yo" value="trash/lobster level" onclick="loadLevel('trash/lobster level')">trash/lobster puzzle</button>
         &nbsp;&nbsp;&nbsp;&nbsp; <button class="loadLevelButton" name="yo3" value="ghost level" onclick="loadLevel('ghost level')">ghost level</button>
         &nbsp;&nbsp;&nbsp;&nbsp; <button class="loadLevelButton" name="yo4" value="tear-dicer" onclick="loadLevel('tear/dicer puzzle')">tare/dicer puzzle</button>
+             <button class="loadLevelButton" name="yo5" value="blah" onclick="loadLevel('blah')">auto-gen level</button>
 
         <br/>
         <br/>
@@ -78,12 +79,15 @@
         <div id="top-binder-div"></div>
         <canvas id="canvas1" width="700px" height="600px"></canvas>
     </div-->
-    <canvas id="canvas1" width="700px" height="600px"></canvas>
+    <div id="game-container-div">
+        <canvas id="canvas1" width="700px" height="600px"></canvas>
+    </div>
     <script type="text/javascript" src="js/game_functionality.js"></script>
     <script type="text/javascript" src="levels/ghost_level/ghost_level.js"></script>
     <script type="text/javascript" src="levels/tutorial_level/tutorial_level.js"></script>
     <script type="text/javascript" src="levels/puzzle_tear_dicer/puzzle_tear_dicer.js"></script>
     <script type="text/javascript" src="levels/trash_lobster/trash_lobster.js"></script>
+    <script type="text/javascript" src="levels/blah/blah.js"></script>
 
 </body>
 </html>
