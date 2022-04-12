@@ -10,7 +10,7 @@ getLevelFunctions['trash/lobster level'] = function() {
     level.defineThingSubclasses = function() {
 
         window.Brats = class Brats extends Thing {
-            handleClick() {
+            handleDblclick() {
                 this.soundToPlayAfterMovement = level.sounds['splash'];
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.
@@ -33,7 +33,7 @@ getLevelFunctions['trash/lobster level'] = function() {
                     }
                 }
                 else {
-                    super.handleClick();
+                    super.handleDblclick();
                 }
             }
             methodToCallAfterMovement() {
@@ -101,7 +101,7 @@ getLevelFunctions['trash/lobster level'] = function() {
     level.initialRoom = 'room1';
     level.initialX = 35; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 35;
-    level.initialSpells = [allSpells.SPELL_ANAGRAM, allSpells.SPELL_REMOVE_EDGE, allSpells.SPELL_ADD_EDGE, allSpells.SPELL_CHANGE_EDGE];
+    level.initialSpells = [allSpells.ANAGRAM, allSpells.REMOVE_EDGE, allSpells.ADD_EDGE, allSpells.CHANGE_EDGE];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
     level.allWords = ['art', 'arts', 'bar', 'bars', 'bast', 'bat', 'bats', 'bolster', 'bolsters', 'bra', 'bras',
@@ -128,10 +128,6 @@ getLevelFunctions['trash/lobster level'] = function() {
 
     level.initializationFunction = function() {
         displayMessage('You need to add some kind of sausage to the cauldron!', DEFAULT_MESSAGE_DURATION * 200);
-        window.setTimeout(
-            function () { displayMessage('Remember to mouse over the Binder icon to see what spells you have!', DEFAULT_MESSAGE_DURATION * 2); },
-            DEFAULT_MESSAGE_DURATION
-        );
         level.sounds = {
             'splash' : new Audio(levelPath + '/audio/416710__inspectorj__splash-small-a.wav'),
         };

@@ -29,9 +29,6 @@
         <br/>
         <div id="spell-list"></div>
     </div>
-    <div id="player-message-0" class="player-message"></div>
-    <div id="player-message-1" class="player-message"></div>
-    <div id="player-message-2" class="player-message"></div>
     <div id="floating-message-holder"></div>
     <div id="caption-div-holder"></div>
 
@@ -60,9 +57,11 @@
 
         <button class="loadLevelButton" name="yo2" value="load tutorial level" onclick="loadLevel('tutorial level')">tutorial level</button>
         <button class="loadLevelButton" name="yo" value="trash/lobster level" onclick="loadLevel('trash/lobster level')">trash/lobster puzzle</button>
-        &nbsp;&nbsp;&nbsp;&nbsp; <button class="loadLevelButton" name="yo3" value="ghost level" onclick="loadLevel('ghost level')">ghost level</button>
-        &nbsp;&nbsp;&nbsp;&nbsp; <button class="loadLevelButton" name="yo4" value="tear-dicer" onclick="loadLevel('tear/dicer puzzle')">tare/dicer puzzle</button>
-             <button class="loadLevelButton" name="yo5" value="blah" onclick="loadLevel('blah')">auto-gen level</button>
+        <button class="loadLevelButton" name="yo3" value="ghost level" onclick="loadLevel('ghost level')">ghost level</button>
+        <button class="loadLevelButton" name="yo4" value="tear-dicer" onclick="loadLevel('tear/dicer puzzle')">tare/dicer puzzle</button>
+        <button class="loadLevelButton" name="yo5" value="blah" onclick="loadLevel('blah')">auto-gen level</button>
+        <button class="loadLevelButton" name="yo5" value="blah" onclick="loadLevel('soap-bowtie')">soap-bowtie level</button>
+        <button class="loadLevelButton" name="yo5" value="blah" onclick="loadLevel('soap-bowtie-easy')">easy soap-bowtie level</button>
 
         <br/>
         <br/>
@@ -80,6 +79,8 @@
         <canvas id="canvas1" width="700px" height="600px"></canvas>
     </div-->
     <div id="game-container-div">
+        <div id="horizontal-spell-list"></div>
+        <div id="score-div"></div>
         <canvas id="canvas1" width="700px" height="600px"></canvas>
     </div>
     <script type="text/javascript" src="js/game_functionality.js"></script>
@@ -88,6 +89,8 @@
     <script type="text/javascript" src="levels/puzzle_tear_dicer/puzzle_tear_dicer.js"></script>
     <script type="text/javascript" src="levels/trash_lobster/trash_lobster.js"></script>
     <script type="text/javascript" src="levels/blah/blah.js"></script>
+    <script type="text/javascript" src="levels/soap-bowtie/soap-bowtie.js"></script>
+    <script type="text/javascript" src="levels/soap-bowtie-easy/soap-bowtie-easy.js"></script>
 
 </body>
 </html>

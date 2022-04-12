@@ -69,6 +69,39 @@
     float:left;
 }
 
+/* todo: consolidate a lot of this style info into a shared class (among score div, this spell list div, maybe caption divs ... */
+#horizontal-spell-list{
+    display:none;
+    border: 3px solid lightgray;
+    border-radius: 8px;
+    padding:4px;
+    line-height: 30px;
+    height:auto;
+    width:auto;
+    position: absolute;
+    font-size:15pt;
+    font-family:sans-serif;
+    background-color: rgba(240, 240, 240, 0.73);
+    color:rgb(70,70,70);
+    z-index: 1;
+}
+
+#score-div{
+    display:none;
+    border: 3px solid lightgray;
+    border-radius: 8px;
+    padding:4px;
+    line-height: 30px;
+    height:auto;
+    width:100px;
+    position: absolute;
+    font-size:15pt;
+    font-family:sans-serif;
+    background-color: rgba(240, 240, 240, 0.73);
+    color:rgb(70,70,70);
+    z-index: 1;
+}
+
 .word-bubble{
     display:none;
     border: 3px solid lightgray;
@@ -105,13 +138,24 @@
 }
 
 .player-message{
-    display:none;
     position: absolute;
     height:auto;
     width:200px;
     text-align: center;
     padding: 5px;
     border: 3px solid red;
+    background-color: rgba(30, 255, 255, 0.9);
+    z-index: 1;
+}
+
+.big-message{
+    font-size:30px;
+    position: absolute;
+    height:300px;
+    width:400px;
+    text-align: center;
+    padding: 15px;
+    border: 5px solid red;
     background-color: rgba(30, 255, 255, 0.9);
     z-index: 1;
 }
@@ -238,8 +282,8 @@
 
 .inline-rune {
     display:inline;
-    height:33px;
-    width:22px;
+    height:30px;
+    width:20px;
     vertical-align:middle;
 }
 

@@ -87,17 +87,6 @@ getLevelFunctions['tutorial level'] = function() {
                 }
             }
         }
-
-        window.Treasure = class Treasure extends Thing {
-            tryToPickUp() {
-                completeLevel();
-                return super.tryToPickUp();
-            }
-            handleCollision() {
-                completeLevel();
-                super.handleCollision();
-            }
-        }
     }
 
     level.getThing = function(word,room,x,y) {
@@ -108,7 +97,6 @@ getLevelFunctions['tutorial level'] = function() {
             case 'key' : return new Key(word,room,x,y);
             case 'shovel' : return new Shovel (word,room,x,y);
             case 'stand': return new Stand(word,room,x,y);
-            case 'treasure': return new Treasure(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
         }
     }
@@ -119,7 +107,7 @@ getLevelFunctions['tutorial level'] = function() {
 
     level.showRoom2Message = function () {
         if ('bear' in thingsHere) {
-            displayMessage('Try to get past the cur by clicking on it and changing "cur" into "curb".', 0, 80,56, true);
+            displayMessage('Try to get past the cur by clicking on it and changing "cur" into "curb".', 0);
         }
     }
 
@@ -139,6 +127,7 @@ getLevelFunctions['tutorial level'] = function() {
     level.solidObjects  = [ 'bear', 'cur', 'gate', 'hovel', 'hovels', 'stand', ];
     level.immovableObjects = [ 'bear', 'gate', 'cur', 'curb', 'curd', 'hovel', 'hovels',  ];
     level.bridgelikeObjects = [ 'span', 'ladder' ];
+    level.targetThing = 'treasure';
     level.otherGameData = {
         'grabbed binder' : false,
     };

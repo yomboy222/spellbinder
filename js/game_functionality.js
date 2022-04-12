@@ -1,4 +1,4 @@
- /*  game_functionality.js
+/*  game_functionality.js
     javascript code to run Spell-Binder game
     Doug McLellan 1/2022
 */
@@ -27,15 +27,15 @@ let binderIconLeft = 0;
 const PLAYER_HEIGHT = 90;
 const PLAYER_WIDTH = 60;
 let EXTRA_SPELL_RADIUS = 260; // currently don't want to make distance an issue. in the future might need to reduce this though.
-const EXTRA_PICKUP_RADIUS = 20;
+const EXTRA_PICKUP_RADIUS = 40;
 const MIN_HALFWIDTH = 20;
 const MIN_HALFHEIGHT = 20;
-const DISTANCE_TO_MOVE = 4;
 const MOVEMENT_TYPE_LINEAR = 0;
 const MOVEMENT_TYPE_PARABOLIC = 1;
-const allSpells = { ADD_EDGE:'add-edge', REMOVE_EDGE:'remove-edge', REVERSAL : 'reversal', ANAGRAM : 'anagram',
-    SYNONYM : 'synonym', ADD : 'add-letter', REMOVE : 'remove-letter', CHANGE_EDGE : 'change-edge', CHANGE : 'change-letter',
-        BINDER_COVER : 'cover', BINDER_INTRO : 'intro' };
+const allSpells = { ADD_EDGE:'add-edge', ADD_EDGE_NFS:'add-edge-nfs', REMOVE_EDGE:'remove-edge', REMOVE_EDGE_NFS:'remove-edge-nfs',
+    REVERSAL : 'reversal', ANAGRAM : 'anagram', SYNONYM : 'synonym', ADD : 'add-letter', ADD_NFS : 'add-letter-nfs', REMOVE : 'remove-letter',
+    REMOVE_NFS : 'remove-letter-nfs', CHANGE_EDGE : 'change-edge', CHANGE_EDGE_NFS : 'change-edge-nfs', CHANGE : 'change-letter',
+    CHANGE_NFS : 'change-letter-nfs', BINDER_COVER : 'cover', BINDER_INTRO : 'intro' };
 let binderImages = {};
 let binderPageHtml = {};
 let timeOfLastBinderOpening = 0;
@@ -46,6 +46,8 @@ let getLevelFunctions = {};
 let level = undefined;
 let levelName = '';
 let levelPath = ''; // to remove spaces etc. so can be used in file paths more easily
+let score = 0;
+let wordsFound = [];
 let thingsElsewhere = {};
 let inventory = {};
 let thingsHere = {};
@@ -67,6 +69,7 @@ let player = {};
 let destinationPassage = undefined;
 let timeMod2200 = 0;
 let arrowsAlpha = 0;
+let arrowsAlphaLookupTable = [];
 let sounds = {};
 let backgroundImage = new Image();
 let backgroundMusic = undefined;
@@ -83,6 +86,7 @@ const DEFAULT_MESSAGE_DURATION = 2600;
 const FADEOUT_DURATION_MS = 1200;
 let fadeinTimer = 0;
 let fadeinWord = '';
+let frameCounter = 0;
 let showingIntroPage = true;
 let showingSpellInput = false;
 let levelComplete = false;
@@ -145,7 +149,7 @@ class Level {
             return false; // false indicates click event not handled here
         };
         this.postTransformBehavior = function(fromWord,toWord) {};
-        this.levelCompleteMessage = 'Congratulations, you completed the level! Press R to return to intro screen.';
+        this.levelCompleteMessage = 'Congratulations, you completed the level! Close this message to return to intro screen.';
     }
 }
 
@@ -186,13 +190,13 @@ class GameElement {
         return false; // TODO: HANDLE OTHER COLLISION PROFILES
     }
 
-    occupiesPoint(x, y) { // this is overridden by Thing to handle case where it's in inventory
+    occupiesPoint(xWithinCanvas, yWithinCanvas) { // this is overridden by Thing to handle case where it's in inventory
         let w = Math.max(this.halfWidth, MIN_HALFWIDTH);
         let h = Math.max(this.halfHeight, MIN_HALFHEIGHT);
-        return ( x >= this.x - w &&
-            x <= this.x + w &&
-            y >= this.y - h &&
-            y <= this.y + h );
+        return ( xWithinCanvas >= this.x - w &&
+            xWithinCanvas <= this.x + w &&
+            yWithinCanvas >= this.y - h &&
+            yWithinCanvas <= this.y + h );
     }
 
     update() {
@@ -209,15 +213,6 @@ class GameElement {
                     this.y = this.initialY + ((this.destY - this.initialY) * fractionTraversed) - 100 +
                         (400 * (fractionTraversed - 0.5) * (fractionTraversed - 0.5));
                 }
-/*
-                if (isNaN(this.x)) {
-                    console.log('uh-oh');
-                    console.log(fractionTraversed);
-                    console.log(this.movementDurationMS);
-                    console.log(this.beginMovementTime);
-                }
-
- */
             }
         }
     }
@@ -317,6 +312,7 @@ class Thing extends GameElement {
         this.x = x;
         this.y = y;
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
+        this.image.onerror = this.handleMissingImage.bind(this);
         this.image.src = levelPath + '/things/' + word.replace(' ', '_') + '.png';
         this.timeOfCreation = Date.now();
         this.movable = (immovableObjects.indexOf(word) < 0 && solidObjects.indexOf(word) < 0);
@@ -325,6 +321,8 @@ class Thing extends GameElement {
         this.collisionProfile = (ellipticalObjects.indexOf(word) >= 0) ? CollisionProfile.ELLIPTICAL : CollisionProfile.RECTANGULAR;
         this.cannotPickUpMessage = 'This object cannot be picked up.';
         this.captionDiv = undefined;
+        this.captionLeftEdgeWithinCanvas = undefined;
+        this.captionTopEdgeWithinCanvas = undefined;
         this.inventoryImageRatio = 1.7; // factor by which to reduce each dimension when drawing in inventory.
         this.playAudioWhenTransformed = true;
         this.sound = undefined; // used for thing's primary sound. will be stopped if/when player leaves room where it is.
@@ -340,6 +338,14 @@ class Thing extends GameElement {
         drawInventory();
     }
 
+    handleMissingImage() { // if image doesn't load
+        this.image.src = 'imgs/thing_placeholder.png';
+        this.height = 100;
+        this.width = 100;
+        this.halfHeight = 50;
+        this.halfWidth = 50;
+    }
+
     deleteFromThingsHere() {
         this.deleteCaptionIfAny();
         for (let [word, thing] of Object.entries(thingsHere)) {
@@ -353,6 +359,8 @@ class Thing extends GameElement {
         if (typeof this.captionDiv !== 'undefined') {
             this.captionDiv.remove(); // take div out of DOM hierarchy
             this.captionDiv = undefined; // ... and mark for garbage removal
+            this.captionTopEdgeWithinCanvas = undefined;
+            this.captionLeftEdgeWithinCanvas = undefined;
         }
     }
 
@@ -365,6 +373,15 @@ class Thing extends GameElement {
         this.deleteCaptionIfAny();
         this.deleteFromThingsHere();
         this.removeFromInventory();
+    }
+
+    setMovement(destX, destY, duration, initialX = undefined, initialY = undefined) {
+        this.destX = destX;
+        this.destY = destY;
+        this.movementDurationMS = duration;
+        this.beginMovementTime = Date.now();
+        this.initialX = (typeof initialX === 'undefined') ? this.x : initialX;
+        this.initialY = (typeof initialY === 'undefined') ? this.y : initialY;
     }
 
     methodToCallAfterMovement() {
@@ -413,6 +430,8 @@ class Thing extends GameElement {
                 console.log(this.y);
                 this.moveCaptionDivIfAnyToInventory();
                 delete thingsHere[this.word];
+                if (typeof level.targetThing === 'string' && level.targetThing === this.word)
+                    completeLevel();
                 return 1;
             }
         } else {
@@ -453,25 +472,40 @@ class Thing extends GameElement {
 
     moveCaptionDivIfAnyToInventory() {
         if (typeof this.captionDiv !== 'undefined') {
+            this.captionLeftEdgeWithinCanvas = canvasOffsetX + this.x - 18;
+            this.captionTopEdgeWithinCanvas = canvasOffsetY + PLAY_AREA_HEIGHT + 58;
             this.captionDiv.classList.add('in-inventory');
-            this.captionDiv.style.left = (canvasOffsetX + this.x - 18).toString() + 'px';
-            this.captionDiv.style.top = (canvasOffsetY + PLAY_AREA_HEIGHT + 58).toString() + 'px';
-            console.log("in moveCaptionDivIfAnyToInventory, canvasOffsetY=" + canvasOffsetY.toString() + ", CANVAS_HEIGHT=" + CANVAS_HEIGHT.toString());
+            this.captionDiv.style.left = this.captionLeftEdgeWithinCanvas.toString() + 'px';
+            this.captionDiv.style.top = this.captionTopEdgeWithinCanvas.toString() + 'px';
+            // console.log("in moveCaptionDivIfAnyToInventory, canvasOffsetY=" + canvasOffsetY.toString() + ", CANVAS_HEIGHT=" + CANVAS_HEIGHT.toString());
         }
     }
 
     setCaptionPositionInThingsHere() {
         if (typeof this.captionDiv != 'undefined') {
             this.captionDiv.classList.remove('in-inventory');
-            this.captionDiv.style.top = (this.y + canvasOffsetY + this.wordDisplayOffsetY).toString() + 'px';
-            this.captionDiv.style.left = (this.x + canvasOffsetX + this.wordDisplayOffsetX).toString() + 'px';
+            this.captionTopEdgeWithinCanvas = this.y + canvasOffsetY + this.wordDisplayOffsetY;
+            this.captionLeftEdgeWithinCanvas = this.x + canvasOffsetX + this.wordDisplayOffsetX;
+            this.captionDiv.style.top = this.captionTopEdgeWithinCanvas.toString() + 'px';
+            this.captionDiv.style.left = this.captionLeftEdgeWithinCanvas.toString() + 'px';
         }
     }
 
-    occupiesPoint(x, y) { // Thing overrides this to handle case where it's in inventory
+    occupiesPoint(xWithinCanvas, yWithinCanvas) { // Thing overrides this to handle case where it's in inventory, & to allow click on caption
 
-        let adjustedWidth = this.halfWidth;
-        let adjustedHeight = this.halfHeight;
+        // check for click on caption first.
+        if (typeof this.captionDiv != 'undefined') {
+            if (xWithinCanvas >= (this.captionLeftEdgeWithinCanvas) &&
+                xWithinCanvas <= (this.captionLeftEdgeWithinCanvas + 60) &&
+                yWithinCanvas >= (this.captionTopEdgeWithinCanvas) &&
+                yWithinCanvas <= (this.captionTopEdgeWithinCanvas + 40) )
+
+                return true;
+        }
+
+
+        let adjustedWidth = (typeof this.arrowHalfWidth == 'undefined') ? this.halfWidth : this.arrowHalfWidth;
+        let adjustedHeight = (typeof this.arrowHalfHeight == 'undefined') ? this.halfHeight : this.arrowHalfHeight;
         if (this.word in inventory) {
             adjustedHeight = adjustedHeight / this.inventoryImageRatio;
             if (adjustedHeight < 20)
@@ -484,10 +518,10 @@ class Thing extends GameElement {
         adjustedHeight = Math.max(adjustedHeight,MIN_HALFHEIGHT);
         adjustedWidth = Math.max(adjustedWidth,MIN_HALFWIDTH);
 
-        return (x >= (this.x - adjustedWidth) &&
-            x <= (this.x + adjustedWidth) &&
-            y >= (this.y - adjustedHeight) &&
-            y <= (this.y + adjustedHeight));
+        return (xWithinCanvas >= (this.x - adjustedWidth) &&
+            xWithinCanvas <= (this.x + adjustedWidth) &&
+            yWithinCanvas >= (this.y - adjustedHeight) &&
+            yWithinCanvas <= (this.y + adjustedHeight));
     }
 
     displayCantPickUpMessage() {
@@ -497,9 +531,7 @@ class Thing extends GameElement {
 
     // particular Thing subclasses may override this:
     handleClick() {
-
         toggleSpellInputWindow(false,this.word);
-
     }
 
     handleDblclick(e) {
@@ -524,7 +556,7 @@ class Thing extends GameElement {
     }
 
     passageBlockingBehavior() {
-        displayMessage('blocked!');
+        displayMessage('blocked!', DEFAULT_MESSAGE_DURATION);
     }
 
     // placeholder methods that subclasses needing specific behavior can override:
@@ -585,6 +617,11 @@ class Passage extends GameElement {
         }
         this.halfWidth = this.width / 2;
         this.halfHeight = this.height / 2;
+
+        this.arrowHalfWidth = (this.direction === 'N' || this.direction === 'S') ? 28 : 60;
+        this.arrowHalfHeight = (this.direction === 'N' || this.direction === 'S') ? 60 : 28;
+
+
         if ( this.type.indexOf('invisible') >= 0) {
             this.image = undefined;
         } else {
@@ -597,7 +634,7 @@ class Passage extends GameElement {
             ctx.drawImage(this.image,this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
         if (this.activated && this.state !== PASSAGE_STATE_OCCUPIED) {
             ctx.globalAlpha = arrowsAlpha;
-            ctx.drawImage(arrowImages[this.direction],this.x - 55, this.y - 36);
+            ctx.drawImage(arrowImages[this.direction],this.x - this.arrowHalfWidth, this.y - this.arrowHalfHeight);
             ctx.globalAlpha = 1.0;
         }
     }
@@ -613,6 +650,7 @@ class Passage extends GameElement {
             player.initialY = player.y;
             player.destX = (this.state === PASSAGE_STATE_BLOCKED) ? this.blockedX : this.x;
             player.destY = (this.state === PASSAGE_STATE_BLOCKED) ? this.blockedY : this.y;
+
             if (this.state === PASSAGE_STATE_BLOCKED) {
                 player.blockingThing = thingsHere[this.obstacle];
                 player.methodToCallAfterMovement = playerBlocked;
@@ -725,21 +763,6 @@ function displayAllCaptions() {
     }
 }
 
-/*
-function pickUpNearbyThings() {
-    let numberOfThingsPickedUp = 0;
-    for (let [word, thing] of Object.entries(thingsHere)) {
-        if (thing.inRangeOfPlayer(EXTRA_PICKUP_RADIUS)) {
-            numberOfThingsPickedUp += thing.tryToPickUp();
-        }
-    }
-    if (numberOfThingsPickedUp > 0) {
-        sounds['pickup'].play();
-        drawInventory();
-    }
-}
-*/
-
 function stopDisplayingMsg(forceStopAll = false) {
 
     /* TODO: fade-out messages like this
@@ -760,8 +783,6 @@ function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treat
     // use one of the fixedMessages if no x and y coordinates specified,
     // otherwise create a new floatingMessage.
 
-    messageCounter++;
-
     if (showingIntroPage === true)
         return; // sometimes displayMessage will be triggered by a setTimeout; if in the meantime the player has returned to intro page, don't show.
 
@@ -772,13 +793,15 @@ function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treat
         }
     }
 
+    messageCounter++;
+
     let messageObject = {};
     messageObject.msg = msg;
     messageObject.standardIndex = undefined;
 
     if (typeof x === 'undefined') {
         let standardIndex = 0;
-        x = standardMessagePositions[0].x; // i.e. will overlap by default if can't find any open place
+        x = standardMessagePositions[0].x; // so will overlap by default if can't find any open place
         y = standardMessagePositions[0].y;
         // find first open "standard" message position:
         for (let i=0; i<standardMessagePositions.length; i++) {
@@ -817,16 +840,19 @@ function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treat
         window.setTimeout(stopDisplayingMsg, durationMS);
     }
     messages[messageCounter] = messageObject;
-    console.log(msg);
 }
 
-function closeMessage(messageNumber) {
+function closeMessage(messageNumber, returnToIntro = false) {
     if (typeof messages[messageNumber] !== 'undefined') {
         messages[messageNumber].divElement.remove();
         if (typeof messages[messageNumber]['standardIndex'] != 'undefined') {
             standardMessagePositions[messages[messageNumber]['standardIndex']].occupied = false;
         }
         delete messages[messageNumber];
+        if (returnToIntro === true) {
+            showIntroScreen();
+        }
+
     }
 }
 
@@ -834,18 +860,33 @@ function getCanonicalAnagram(word) {
     return word.split('').sort().join(); // turns VEAL into AELV etc.
 }
 
-function spellAvailable(spell) {
+function spellAvailable(spell, involvesFinalS = false) {
     // returns whether user has the requested spell or a strictly more powerful spell.
-    return (spellsAvailable.indexOf(spell) >= 0 ||
-        (spell === allSpells.ADD_EDGE && spellsAvailable.indexOf(allSpells.ADD) >= 0) ||
-        (spell === allSpells.REMOVE_EDGE && spellsAvailable.indexOf(allSpells.REMOVE) >= 0) ||
-        (spell === allSpells.REVERSAL && spellsAvailable.indexOf(allSpells.ANAGRAM) >= 0) ||
-        (spell === allSpells.CHANGE_EDGE && spellsAvailable.indexOf(allSpells.CHANGE) >= 0)
-    );
+    // in the case of single-rune spells, the spell sent to this function will be "regular"
+    // like remove-letter in which case you're affecting an interior letter,
+    // or edge-specific like remove-edge; but it *won't* be a no-final-s variant.
+    // whether the final-s issue needs to be dealt with is determined by the second parameter.
+
+    if (spellsAvailable.indexOf(spell) >= 0)
+        return true;
+
+    // at this point we know player doesn't have the explicitly specified spell ...
+    switch (spell) {
+        case allSpells.ADD: return spellsAvailable.indexOf(allSpells.ADD_NFS) >= 0;
+        case allSpells.CHANGE :return spellsAvailable.indexOf(allSpells.CHANGE_NFS) >= 0;
+        case allSpells.REMOVE : return spellsAvailable.indexOf(allSpells.REMOVE_NFS) >= 0;
+        case allSpells.ADD_EDGE : return (spellsAvailable.indexOf(allSpells.ADD) >= 0 ||
+                (!involvesFinalS && (spellsAvailable.indexOf(allSpells.ADD_EDGE_NFS) >= 0 || spellsAvailable.indexOf(allSpells.ADD_NFS) >= 0)));
+        case allSpells.CHANGE_EDGE : return (spellsAvailable.indexOf(allSpells.CHANGE) >= 0 ||
+                (!involvesFinalS && (spellsAvailable.indexOf(allSpells.CHANGE_EDGE_NFS) >= 0 || spellsAvailable.indexOf(allSpells.CHANGE_NFS) >= 0)))
+        case allSpells.REMOVE_EDGE : return (spellsAvailable.indexOf(allSpells.REMOVE) >= 0 ||
+                (!involvesFinalS && (spellsAvailable.indexOf(allSpells.REMOVE_EDGE_NFS) >= 0 || spellsAvailable.indexOf(allSpells.REMOVE_NFS) >= 0)))
+        default: return (spellsAvailable.indexOf(spell) >= 0);
+    }
 }
 
 function getSpellListHtml(spellName) {
-    return '<a href="#" onclick="showBinder(\'' + spellName + '\')">' + spellName + '</a><br/>'
+    return '<a href="#" onclick="showBinder(\'' + spellName + '\')">' + spellName + '</a><br/> ';
 }
 
 function addSpellToBinder(spellName) {
@@ -875,41 +916,34 @@ function toggleSpellInputWindow(forceClose = false, fromWord = '') {
     }
 }
 
-// this function has return value of form { attemptedSpell, runeNeeded, runeReleased }
+// this function has return value of form { attemptedSpell, runeNeeded, runeReleased, affectsEnd }
 function getAttemptedSingleRuneSpell(fromWord,toWord) {
     for (let i = 0; i < fromWord.length+1; i++) {
         if (toWord.slice(0, i) === fromWord.slice(0,i) && toWord.slice(i+1) === fromWord.slice(i)) {
             let spell = (i == 0 || i == fromWord.length) ? allSpells.ADD_EDGE : allSpells.ADD;
-            return [spell, toWord.substr(i,1), undefined];
+            return [spell, toWord.substr(i,1), undefined, (i == fromWord.length)];
         }
         if (i < fromWord.length && toWord.length == fromWord.length && toWord.slice(0, i) === fromWord.slice(0,i) && toWord.slice(i+1) === fromWord.slice(i+1)) {
             let spell = (i == 0 || i == toWord.length - 1) ? allSpells.CHANGE_EDGE : allSpells.CHANGE;
-            return [spell, toWord.substr(i,1), fromWord.substr(i,1)];
+            return [spell, toWord.substr(i,1), fromWord.substr(i,1), (i == fromWord.length - 1)];
         }
         if (toWord.slice(0, i) === fromWord.slice(0,i) && toWord.slice(i) === fromWord.slice(i+1)) {
             let spell = (i == 0 || i == toWord.length) ? allSpells.REMOVE_EDGE : allSpells.REMOVE;
-            return [spell, undefined, fromWord.substr(i,1)];
+            return [spell, undefined, fromWord.substr(i,1), (i == fromWord.length - 1)];
         }
     }
     return false; // meaning it's not an attempted add/remove/change-single-rune spell.
 }
 
-/*
-function indexOfSoleChangedLetterIfAny(fromWord, toWord) {
-    // for example, "cart > cast" would return 2 (counting from first letter = 0); return -1 if not of this form.
-
-    if (fromWord.length !== toWord.length)
-        return -1;
-
-    for (let i = 0; i < toWord.length; i++) {
-        if (toWord.slice(0, i) === fromWord.slice(0,i) && toWord.slice(i+1) === fromWord.slice(i+1))
-            return i;
-    }
-
-    return -1;
+function registerWordForScoringPurposes(word) {
+    console.log ('hey');
+    if (wordsFound.indexOf(word) >= 0)
+        return; // already found.
+    score += word.length;
+    wordsFound.push(word);
+    console.log('here, word length ' + word.length)
+    document.getElementById("score-span").innerText = score.toString();
 }
-*/
-
 
 function castSpell() {
     toggleSpellInputWindow(true); // close the window
@@ -940,6 +974,7 @@ function castSpell() {
     let spellRequested = '';
     let runeNeeded = undefined;
     let runeReleased = undefined;
+    let involvesFinalS = false;
 
     if (getCanonicalAnagram(toWord) === getCanonicalAnagram(fromWord)) {
         spellRequested = allSpells.ANAGRAM;
@@ -961,19 +996,21 @@ function castSpell() {
         spellRequested = singleRuneSpellData[0];
         runeNeeded = singleRuneSpellData[1];
         runeReleased = singleRuneSpellData[2];
+        involvesFinalS = singleRuneSpellData[3] && (runeNeeded === 's' || runeReleased === 's');
     }
 
     console.log(spellRequested);
 
     // TODO: check for SYNONYM, etc.
 
-    if (!spellAvailable(spellRequested)) {
-        displayMessage("Hey Sorry, that didn't work!", DEFAULT_MESSAGE_DURATION);
+    if (!spellAvailable(spellRequested, involvesFinalS)) {
+        // TODO: more specific error if it failed because tried to use a final "s" and player only has a nfs version of spell.
+        displayMessage("Sorry, that didn't work!", DEFAULT_MESSAGE_DURATION);
         return;
     }
 
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
-        displayMessage("Sorry, you need a rune: " + runeNeeded, DEFAULT_MESSAGE_DURATION);
+        displayMessage('Sorry, you need a rune: <img class="inline-rune" src="imgs/runes/Rune-' + runeNeeded.toUpperCase() + '.png">', 2 * DEFAULT_MESSAGE_DURATION);
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
             setTimeout(
                 function() { displayMessage('To get a "b" rune, change "bear" into "ear".', 0); },
@@ -987,6 +1024,8 @@ function castSpell() {
         return;
 
     // *** if we got here then the spell worked ***
+
+    registerWordForScoringPurposes(toWord);
 
     transformationToExecute = {
         'sourceThing' : sourceThing,
@@ -1138,6 +1177,8 @@ function showBinder(page = allSpells.BINDER_COVER) {
     pageBeingShownInBinder = page;
     document.getElementById('binder-instructions').style.display = 'block';
     document.getElementById('binder-icon-holder').style.display = 'none';
+    document.getElementById('horizontal-spell-list').style.display = 'none';
+    document.getElementById('score-div').style.display = 'none';
     hideAllCaptions();
     // console.log('should be showing ...');
     // alert('hey');
@@ -1183,8 +1224,15 @@ function toggleMusic() {
 
 function animate() {
 
+    frameCounter++;
+    if (frameCounter > 99)
+        frameCounter = 0;
+    arrowsAlpha = arrowsAlphaLookupTable[frameCounter];
+
+    /*
     timeMod2200 = Date.now() % 2200;
     arrowsAlpha = 0.25 * Math.sin(timeMod2200 * 0.002856) + 0.5
+*/
 
     // clear and draw background for current room:
     ctx.clearRect(0, 0,  PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
@@ -1302,7 +1350,24 @@ function completeLevel() {
     if (typeof backgroundMusic === 'object') {
         backgroundMusic.pause();
     }
-    displayMessage(level.levelCompleteMessage, DEFAULT_MESSAGE_DURATION * 20);
+    let messageObject = {};
+    messageObject.standardIndex = undefined; // this will be a "large" message, not one in one of the standard message slots
+    messageObject.divElement = document.createElement('div');
+    let msgDiv = messageObject.divElement;
+    msgDiv.classList.add('big-message');
+    msgDiv.style.left = (canvasOffsetX + (CANVAS_WIDTH / 2) - 200).toString() + 'px';
+    msgDiv.style.top = (canvasOffsetY + 100).toString() + 'px';
+    let outerDiv = document.getElementById('floating-message-holder');
+    outerDiv.appendChild(msgDiv);
+    floatingMessages.push(messageObject);
+
+    messageCounter++;
+    messageObject.timeAtMessageCreation = Date.now();
+    messageObject.duration = 0;
+    msgDiv.innerHTML = '<div class="window-closing-div"><a href="#" onclick="closeMessage(' + messageCounter.toString( ) + ',true)">X</a></div>';
+    msgDiv.innerHTML += level.levelCompleteMessage;
+    msgDiv.style.display = 'block';
+    messages[messageCounter] = messageObject;
 }
 
 function confirmQuit() {
@@ -1410,7 +1475,13 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent) {
 }
 
 function drawTopBinderImage() {
-    ctx.drawImage(binderImages['side_view_for_top'],0,-50);
+    // currently not doing binder image -- just drawing list of avail. spells:
+    let div = document.getElementById('horizontal-spell-list');
+    div.style.left = (canvasOffsetX + 20).toString() + 'px';
+    div.style.top = (canvasOffsetY + 20).toString() + 'px';
+    div.style.display = 'block';
+    document.getElementById('score-div').style.display = 'block';
+    // ctx.drawImage(binderImages['side_view_for_top'],0,-50);
 }
 
 function loadLevel(lName = 'intro level') {
@@ -1419,6 +1490,8 @@ function loadLevel(lName = 'intro level') {
     // document.getElementById('game-area').style.display = 'block';
     levelName = lName;
     levelComplete = false;
+    score = 0;
+
 
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'none';
@@ -1428,9 +1501,7 @@ function loadLevel(lName = 'intro level') {
 
     level = getLevelFunctions[lName]();
 
-    console.log('yo');
     console.log(level);
-
 
     levelPath = (typeof level.levelPath === 'string') ? 'levels/' + level.levelPath : 'levels/' + lName.replace(' ','_');
 
@@ -1450,9 +1521,11 @@ function loadLevel(lName = 'intro level') {
     otherData = level.otherGameData;
 
     thingsElsewhere = {};
+    wordsFound = [];
     let objectData = level.initialThings;
     for (let i=0; i < objectData.length; i++) {
         let key = objectData[i][0];
+        wordsFound.push(key); // so player doesn't get score credit for transforming something into one of these "given" words
         if (key in thingsElsewhere) {
             // might have to append digit to word to get unique key for it:
             for (let j=1; j<10; j++) {
@@ -1464,12 +1537,13 @@ function loadLevel(lName = 'intro level') {
         thingsElsewhere[key] = getThing(objectData[i][0], objectData[i][1], objectData[i][2], objectData[i][3]);
     }
 
-    let spellListHtml = '<b>Spells in Binder:</b><br/>';
+    let spellListHtml = 'Spells in Binder:<br/>';
     for (i=0; i< spellsAvailable.length; i++) {
         spellListHtml += getSpellListHtml(spellsAvailable[i]);
     }
-    document.getElementById('spell-list').innerHTML = spellListHtml;
-
+    // document.getElementById('spell-list').innerHTML = spellListHtml;
+    document.getElementById('horizontal-spell-list').innerHTML = spellListHtml;
+    document.getElementById('score-div').innerHTML = 'score: <span id="score-span">0</span>';
     level.initializationFunction();
 
     if (typeof level.backgroundMusicFile !== 'undefined') {
@@ -1489,7 +1563,9 @@ function loadLevel(lName = 'intro level') {
 function closeBinder() {
     console.log('closing binder');
     pageBeingShownInBinder = '';
-    document.getElementById('binder-icon-holder').style.display = 'block';
+    // document.getElementById('binder-icon-holder').style.display = 'block';
+    document.getElementById('horizontal-spell-list').style.display = 'block';
+    document.getElementById('score-div').style.display = 'block';
     let leftPage = document.getElementById('binder-page-left');
     let rightPage = document.getElementById('binder-page-right');
     let instructionDiv = document.getElementById('binder-instructions');
@@ -1618,7 +1694,7 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
     // TODO: maybe handle clicks on intro page programatically here??
         return;
     }
-    else if (pageBeingShownInBinder != '' && Date.now() > timeOfLastBinderOpening + 200 ) {
+    else if (pageBeingShownInBinder != '' && Date.now() > timeOfLastBinderOpening + 600 ) {
         // the reason for checking  Date.now() > timeOfLastBinderOpening + 200 is that clicking on the name of a spell in the
         // new binder-icon-holder div will open the binder, but this handler will also fire, and immediately close binder without this check.
         closeBinder();
@@ -1650,8 +1726,10 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
 
     for ([word, thing] of Object.entries(thingsHere)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
-            if (doubleRatherThanSingle)
+            if (doubleRatherThanSingle) {
+                console.log('got here');
                 thing.handleDblclick();
+            }
             else
                 thing.handleClick();
     }
@@ -1669,14 +1747,20 @@ function resizePage() {
     canvasOffsetX = bounds.left; // + window.scrollX;
     canvasOffsetY = bounds.top; // + window.scrollY;
 
+    scoreDiv = document.getElementById('score-div');
+    scoreDiv.style.left = (canvasOffsetX + CANVAS_WIDTH - 130).toString() + 'px';
+    scoreDiv.style.top = (canvasOffsetY + 10).toString() + 'px';
+
     standardMessagePositions = [];
-    const messageY = canvasOffsetY + Math.round(CANVAS_HEIGHT / 8);
-    const messageXspacing = Math.round(CANVAS_WIDTH / 3.1);
+    const messageYoffset = 20; // canvasOffsetY + Math.round(CANVAS_HEIGHT / 8);
+    const messageXoffset = Math.round(CANVAS_WIDTH / 2);
+    const messageXspacing = 0; // Math.round(CANVAS_WIDTH / 3.1);
+    const messageYspacing = Math.round(PLAY_AREA_HEIGHT/7);
     for (let i = 0; i < NUMBER_OF_FIXED_MESSAGE_DIVS; i++) {
         standardMessagePositions.push(
             {
-                x : (i * messageXspacing) + 100,
-                y : messageY,
+                x : messageXoffset + (i * messageXspacing),
+                y : messageYoffset + (i * messageYspacing),
                 occupied : false
             }
         );
@@ -1691,27 +1775,6 @@ function resizePage() {
 function initialize() {
     // the variables initialized here were actually declared above
     // so as to have global scope.
-
-    /* testing ...
-    let r = getAttemptedSingleRuneSpell('aaa','baaa');
-    console.log("aaa,baaa", r[0], r[1], r[2]);
-    r = getAttemptedSingleRuneSpell('aaa','abaa');
-    console.log("aaa,abaa", r[0], r[1], r[2]);
-    r = getAttemptedSingleRuneSpell('aaa','aaab');
-    console.log("aaa,aaab", r[0], r[1], r[2]);
-    r = getAttemptedSingleRuneSpell('abc','xbc');
-    console.log("abc,xbc", r[0], r[1], r[2]);
-    r = getAttemptedSingleRuneSpell('abc','axc');
-    console.log("abc,axb", r[0], r[1], r[2]);
-    r = getAttemptedSingleRuneSpell('abc','abx');
-    console.log("abc,abx", r[0], r[1], r[2]);
-    r = getAttemptedSingleRuneSpell('abc','bc');
-    console.log("abc,bc", r[0], r[1], r[2]);
-    r = getAttemptedSingleRuneSpell('abc','ab');
-    console.log("abc,ab", r[0], r[1], r[2]);
-    r = getAttemptedSingleRuneSpell('abc','ac');
-    console.log("abc,ac", r[0], r[1], r[2]);
-     */
 
     player = new Player();
     sounds = {};
@@ -1745,6 +1808,13 @@ function initialize() {
         arrowImages[directions[i]].src = 'imgs/arrow-' + directions[i] + '.png';
     }
 
+    // calculate alpha values for pulsing arrows & put in lookup table so don't have to keep recalculating:
+    const numberOfFrames = 100;
+    arrowsAlphaLookupTable = [];
+    for (let i=0; i< numberOfFrames; i++) {
+        arrowsAlphaLookupTable.push(0.3 * Math.sin(i * 2.0 * Math.PI / numberOfFrames) + 0.4);
+    }
+
     // load binder page images
     binderImages = {
         side_view_for_top: new Image(),
@@ -1769,6 +1839,9 @@ function initialize() {
     binderPageHtml[allSpells.ADD_EDGE] = '<div class="spell-title">Add Edge</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word:</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fang</span></div> <div class="spell-example">change <span class="monospace">ink</span> into <span class="monospace">sink</span></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
     binderPageHtml[allSpells.REMOVE_EDGE] = '<div class="spell-title">Remove Edge</div> <div class="spell-description">This spell removes the letter at the beginning or end of a word, and releases it into your care as a rune:</div>  <div class="spell-example">change <span class="monospace">fang</span> into <span class="monospace">fan</span> </div><div class="spell-example"> change <span class="monospace">sink</span> into <span class="monospace">ink</span></div> <div class="spell-description">This is a good way to get more runes!</div>';
     binderPageHtml[allSpells.CHANGE_EDGE] = '<div class="spell-title">Change Edge</div> <div class="spell-description">This spell lets you change the first or last letter in a word:</div>  <div class="spell-example">change <span class="monospace">cable</span> into <span class="monospace">table</span> </div> <div class="spell-description">Keep in mind you need a rune of the new letter (in this example, <img class="inline-rune" src="imgs/runes/Rune-T.png">); the old rune is released to you (here, <img class="inline-rune" src="imgs/runes/Rune-C.png">).</div>';
+    binderPageHtml[allSpells.ADD] = '<div class="spell-title">Add Letter</div> <div class="spell-description">This spell lets you add a letter to a word (at the beginning, end, or anywhere in the middle):</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fang</span></div> <div class="spell-example">change <span class="monospace">cat</span> into <span class="monospace">cart</span></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
+    binderPageHtml[allSpells.REMOVE] = '<div class="spell-title">Remove Letter</div> <div class="spell-description">This spell removes a letter from a word, and releases it into your care as a rune:</div>  <div class="spell-example">change <span class="monospace">cart</span> into <span class="monospace">cat</span> </div><div class="spell-example"> change <span class="monospace">sink</span> into <span class="monospace">ink</span></div> <div class="spell-description">This is a good way to get more runes!</div>';
+    binderPageHtml[allSpells.CHANGE] = '<div class="spell-title">Change Letter</div> <div class="spell-description">This spell lets you change a letter in a word:</div>  <div class="spell-example">change <span class="monospace">seat</span> into <span class="monospace">slat</span> </div> <div class="spell-description">Keep in mind you need a rune of the new letter (in this example, <img class="inline-rune" src="imgs/runes/Rune-L.png">); the old rune is released to you.</div>';
     binderPageHtml[allSpells.REVERSAL] = '<div class="spell-title">Reversal</div> <div class="spell-description">Simply reverses a word:</div>  <div class="spell-example">change <span class="monospace">auks</span> into <span class="monospace">skua</span></div>';
     binderPageHtml[allSpells.ANAGRAM] = '<div class="spell-title">Anagram</div> <div class="spell-description">This spell lets you rearrange the letters in a word:</div>  <div class="spell-example">change <span class="monospace">flea</span> into <span class="monospace">leaf</span></div>';
 
@@ -1795,7 +1868,7 @@ function initialize() {
     instructionDiv.style.left = (canvasOffsetX + 15).toString() + 'px';
     instructionDiv.style.height = (CANVAS_HEIGHT - PLAY_AREA_HEIGHT - 45).toString() + 'px';
     instructionDiv.style.width = (CANVAS_WIDTH.toString() - 45).toString() + 'px';
-    instructionDiv.innerText = "Use arrow keys to turn pages. Press B to close the Binder.";
+    instructionDiv.innerText = "Click to close the Binder.";
 }
 
 function showIntroScreen() {
@@ -1803,6 +1876,9 @@ function showIntroScreen() {
     deleteCaptions(true); // "true" here forces deletion of captions in inventory too
     document.getElementById('binder-icon-holder').style.display = 'none';
     document.getElementById('music-toggle-div').style.display = 'none';
+    document.getElementById('horizontal-spell-list').style.display = 'none';
+    document.getElementById('score-div').style.display = 'none';
+
     canvas.style.display = 'none';
 
     let introDiv = document.getElementById('intro_screen_div');

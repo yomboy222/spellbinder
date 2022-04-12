@@ -381,17 +381,6 @@ getLevelFunctions['ghost level'] = function() {
             }
         }
 
-        window.Treasure = class Treasure extends Thing {
-            tryToPickUp() {
-                completeLevel();
-                return super.tryToPickUp();
-            }
-            handleCollision() {
-                completeLevel();
-                return super.handleCollision();
-            }
-        }
-
         level.carryingLamp = function() {
             return ('lamp' in inventory || 'lamp' in thingsHere || 'lamps' in inventory || 'lamps' in thingsHere);
         }
@@ -416,7 +405,6 @@ getLevelFunctions['ghost level'] = function() {
                 case 'portcullis' : return new Portcullis(word,room,x,y);
                 case 'reward': return new Reward(word,room,x,y);
                 case 'stand' : return new Stand(word,room,x,y);
-                case 'treasure' : return new Treasure(word,room,x,y);
                 default : return undefined; // the generic getThing function will then create a plain-vanilla Thing object.
             }
         }
@@ -439,6 +427,7 @@ getLevelFunctions['ghost level'] = function() {
         level.immovableObjects= [  'drawer','ghost','gun','gunk','host','board','boar','mantra','dresser','stand', 'toll machine', ];
         level.bridgelikeObjects= [ 'span', 'ladder' ];
         level.ellipticalObjects= [ 'clam', 'meteor', 'asteroid'];
+        level.targetThing = 'treasure';
         level.otherGameData= { 'hive in place':true,
             'last hive trigger time':0,
             'bee image':new Image(),
