@@ -132,7 +132,7 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
         }
     }
     level.initialRoom = 'room1';
-    level.initialX = 50; // expressed as % of way across x axis, i.e. value range is 0-100 
+    level.initialX = 50; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 55;
     level.initialSpells = [ 'remove-letter', 'change-letter' ];
     level.initialInventory = {};
@@ -143,7 +143,6 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
 
     level.targetThing = 'treasure';
     level.initialRunes = [];
-    level.initialMessage = 'You goal: find and take the treasure!';
 
     level.rooms = {
         'room1': {

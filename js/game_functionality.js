@@ -149,7 +149,7 @@ class Level {
             return false; // false indicates click event not handled here
         };
         this.postTransformBehavior = function(fromWord,toWord) {};
-        this.levelCompleteMessage = 'Congratulations, you completed the level! Close this message to return to intro screen.';
+        this.levelCompleteMessage = 'Congratulations, you completed the level! Close this message to return to home screen.';
     }
 }
 
@@ -1377,7 +1377,7 @@ function confirmQuit() {
     }
 }
 
-function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent) {
+function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialMessage=undefined) {
 
     // note that in level data, x and y coordinates have values 0-100, to facilitate rescaling.
     // we convert to actual pixel values here.
@@ -1472,6 +1472,10 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent) {
 
     if (typeof roomData.specificNewRoomBehavior === 'function')
         roomData.specificNewRoomBehavior();
+
+    if (typeof initialMessage === 'string') {
+        displayMessage(initialMessage,DEFAULT_MESSAGE_DURATION * 3);
+    }
 }
 
 function drawTopBinderImage() {
@@ -1555,7 +1559,12 @@ function loadLevel(lName = 'intro level') {
 
     drawTopBinderImage();
 
-    newRoom(level.initialRoom, level.initialX, level.initialY);
+   /* let initialMessage = undefined;
+    if (typeof level.initialMessage === 'string') {
+        initialMessage = level.initialMessage;
+    }*/
+
+    newRoom(level.initialRoom, level.initialX, level.initialY, level.initialMessage);
 
     animate();
 }
