@@ -8,11 +8,9 @@ screen-resizing issues
 
 better click-on-arrow detection
 
-finish upgrading tutorial level
+finish upgrading tutorial level. allow one message to supersede another
 
-make binder icon replacement on top
-
-convey how to complete a level.
+convey how to complete a level (put initialMessage into existing levels).
 
 obstacle things should have "obstacleDeactivated" property. this will help deal with things like the gate that gets pushed aside,
 or the meteor that gets pushed aside.

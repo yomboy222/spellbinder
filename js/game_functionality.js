@@ -13,11 +13,11 @@ const CANVAS_WIDTH = 700; const CANVAS_HEIGHT = 700; const TOP_BINDER_AREA_HEIGH
 const PLAY_AREA_WIDTH = 700; const PLAY_AREA_HEIGHT = 500;
 const xScaleFactor = PLAY_AREA_WIDTH / 100; const yScaleFactor = PLAY_AREA_HEIGHT / 100;
 const INVENTORY_WIDTH = 700; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
-const RUNE_X_SPACING = 38; const RUNE_Y_SPACING = 42;
+const RUNE_X_SPACING = 44; const RUNE_Y_SPACING = 42;
 const INVENTORY_TOP_MARGIN = 42; const INVENTORY_LEFT_MARGIN = 65; const INVENTORY_SPACING = 95;
 const BINDER_ICON_WIDTH = 132;
 const MAX_ITEMS_IN_INVENTORY = 6;
-const RUNE_IMAGE_WIDTH = 65; const RUNE_IMAGE_HEIGHT = 92; const RUNE_DISPLAY_WIDTH = 30; const RUNE_DISPLAY_HEIGHT = 42;
+const RUNE_IMAGE_WIDTH = 65; const RUNE_IMAGE_HEIGHT = 92; const RUNE_DISPLAY_WIDTH = 32; const RUNE_DISPLAY_HEIGHT = 46;
 const PASSAGE_WIDTH = 55;
 const PASSAGE_LENGTH = 150;
 const PASSAGE_STATE_INACTIVE = 0; const PASSAGE_STATE_BLOCKED = 1; const PASSAGE_STATE_ACTIVE = 2; const PASSAGE_STATE_OCCUPIED = 3;
@@ -76,8 +76,6 @@ let backgroundMusic = undefined;
 let musicPlaying = false;
 let normalPlayerInputSuppressed = false;
 let playerImageSuppressed = false;
-let fixedMessages = [];
-let floatingMessages = [];
 let messages = {}; // switching to strategy of having messages in a dictionary, indexed by messageCounter
 let messageCounter = 0;
 let standardMessagePositions = [];
@@ -231,7 +229,7 @@ class GameElement {
             displayMessage(this.messageToDisplayAfterMovement);
     }
     handleDblclick(e) {
-        console.log('dblclick');
+        return false; // meaning that this object didn't actually handle the dblclick.
     }
 }
 
@@ -317,7 +315,6 @@ class Thing extends GameElement {
         this.timeOfCreation = Date.now();
         this.movable = (immovableObjects.indexOf(word) < 0 && solidObjects.indexOf(word) < 0);
         this.solid = (solidObjects.indexOf(word) >= 0);
-        this.bridgelike = (bridgelikeObjects.indexOf(word) >= 0);
         this.collisionProfile = (ellipticalObjects.indexOf(word) >= 0) ? CollisionProfile.ELLIPTICAL : CollisionProfile.RECTANGULAR;
         this.cannotPickUpMessage = 'This object cannot be picked up.';
         this.captionDiv = undefined;
@@ -417,13 +414,14 @@ class Thing extends GameElement {
             this.height / this.inventoryImageRatio);
     }
 
-    // tryToPickUp() returns 1 if successful else 0 :
+    // tryToPickUp() returns true if successful else false or an error message:
     tryToPickUp() {
         // only call this on things in thingsHere in range of player.
         if (this.movable) {
             if (Object.keys(inventory).length >= MAX_ITEMS_IN_INVENTORY) {
-                displayMessage('Too many things in inventory!');
+                return 'Too many things in inventory!';
             } else {
+                sounds['pickup'].play();
                 inventory[this.word] = this;
                 this.setCoordinatesInInventory(Object.keys(inventory).length - 1);
                 console.log(this.x);
@@ -432,10 +430,10 @@ class Thing extends GameElement {
                 delete thingsHere[this.word];
                 if (typeof level.targetThing === 'string' && level.targetThing === this.word)
                     completeLevel();
-                return 1;
+                return true;
             }
         } else {
-            return 0;
+            return false;
         }
     }
 
@@ -541,18 +539,15 @@ class Thing extends GameElement {
             } else {
                 this.discard();
             }
-            return;
+            return true; // meaning that this object handled the dblclick.
         }
         if (!this.movable) {
-            this.displayCantPickUpMessage();
-            return;
+            return this.displayCantPickUpMessage(); // the overall click-handling function will display this msg if no *other* object handles the dblclick successfully.
         }
         if (!this.inRangeOfPlayer(EXTRA_PICKUP_RADIUS)) {
-            displayMessage("You must be closer to pick up.");
-            return;
+            return ("You must be closer to pick this up.");
         }
-        this.tryToPickUp();
-        sounds['pickup'].play();
+        return this.tryToPickUp(); // will be "true" if it works, else error message or false
     }
 
     passageBlockingBehavior() {
@@ -780,8 +775,6 @@ function stopDisplayingMsg(forceStopAll = false) {
 }
 
 function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
-    // use one of the fixedMessages if no x and y coordinates specified,
-    // otherwise create a new floatingMessage.
 
     if (showingIntroPage === true)
         return; // sometimes displayMessage will be triggered by a setTimeout; if in the meantime the player has returned to intro page, don't show.
@@ -798,6 +791,7 @@ function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treat
     let messageObject = {};
     messageObject.msg = msg;
     messageObject.standardIndex = undefined;
+    messageObject.msgID = 'none'; // this can be set to something useful in displaySequenceableMessage()
 
     if (typeof x === 'undefined') {
         let standardIndex = 0;
@@ -828,7 +822,6 @@ function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treat
     msgDiv.style.top = (canvasOffsetY + y).toString() + 'px';
     let outerDiv = document.getElementById('floating-message-holder');
     outerDiv.appendChild(msgDiv);
-    floatingMessages.push(messageObject);
 
     messageObject.timeAtMessageCreation = Date.now();
     messageObject.duration = durationMS;
@@ -840,6 +833,20 @@ function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treat
         window.setTimeout(stopDisplayingMsg, durationMS);
     }
     messages[messageCounter] = messageObject;
+    return messageObject;
+}
+
+function displaySequenceableMessage(msg, msgID, msgIDtoSupersede, durationMS = 0, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
+    // if this supersedes another message, close that one:
+    if (typeof msgIDtoSupersede != 'undefined') {
+        for (let [messageNumber, messageObj] of Object.entries(messages)) {
+            if (typeof messageObj.msgID != 'undefined' && messageObj.msgID === msgIDtoSupersede) {
+                closeMessage(messageNumber);
+            }
+        }
+    }
+    let messageObject = displayMessage(msg, durationMS, x, y, treatCoordinatesAsPercentages);
+    messageObject.msgID = msgID;
 }
 
 function closeMessage(messageNumber, returnToIntro = false) {
@@ -1136,10 +1143,17 @@ function repositionInventoryItems() {
 }
 
 function getRuneCoordinates(index) {
+    // so that runes display in inventory in one row:
+    return {
+        x : INVENTORY_LEFT + INVENTORY_WIDTH - INVENTORY_LEFT_MARGIN - (RUNE_X_SPACING * index),
+        y : INVENTORY_TOP + 20
+    };
+    /*
+    here is the old two-row version:
     return {
         x : INVENTORY_LEFT + INVENTORY_WIDTH - INVENTORY_LEFT_MARGIN - (RUNE_X_SPACING * Math.round((index-1)/2)),
         y : INVENTORY_TOP + 5 + (RUNE_Y_SPACING * (index % 2))
-    }
+    }*/
 }
 
 function drawInventory() {
@@ -1359,7 +1373,6 @@ function completeLevel() {
     msgDiv.style.top = (canvasOffsetY + 100).toString() + 'px';
     let outerDiv = document.getElementById('floating-message-holder');
     outerDiv.appendChild(msgDiv);
-    floatingMessages.push(messageObject);
 
     messageCounter++;
     messageObject.timeAtMessageCreation = Date.now();
@@ -1692,9 +1705,11 @@ function handleClick(e) {
         initialClickEvent = undefined;
         return processSingleOrDoubleClick(e, true);
     }
-    initialClickEvent = e;
-    lastClickTime = Date.now();
-    window.setTimeout( checkIfClickWasMadeDouble, MAX_DOUBLE_CLICK_TIME_SEPARATION);
+    if (!showingIntroPage) {
+        initialClickEvent = e;
+        lastClickTime = Date.now();
+        window.setTimeout(checkIfClickWasMadeDouble, MAX_DOUBLE_CLICK_TIME_SEPARATION);
+    }
 }
 
 function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
@@ -1734,13 +1749,24 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
     }
 
     for ([word, thing] of Object.entries(thingsHere)) {
+        messageToDisplayIfNothingHandlesSuccessfully = '';
+        console.log('hereeeee');
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             if (doubleRatherThanSingle) {
-                console.log('got here');
-                thing.handleDblclick();
+                let result = thing.handleDblclick();
+                if (typeof result === 'boolean' && result === true)
+                    break; // at most one thing should successfully handle dbl click
+                else if (typeof result === 'string')
+                    messageToDisplayIfNothingHandlesSuccessfully = result;
             }
-            else
-                thing.handleClick();
+            else {
+                if (thing.okayToDisplayWord()) // i.e. only open spell-input window if the word is being shown
+                    thing.handleClick();
+                    break; // at most one thing should successfully handle click
+            }
+            if (messageToDisplayIfNothingHandlesSuccessfully != '') {
+                displayMessage(messageToDisplayIfNothingHandlesSuccessfully);
+            }
     }
 
     for (i = 0; i < passages.length; i++) {

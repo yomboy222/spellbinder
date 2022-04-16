@@ -24,6 +24,10 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
                 // change image to player's head in window
                 normalPlayerInputSuppressed = true;
                 playerImageSuppressed = true;
+                if (passages.length > 0) {
+                    passages[0].activated = false;
+                    passages[0].state = PASSAGE_STATE_INACTIVE;
+                }
                 this.beginMovementTime = Date.now();
                 this.movementDurationMS = 3200;
                 this.destX = 79 * xScaleFactor;
@@ -51,6 +55,9 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             //    if (this.frameCtr > 5)
             //        this.frameCtr = 0;
             //    this.image = this.images[this.frameCtr];
+            }
+            passageBlockingBehavior() {
+                displayMessage('This magical precipitation stings!', DEFAULT_MESSAGE_DURATION, this.initialX, this.initialY);
             }
             handleCollision() {
                 displayMessage('This magical precipitation stings!', DEFAULT_MESSAGE_DURATION, this.initialX, this.initialY);
@@ -85,7 +92,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
 
     level.initialRoom = 'room1';
     level.initialX = 20; // expressed as % of way across x axis, i.e. value range is 0-100
-    level.initialY = 70;
+    level.initialY = 84;
     level.initialSpells = ['anagram', 'remove-edge', 'add-edge', 'change-edge'];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
@@ -105,7 +112,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
         'room1': {
             boundaries: [ ['i',0,50,100,50] ],
             filledPolygons: [],
-            passages: [],
+            passages: [  new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',72,83, 'room1',72, 83, true, 72, 83, 'mysterious-precipitation', PASSAGE_STATE_BLOCKED, 50, 84 ) ],
             backgroundImageName: 'road-background.png',
         },
     };

@@ -73,19 +73,6 @@ getLevelFunctions['tutorial level'] = function() {
             okayToDisplayWord() {
                 return false; // this just exists to hold Binder
             }
-            handleCollision() {
-                if (otherData['grabbed binder'] === false) {
-                    otherData['grabbed binder'] = true;
-                    displayMessage('You got the Spell Binder! Mouse over the binder icon to see what spells are in it. Click on spell name or press B to look inside.', 7500, this.x, this.y);
-                    document.getElementById('binder-icon-holder').style.display = 'block';
-                    this.solid = false;
-                    sounds['pickup'].play();
-                    this.image.src = levelPath + '/things/stand-no-binder.png';
-                }
-                else {
-                    return super.handleClick();
-                }
-            }
         }
     }
 
@@ -95,7 +82,6 @@ getLevelFunctions['tutorial level'] = function() {
             case 'bear' : return new Bear(word,room,x,y);
             case 'gate' : return new Gate(word,room,x,y);
             case 'key' : return new Key(word,room,x,y);
-            case 'shovel' : return new Shovel (word,room,x,y);
             case 'stand': return new Stand(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
         }
