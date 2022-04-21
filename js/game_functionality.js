@@ -52,6 +52,7 @@ let thingsElsewhere = {};
 let inventory = {};
 let thingsHere = {};
 let spellsAvailable = [];
+let spellNamesOnScreen = [];
 let runes = [];
 let runeImages = []; let arrowImages = {};
 let runeAcquisitionTime = 0;
@@ -361,12 +362,16 @@ class Thing extends GameElement {
         }
     }
 
-    dispose() {
+    unblockPassagesThisHadBeenBlocking() {
         for (let i=0; i<passages.length; i++) {
             if (passages[i].obstacle === this.word) {
                 passages[i].unblock();
             }
         }
+    }
+
+    dispose() {
+        this.unblockPassagesThisHadBeenBlocking();
         this.deleteCaptionIfAny();
         this.deleteFromThingsHere();
         this.removeFromInventory();
@@ -414,6 +419,10 @@ class Thing extends GameElement {
             this.height / this.inventoryImageRatio);
     }
 
+    extraPickUpBehavior() {}
+
+    extraDiscardBehavior() {}
+
     // tryToPickUp() returns true if successful else false or an error message:
     tryToPickUp() {
         // only call this on things in thingsHere in range of player.
@@ -424,12 +433,13 @@ class Thing extends GameElement {
                 sounds['pickup'].play();
                 inventory[this.word] = this;
                 this.setCoordinatesInInventory(Object.keys(inventory).length - 1);
-                console.log(this.x);
-                console.log(this.y);
+                // console.log(this.x);
+                // console.log(this.y);
                 this.moveCaptionDivIfAnyToInventory();
                 delete thingsHere[this.word];
                 if (typeof level.targetThing === 'string' && level.targetThing === this.word)
                     completeLevel();
+                this.extraPickUpBehavior();
                 return true;
             }
         } else {
@@ -466,6 +476,7 @@ class Thing extends GameElement {
         thingsHere[this.word] = this;
         this.setCaptionPositionInThingsHere();
         sounds['pickup'].play();
+        this.extraDiscardBehavior();
     }
 
     moveCaptionDivIfAnyToInventory() {
@@ -893,7 +904,7 @@ function spellAvailable(spell, involvesFinalS = false) {
 }
 
 function getSpellListHtml(spellName) {
-    return '<a href="#" onclick="showBinder(\'' + spellName + '\')">' + spellName + '</a><br/> ';
+    return '<a href="#" class="spell-name" id="spell-name-on-screen-' + spellName + '" onclick="showBinder(\'' + spellName + '\')">' + spellName + '</a><br/> ';
 }
 
 function addSpellToBinder(spellName) {
@@ -920,6 +931,13 @@ function toggleSpellInputWindow(forceClose = false, fromWord = '') {
         document.getElementById('toWord').focus();
         document.getElementById('toWord').value = '';
         document.getElementById('fromWord').innerText = fromWord;
+    }
+}
+
+function unhighlightAllSpellNames() {
+    let names = document.getElementsByClassName('spell-name');
+    for (let i = 0; i < names.length; i++) {
+        names[i].classList.remove('highlight-spell');
     }
 }
 
@@ -1017,11 +1035,11 @@ function castSpell() {
     }
 
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
-        displayMessage('Sorry, you need a rune: <img class="inline-rune" src="imgs/runes/Rune-' + runeNeeded.toUpperCase() + '.png">', 2 * DEFAULT_MESSAGE_DURATION);
+        displaySequenceableMessage('Sorry, you need a rune: <img class="inline-rune" src="imgs/runes/Rune-' + runeNeeded.toUpperCase() + '.png">', 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
             setTimeout(
-                function() { displayMessage('To get a "b" rune, change "bear" into "ear".', 0); },
-                1200
+                function() { displaySequenceableMessage('To get a <img class="inline-rune" src="imgs/runes/Rune-B.png"> rune, change "bear" into "ear".', 'tutorial_instruction', 'missing-rune-message'); },
+                1.5 * DEFAULT_MESSAGE_DURATION
             );
         }
         return;
@@ -1040,6 +1058,13 @@ function castSpell() {
         'runeNeeded' : runeNeeded,
         'runeReleased' : runeReleased,
     };
+
+    let nameToHighlight = document.getElementById('spell-name-on-screen-' + spellRequested);
+    if (nameToHighlight !== null) {
+        console.log(nameToHighlight);
+        nameToHighlight.classList.add('highlight-spell');
+        setTimeout( unhighlightAllSpellNames, 1000);
+    }
 
     if (typeof runeNeeded === 'undefined') {
         // if no runes to shuffle around graphically, just execute the transformation now:
@@ -1364,6 +1389,8 @@ function completeLevel() {
     if (typeof backgroundMusic === 'object') {
         backgroundMusic.pause();
     }
+    stopDisplayingMsg(true); // closes any messages currently open
+
     let messageObject = {};
     messageObject.standardIndex = undefined; // this will be a "large" message, not one in one of the standard message slots
     messageObject.divElement = document.createElement('div');
@@ -1398,6 +1425,8 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     if (typeof currentRoom != 'undefined') {
         sounds['whoosh'].play();
     }
+
+    toggleSpellInputWindow(true); // closes spell input
 
     for (let [word, thing] of Object.entries(thingsHere)) {
         thing.deleteCaptionIfAny();
@@ -1765,7 +1794,7 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
                     break; // at most one thing should successfully handle click
             }
             if (messageToDisplayIfNothingHandlesSuccessfully != '') {
-                displayMessage(messageToDisplayIfNothingHandlesSuccessfully);
+                displayMessage(messageToDisplayIfNothingHandlesSuccessfully, 2 * DEFAULT_MESSAGE_DURATION);
             }
     }
 

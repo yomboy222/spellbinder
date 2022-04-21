@@ -1,0 +1,6 @@
+
+
+
+remove player image from game entirely??
+
+should untransformable things ever have captions? 

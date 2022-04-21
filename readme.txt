@@ -6,9 +6,15 @@ TODO:
 
 screen-resizing issues
 
+home icon in lieu of Q to quit
+
 better click-on-arrow detection
 
-finish upgrading tutorial level. allow one message to supersede another
+finish upgrading tutorial level.
+
+possibly put messages into an invisible div & let them just fit in sequentially
+
+fizzle sound for failed spell / notification sound for messages
 
 convey how to complete a level (put initialMessage into existing levels).
 

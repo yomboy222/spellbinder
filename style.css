@@ -138,11 +138,14 @@
 }
 
 .player-message{
+    font-size:20px;
+    font-family:sans-serif;
     position: absolute;
+    border-radius: 8px;
     height:auto;
-    width:200px;
+    width:220px;
     text-align: center;
-    padding: 5px;
+    padding: 10px;
     border: 3px solid red;
     background-color: rgba(30, 255, 255, 0.9);
     z-index: 1;
@@ -162,6 +165,7 @@
 
 .window-closing-div{
     float:left;
+    padding:2px;
 }
 
 .window-closing-div > a{
@@ -215,6 +219,17 @@
     font-family: 'Griffy', cursive;
     max-height:10px;
 }
+
+#horizontal-spell-list > a {
+    background-color: rgba(255, 50, 255, 0.0);
+    transition: background-color 1s linear;
+}
+
+
+#horizontal-spell-list > a.highlight-spell {
+    background-color: rgba(255, 50, 255, 1.0);
+}
+
 
 /* classes for binder pages: */
 

@@ -42,7 +42,13 @@ getLevelFunctions['soap-bowtie'] = function() {
             }
           }
 
-          /* TODO: suppress player input during motion */
+          extraTransformIntoBehavior() {
+              if (!(this.word in inventory)) {
+                  displayMessage('Remember, to pick something up, double-click it.');
+              }
+          }
+
+            /* TODO: suppress player input during motion */
 
           startStroke() {
               this.strokeNumber++;
