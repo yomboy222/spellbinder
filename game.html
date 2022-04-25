@@ -40,9 +40,9 @@
         </div>
 
         While hiking in the Black Forest of Germany, you stumble upon a Medieval tower.
-        Inside are strange stone runes, and old tomes ... bearing the name-plate of
+        Inside are stone runes, and old tomes ... bearing the name-plate of
         the fabled alchemist, Gombrecht the Irrefrugnable! Gombrecht had
-        researched spells for transmutation, hoping eventually to turn lead into gold. His idea was
+        researched spells for transmutation, hoping to turn lead into gold. His idea was
         that by altering the letters in an object's True Name, you alter the object itself, for instance turning
         a Tier (beast) into a Bier (beer). His fatal mistake &mdash; obvious to us Americans &mdash; is that an object's True Name
         is the word for it in English, not German.
@@ -62,6 +62,7 @@
         <button class="loadLevelButton" name="yo5" value="soap-bowtie" onclick="loadLevel('soap-bowtie')">soap-bowtie level</button>
         <button class="loadLevelButton" name="yo6" value="soap-bowtie-easy" onclick="loadLevel('soap-bowtie-easy')">easy soap-bowtie level</button>
         <button class="loadLevelButton" name="yo7" value="cordon-joker" onclick="loadLevel('cordon-joker')">cordon-joker level</button>
+        <button class="loadLevelButton" name="yo5" value="aromantics-hotspot" onclick="loadLevel('aromantics-hotspot')">aromantics-hotspot level</button>
 
         <br/>
         <br/>
@@ -80,7 +81,7 @@
     </div-->
     <div id="game-container-div">
         <div id="horizontal-spell-list"></div>
-        <div id="score-div"></div>
+        <div id="score-div"><a href="javascript:confirmQuit()"><img src="imgs/home.png"></a> <div id="inner-score-div"></div></div>
         <canvas id="canvas1" width="700px" height="600px"></canvas>
     </div>
     <script type="text/javascript" src="js/game_functionality.js"></script>
@@ -90,6 +91,7 @@
     <script type="text/javascript" src="levels/trash_lobster/trash_lobster.js"></script>
     <script type="text/javascript" src="levels/soap-bowtie/soap-bowtie.js"></script>
     <script type="text/javascript" src="levels/cordon-joker/cordon-joker.js"></script>
+    <script type="text/javascript" src="levels/aromantics-hotspot/aromantics-hotspot.js"></script>
     <script type="text/javascript" src="levels/soap-bowtie-easy/soap-bowtie-easy.js"></script>
 
 </body>

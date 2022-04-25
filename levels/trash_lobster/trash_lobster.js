@@ -11,7 +11,7 @@ getLevelFunctions['trash/lobster level'] = function() {
 
         window.Brats = class Brats extends Thing {
             handleDblclick() {
-                this.soundToPlayAfterMovement = level.sounds['splash'];
+                this.soundToPlayAfterMovement = sounds['splash'];
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.
                 }
@@ -128,9 +128,6 @@ getLevelFunctions['trash/lobster level'] = function() {
 
     level.initializationFunction = function() {
         displayMessage('You need to add some kind of sausage to the cauldron!', DEFAULT_MESSAGE_DURATION * 200);
-        level.sounds = {
-            'splash' : new Audio(levelPath + '/audio/416710__inspectorj__splash-small-a.wav'),
-        };
     };
 
     return level;

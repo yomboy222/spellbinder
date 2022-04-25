@@ -4,6 +4,8 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
+implement suppress-player-input during multi-stage movements
+
 screen-resizing issues
 
 home icon in lieu of Q to quit
@@ -21,7 +23,6 @@ convey how to complete a level (put initialMessage into existing levels).
 obstacle things should have "obstacleDeactivated" property. this will help deal with things like the gate that gets pushed aside,
 or the meteor that gets pushed aside.
 
-handle cases where one obstacle is replaced by another (the passage affected won't automatically change to Active)
 
 PHASE 2 STUFF:
 use flip-a-clip to get walking player images
@@ -37,6 +38,8 @@ Music promoted by Audio Library https://youtu.be/7-rXQALDv-4
 
 sound from freesound.org, ...
 
+failure sound -- https://freesound.org/s/342756/
+hawk -- https://freesound.org/s/362426/
 dog bark -- https://freesound.org/s/327666/
 unlock door -- https://freesound.org/s/410983/
 pop bottle --- https://freesound.org/s/575527/

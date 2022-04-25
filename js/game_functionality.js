@@ -24,10 +24,10 @@ const PASSAGE_STATE_INACTIVE = 0; const PASSAGE_STATE_BLOCKED = 1; const PASSAGE
 let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
 let binderIconLeft = 0;
-const PLAYER_HEIGHT = 90;
-const PLAYER_WIDTH = 60;
+const PLAYER_HEIGHT = 120;
+const PLAYER_WIDTH = 80;
 let EXTRA_SPELL_RADIUS = 260; // currently don't want to make distance an issue. in the future might need to reduce this though.
-const EXTRA_PICKUP_RADIUS = 40;
+const EXTRA_PICKUP_RADIUS = 60;
 const MIN_HALFWIDTH = 20;
 const MIN_HALFHEIGHT = 20;
 const MOVEMENT_TYPE_LINEAR = 0;
@@ -217,7 +217,7 @@ class GameElement {
     }
     initiateMovement(relSpeed = 1) {
         let distanceAsFractionOfPlayAreaWidth = Math.sqrt( ( (this.x - this.destX) * (this.x - this.destX)) + ((this.y - this.destY) * (this.y - this.destY)) )  / PLAY_AREA_WIDTH;
-        this.movementDurationMS = distanceAsFractionOfPlayAreaWidth * 2000 * relSpeed;
+        this.movementDurationMS = distanceAsFractionOfPlayAreaWidth * 2000 / relSpeed;
         this.beginMovementTime = Date.now();
     }
     methodToCallAfterMovement() {
@@ -286,14 +286,6 @@ class Player extends GameElement {
          this.images[Directions.RIGHT].src = 'imgs/player-right.png';
          this.images[Directions.DOWN].src = 'imgs/player-front.png';
          this.images[Directions.LEFT].src = 'imgs/player-left.png';
-     }
-
-     update() {
-         super.update();
-     }
-
-     methodToCallAfterMovement() {
-         super.methodToCallAfterMovement();
      }
 
      draw() {
@@ -512,16 +504,11 @@ class Thing extends GameElement {
                 return true;
         }
 
-
-        let adjustedWidth = (typeof this.arrowHalfWidth == 'undefined') ? this.halfWidth : this.arrowHalfWidth;
-        let adjustedHeight = (typeof this.arrowHalfHeight == 'undefined') ? this.halfHeight : this.arrowHalfHeight;
+        let adjustedWidth = this.halfWidth;
+        let adjustedHeight = this.halfHeight;
         if (this.word in inventory) {
             adjustedHeight = adjustedHeight / this.inventoryImageRatio;
-            if (adjustedHeight < 20)
-                adjustedHeight = 20;
             adjustedWidth = adjustedWidth / this.inventoryImageRatio;
-            if (adjustedWidth < 20)
-                adjustedWidth = 20;
         }
 
         adjustedHeight = Math.max(adjustedHeight,MIN_HALFHEIGHT);
@@ -624,8 +611,8 @@ class Passage extends GameElement {
         this.halfWidth = this.width / 2;
         this.halfHeight = this.height / 2;
 
-        this.arrowHalfWidth = (this.direction === 'N' || this.direction === 'S') ? 28 : 60;
-        this.arrowHalfHeight = (this.direction === 'N' || this.direction === 'S') ? 60 : 28;
+        this.arrowHalfWidth = (this.direction === 'N' || this.direction === 'S') ? 30 : 60;
+        this.arrowHalfHeight = (this.direction === 'N' || this.direction === 'S') ? 60 : 30;
 
 
         if ( this.type.indexOf('invisible') >= 0) {
@@ -681,6 +668,18 @@ class Passage extends GameElement {
             destinationPassage = this;
         }
     }
+    occupiesPoint(xWithinCanvas, yWithinCanvas) {
+        let adjustedWidth = (typeof this.arrowHalfWidth == 'undefined') ? this.halfWidth : this.arrowHalfWidth;
+        let adjustedHeight = (typeof this.arrowHalfHeight == 'undefined') ? this.halfHeight : this.arrowHalfHeight;
+        adjustedHeight = Math.max(adjustedHeight,MIN_HALFHEIGHT);
+        adjustedWidth = Math.max(adjustedWidth,MIN_HALFWIDTH);
+
+        return (xWithinCanvas >= (this.x - adjustedWidth) &&
+            xWithinCanvas <= (this.x + adjustedWidth) &&
+            yWithinCanvas >= (this.y - adjustedHeight) &&
+            yWithinCanvas <= (this.y + adjustedHeight));
+    }
+
     unblock() {
         this.activated = true;
         this.state = PASSAGE_STATE_ACTIVE;
@@ -960,6 +959,19 @@ function getAttemptedSingleRuneSpell(fromWord,toWord) {
     return false; // meaning it's not an attempted add/remove/change-single-rune spell.
 }
 
+// this returns the spell passed in if the player has it, otherwise the spell the player has (e.g. add-letter for add-edge)
+// this function assumes it's already been established that the user has *some* spell that "covers" the passed spell.
+function getSpellToHighlight(spell) {
+    if (spellsAvailable.indexOf(spell) >= 0)
+        return spell;
+    let spellRoot = spell.substr(0,3); // should be "add", "rem", or "cha"
+    for (let i = 0; i < spellsAvailable.length; i++) {
+        if (spellRoot === spellsAvailable[i].substr(0,3))
+            return spellsAvailable[i];
+    }
+    return false; // not recognized case.
+}
+
 function registerWordForScoringPurposes(word) {
     console.log ('hey');
     if (wordsFound.indexOf(word) >= 0)
@@ -968,6 +980,11 @@ function registerWordForScoringPurposes(word) {
     wordsFound.push(word);
     console.log('here, word length ' + word.length)
     document.getElementById("score-span").innerText = score.toString();
+}
+
+function announceSpellFailure(msg) {
+    displayMessage(msg,DEFAULT_MESSAGE_DURATION);
+    sounds['failure'].play();
 }
 
 function castSpell() {
@@ -986,12 +1003,12 @@ function castSpell() {
         sourceThing = thingsHere[fromWord];
     }
     else {
-        displayMessage('Nothing called "' + fromWord + '" is available here.');
+        announceSpellFailure('Nothing called "' + fromWord + '" is available here.');
         return;
     }
 
     if (allWords.indexOf(toWord) < 0) { // target word not recognized as a possible object
-        displayMessage("Sorry, that didn't work.", DEFAULT_MESSAGE_DURATION);
+        announceSpellFailure("Sorry, that didn't work.");
         return;
     }
 
@@ -1030,11 +1047,12 @@ function castSpell() {
 
     if (!spellAvailable(spellRequested, involvesFinalS)) {
         // TODO: more specific error if it failed because tried to use a final "s" and player only has a nfs version of spell.
-        displayMessage("Sorry, that didn't work!", DEFAULT_MESSAGE_DURATION);
+        announceSpellFailure("Sorry, that didn't work!");
         return;
     }
 
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
+        sounds['failure'].play();
         displaySequenceableMessage('Sorry, you need a rune: <img class="inline-rune" src="imgs/runes/Rune-' + runeNeeded.toUpperCase() + '.png">', 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
             setTimeout(
@@ -1059,11 +1077,17 @@ function castSpell() {
         'runeReleased' : runeReleased,
     };
 
-    let nameToHighlight = document.getElementById('spell-name-on-screen-' + spellRequested);
-    if (nameToHighlight !== null) {
-        console.log(nameToHighlight);
-        nameToHighlight.classList.add('highlight-spell');
-        setTimeout( unhighlightAllSpellNames, 1000);
+    let actualPlayerSpellBeingUsed = getSpellToHighlight(spellRequested);
+    console.log(spellRequested);
+    console.log(actualPlayerSpellBeingUsed);
+
+    if (actualPlayerSpellBeingUsed !== false) {
+        let nameToHighlight = document.getElementById('spell-name-on-screen-' + actualPlayerSpellBeingUsed);
+        if (nameToHighlight !== null) {
+            console.log(nameToHighlight);
+            nameToHighlight.classList.add('highlight-spell');
+            setTimeout(unhighlightAllSpellNames, 1000);
+        }
     }
 
     if (typeof runeNeeded === 'undefined') {
@@ -1396,7 +1420,7 @@ function completeLevel() {
     messageObject.divElement = document.createElement('div');
     let msgDiv = messageObject.divElement;
     msgDiv.classList.add('big-message');
-    msgDiv.style.left = (canvasOffsetX + (CANVAS_WIDTH / 2) - 200).toString() + 'px';
+    msgDiv.style.left = (canvasOffsetX + (CANVAS_WIDTH / 2) - 160).toString() + 'px';
     msgDiv.style.top = (canvasOffsetY + 100).toString() + 'px';
     let outerDiv = document.getElementById('floating-message-holder');
     outerDiv.appendChild(msgDiv);
@@ -1516,15 +1540,15 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
         roomData.specificNewRoomBehavior();
 
     if (typeof initialMessage === 'string') {
-        displayMessage(initialMessage,DEFAULT_MESSAGE_DURATION * 3);
+        displayMessage(initialMessage);
     }
 }
 
 function drawTopBinderImage() {
     // currently not doing binder image -- just drawing list of avail. spells:
     let div = document.getElementById('horizontal-spell-list');
-    div.style.left = (canvasOffsetX + 20).toString() + 'px';
-    div.style.top = (canvasOffsetY + 20).toString() + 'px';
+    div.style.left = (canvasOffsetX + 12).toString() + 'px';
+    div.style.top = (canvasOffsetY + 12).toString() + 'px';
     div.style.display = 'block';
     document.getElementById('score-div').style.display = 'block';
     // ctx.drawImage(binderImages['side_view_for_top'],0,-50);
@@ -1573,7 +1597,7 @@ function loadLevel(lName = 'intro level') {
         let key = objectData[i][0];
         wordsFound.push(key); // so player doesn't get score credit for transforming something into one of these "given" words
         if (key in thingsElsewhere) {
-            // might have to append digit to word to get unique key for it:
+            // the following code is because might have to append digit to word to get unique key for it:
             for (let j=1; j<10; j++) {
                 key = objectData[i][0] + j.toString();
                 if (!(key in thingsElsewhere))
@@ -1589,7 +1613,7 @@ function loadLevel(lName = 'intro level') {
     }
     // document.getElementById('spell-list').innerHTML = spellListHtml;
     document.getElementById('horizontal-spell-list').innerHTML = spellListHtml;
-    document.getElementById('score-div').innerHTML = 'score: <span id="score-span">0</span>';
+    document.getElementById('inner-score-div').innerHTML = 'score: <span id="score-span">0</span>';
     level.initializationFunction();
 
     if (typeof level.backgroundMusicFile !== 'undefined') {
@@ -1772,9 +1796,9 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
     for ([word, thing] of Object.entries(inventory)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             if (doubleRatherThanSingle)
-                thing.handleDblclick();
+                thing.handleDblclick(e);
             else
-                thing.handleClick();
+                thing.handleClick(e);
     }
 
     for ([word, thing] of Object.entries(thingsHere)) {
@@ -1812,7 +1836,7 @@ function resizePage() {
     canvasOffsetY = bounds.top; // + window.scrollY;
 
     scoreDiv = document.getElementById('score-div');
-    scoreDiv.style.left = (canvasOffsetX + CANVAS_WIDTH - 130).toString() + 'px';
+    scoreDiv.style.left = (canvasOffsetX + CANVAS_WIDTH - 155).toString() + 'px';
     scoreDiv.style.top = (canvasOffsetY + 10).toString() + 'px';
 
     standardMessagePositions = [];
@@ -1849,8 +1873,10 @@ function initialize() {
     }
     sounds['add-spell'] = new Audio('audio/magical_1.ogg');
     sounds['spell'] = new Audio('audio/magical_1.ogg');
+    sounds['failure'] = new Audio('audio/342756__rhodesmas__failure-01.wav');
     sounds['page turn'] = new Audio('audio/63318__flag2__page-turn-please-turn-over-pto-paper-turn-over.wav');
     sounds['fanfare'] = new Audio('audio/524849__mc5__short-brass-fanfare-1.wav');
+    sounds['splash'] = new Audio( 'audio/416710__inspectorj__splash-small-a.wav');
 
     document.addEventListener('click', handleClick);
     document.addEventListener('keydown', handleKeydown);
@@ -1900,12 +1926,18 @@ function initialize() {
     binderPageHtml[allSpells.BINDER_COVER] = '<div class="binder-cover-title"><span style="font-size:24px;">The</span><br/>Spell-<br/>Binder</div>';
     binderPageHtml['binder-intro-left-page'] = '<div class="spell-description">To cast a spell, press C; then type what you wish to transform and the word to transform it into. For example, you might change <span class="monospace">ox</span> into <span class="monospace">fox</span>. For this to work, you need three things: a nearby ox, a spell for putting a letter in front of a word, and a rune of the letter F: <img class="inline-rune" src="imgs/runes/Rune-F.png"> </div>';
     binderPageHtml[allSpells.BINDER_INTRO] = '<div class="spell-description">Each spell is written on a page in this binder; you may find more pages with new spells!</div>';
-    binderPageHtml[allSpells.ADD_EDGE] = '<div class="spell-title">Add Edge</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word:</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fang</span></div> <div class="spell-example">change <span class="monospace">ink</span> into <span class="monospace">sink</span></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
+    binderPageHtml[allSpells.ADD_EDGE] = '<div class="spell-title">Add Edge</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word:</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fans</span></div> <div class="spell-example">change <span class="monospace">ink</span> into <span class="monospace">mink</span></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
+    binderPageHtml[allSpells.ADD_EDGE_NFS] = '<div class="spell-title">Add Edge but Not Final S</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word, but not a final S:</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fang</span></div> <div class="spell-example">change <span class="monospace">ink</span> into <span class="monospace">mink</span></div> <div class="spell-example"><del>change <span class="monospace">fan</span> into <span class="monospace">fans</span></del></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
     binderPageHtml[allSpells.REMOVE_EDGE] = '<div class="spell-title">Remove Edge</div> <div class="spell-description">This spell removes the letter at the beginning or end of a word, and releases it into your care as a rune:</div>  <div class="spell-example">change <span class="monospace">fang</span> into <span class="monospace">fan</span> </div><div class="spell-example"> change <span class="monospace">sink</span> into <span class="monospace">ink</span></div> <div class="spell-description">This is a good way to get more runes!</div>';
+    binderPageHtml[allSpells.REMOVE_EDGE_NFS] = '<div class="spell-title">Remove Edge but Not Final S</div> <div class="spell-description">This spell removes the letter at the beginning or end of a word, except for a final S, and releases it into your care as a rune:</div>  <div class="spell-example">change <span class="monospace">fang</span> into <span class="monospace">fan</span> </div> <div class="spell-example"> change <span class="monospace">sink</span> into <span class="monospace">ink</span></div> <div class="spell-example"><del>change <span class="monospace">fans</span> into <span class="monospace">fan</span></del></div> <div class="spell-description">This is a good way to get more runes!</div>';
     binderPageHtml[allSpells.CHANGE_EDGE] = '<div class="spell-title">Change Edge</div> <div class="spell-description">This spell lets you change the first or last letter in a word:</div>  <div class="spell-example">change <span class="monospace">cable</span> into <span class="monospace">table</span> </div> <div class="spell-description">Keep in mind you need a rune of the new letter (in this example, <img class="inline-rune" src="imgs/runes/Rune-T.png">); the old rune is released to you (here, <img class="inline-rune" src="imgs/runes/Rune-C.png">).</div>';
+    binderPageHtml[allSpells.CHANGE_EDGE_NFS] = '<div class="spell-title">Change Edge but Not Final S</div> <div class="spell-description">This spell lets you change the first or last letter in a word (but not the last letter to or from S):</div>  <div class="spell-example">change <span class="monospace">cable</span> into <span class="monospace">table</span> </div>  <div class="spell-example"><del>change <span class="monospace">bath</span> into <span class="monospace">bats</span></del></div> </div>';
     binderPageHtml[allSpells.ADD] = '<div class="spell-title">Add Letter</div> <div class="spell-description">This spell lets you add a letter to a word (at the beginning, end, or anywhere in the middle):</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fang</span></div> <div class="spell-example">change <span class="monospace">cat</span> into <span class="monospace">cart</span></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
+    binderPageHtml[allSpells.ADD_NFS] = '<div class="spell-title">Add Letter but Not Final S</div> <div class="spell-description">This spell lets you add a letter to a word, at the beginning, end, or anywhere in the middle, except not a final S:</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fang</span></div> <div class="spell-example">change <span class="monospace">cat</span> into <span class="monospace">cast</span></div> <div class="spell-example"><del>change <span class="monospace">fan</span> into <span class="monospace">fans</span></del></div> <!--div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div-->';
     binderPageHtml[allSpells.REMOVE] = '<div class="spell-title">Remove Letter</div> <div class="spell-description">This spell removes a letter from a word, and releases it into your care as a rune:</div>  <div class="spell-example">change <span class="monospace">cart</span> into <span class="monospace">cat</span> </div><div class="spell-example"> change <span class="monospace">sink</span> into <span class="monospace">ink</span></div> <div class="spell-description">This is a good way to get more runes!</div>';
+    binderPageHtml[allSpells.REMOVE_NFS] = '<div class="spell-title">Remove Letter but Not Final S</div> <div class="spell-description">This spell removes a letter from a word, except for a final S, and releases it into your care as a rune:</div>  <div class="spell-example">change <span class="monospace">cart</span> into <span class="monospace">cat</span> </div><div class="spell-example"> change <span class="monospace">sink</span> into <span class="monospace">ink</span></div> <div class="spell-example"><del>change <span class="monospace">fans</span> into <span class="monospace">fan</span></del></div>';
     binderPageHtml[allSpells.CHANGE] = '<div class="spell-title">Change Letter</div> <div class="spell-description">This spell lets you change a letter in a word:</div>  <div class="spell-example">change <span class="monospace">seat</span> into <span class="monospace">slat</span> </div> <div class="spell-description">Keep in mind you need a rune of the new letter (in this example, <img class="inline-rune" src="imgs/runes/Rune-L.png">); the old rune is released to you.</div>';
+    binderPageHtml[allSpells.CHANGE_NFS] = '<div class="spell-title">Change Letter but Not Final S</div> <div class="spell-description">This spell lets you change a letter in a word, but not the last latter to or from S:</div>  <div class="spell-example">change <span class="monospace">seat</span> into <span class="monospace">slat</span> </div>  <div class="spell-example"><del>change <span class="monospace">bath</span> into <span class="monospace">bats</span></del></div> </div>';
     binderPageHtml[allSpells.REVERSAL] = '<div class="spell-title">Reversal</div> <div class="spell-description">Simply reverses a word:</div>  <div class="spell-example">change <span class="monospace">auks</span> into <span class="monospace">skua</span></div>';
     binderPageHtml[allSpells.ANAGRAM] = '<div class="spell-title">Anagram</div> <div class="spell-description">This spell lets you rearrange the letters in a word:</div>  <div class="spell-example">change <span class="monospace">flea</span> into <span class="monospace">leaf</span></div>';
 
