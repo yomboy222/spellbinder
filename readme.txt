@@ -8,17 +8,11 @@ implement suppress-player-input during multi-stage movements
 
 screen-resizing issues
 
-home icon in lieu of Q to quit
-
-better click-on-arrow detection
-
 finish upgrading tutorial level.
 
 possibly put messages into an invisible div & let them just fit in sequentially
 
-fizzle sound for failed spell / notification sound for messages
-
-convey how to complete a level (put initialMessage into existing levels).
+notification sound for messages
 
 obstacle things should have "obstacleDeactivated" property. this will help deal with things like the gate that gets pushed aside,
 or the meteor that gets pushed aside.
@@ -27,6 +21,7 @@ or the meteor that gets pushed aside.
 PHASE 2 STUFF:
 use flip-a-clip to get walking player images
 
+difficulty rating feedback at end of each level
 
 
 ––––––––––––––––––––––––––––––
@@ -38,6 +33,7 @@ Music promoted by Audio Library https://youtu.be/7-rXQALDv-4
 
 sound from freesound.org, ...
 
+bear growl ... https://freesound.org/s/345733/
 failure sound -- https://freesound.org/s/342756/
 hawk -- https://freesound.org/s/362426/
 dog bark -- https://freesound.org/s/327666/

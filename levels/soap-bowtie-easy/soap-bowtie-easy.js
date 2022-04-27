@@ -18,20 +18,16 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
                 if (!(this.word in inventory) || !(('partition' in thingsHere) || ('ravelin' in thingsHere)))
                     return super.handleDblclick(e);
                 this.strokeNumber = 0;
-                this.discard();
+                this.removeFromInventoryForUseOnScreen();
                 let target = ('partition' in thingsHere) ? thingsHere['partition'] : thingsHere['ravelin'];
                 this.x =  target.x - 25;
                 this.y = target.y - 25;
                 this.startStroke();
-                if (typeof this.captionDiv !== 'undefined') {
-                    this.captionDiv.style.display = 'none'; // don't display caption while saw being used
-                }
             }
 
             /* TODO: suppress player input during motion */
 
             startStroke() {
-                console.log('sS');
                 this.strokeNumber++;
                 let destX = this.x ; // - 70;
                 let destY = this.y ; // + 4;
@@ -62,23 +58,14 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
                 }
                 // console.log(rotation);
                 if (this.beginMovementTime > 0) {
-                    /*   ctx.save();
-                    ctx.translate(this.x, this.y);
-                    ctx.rotate(rotation);
-                    */
                     ctx.setTransform(1, 0, 0, 1, this.x + 10, this.y - 50);
                     ctx.rotate(rotation);
                     ctx.drawImage(this.image, 60 - this.halfWidth, 60 - this.halfHeight, this.width, this.height);
-// ctx.drawImage(this.image, 0 - (this.x - this.halfWidth), 0 - (this.y - this.halfHeight), this.width, this.height);
-//
-                    // ctx.drawImage(this.image, 0 - (this.x - this.halfWidth), 0 - (this.y - this.halfHeight), this.width, this.height);
                     ctx.rotate(0-rotation);
                     ctx.setTransform(1,0,0,1,0,0);
                 }
                 else
                     ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
-                /* if (rotation > 0)
-                    ctx.restore(); */
             }
 
             stopStriking() {
@@ -87,7 +74,7 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
                 }
                 this.beginMovementTime = 0;
                 this.movementDurationMS = 0;
-                this.tryToPickUp();
+                this.tryToPickUp(true);
             }
 
             removePartition() {
@@ -134,13 +121,16 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
         }
     }
     level.initialRoom = 'room1';
-    level.initialX = 50; // expressed as % of way across x axis, i.e. value range is 0-100 
+    level.initialX = 40; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 55;
     level.initialSpells = [ 'remove-letter', 'change-letter' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
-    level.allWords = [ 'bootie','bowtie','hammer','hater','jammer','java','lap','lav','lava','lavs','law','partition','paw','sap','saw','soap','sop','treasure','water' ];
-    level.initialThings = [ ['bowtie','room1',40,65],['soap','room1',60,65],['hater','room1',81,50],['jammer','room0',40,65],['partition','room2',75,50],['lava','room3',81,50],['treasure','room4',40,65] ];
+    level.allWords = [ 'bootie','bowtie','hammer','hater','jammer','java','lava','law','partition','paw','sap','saw','soap','treasure','water' ];
+    level.initialThings = [ ['bowtie','room1',24,65],['soap','room1',50,65],['hater','room1',72,50],
+        ['jammer','room0',40,65],
+        ['partition','room2',75,50],
+        ['lava','room3',72,50],['treasure','room4',40,65] ];
     level.immovableObjects = [ 'partition','jammer','hater','water','lava' ];
 
     level.targetThing = 'treasure';
@@ -152,8 +142,8 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 65, 50, 'hater', PASSAGE_STATE_BLOCKED, 73, 50),
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room0', 90, 50, true, 60, 50)],
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 52, 50, 'hater', PASSAGE_STATE_BLOCKED, 66, 50),
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room0', 90, 50, true, 48, 50)],
         },
         'room0': {
             boundaries: [],
@@ -165,14 +155,14 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room3', 10, 50, true, 65, 50, 'partition', PASSAGE_STATE_BLOCKED, 73, 50),
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room3', 10, 50, true, 52, 50, 'partition', PASSAGE_STATE_BLOCKED, 73, 50),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room1', 90, 50, true, 50, 50)],
         },
         'room3': {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room4', 10, 50, true, 25, 50, 'lava', PASSAGE_STATE_BLOCKED, 73, 50),
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room4', 10, 50, true, 25, 50, 'lava', PASSAGE_STATE_BLOCKED, 63, 50),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room2', 90, 50, true, 50, 50)],
         },
         'room4': {

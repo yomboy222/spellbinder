@@ -76,6 +76,8 @@ let backgroundImage = new Image();
 let backgroundMusic = undefined;
 let musicPlaying = false;
 let normalPlayerInputSuppressed = false;
+let timePlayerInputSuppressed = 0;
+const MAX_TIME_TO_SUPPRESS_INPUT_MS = 8000; // a failsafe in case code fails to un-suppress input
 let playerImageSuppressed = false;
 let messages = {}; // switching to strategy of having messages in a dictionary, indexed by messageCounter
 let messageCounter = 0;
@@ -369,20 +371,25 @@ class Thing extends GameElement {
         this.removeFromInventory();
     }
 
-    setMovement(destX, destY, duration, initialX = undefined, initialY = undefined) {
+    setMovement(destX, destY, duration, initialX = undefined, initialY = undefined, suppressInputDuringMovement = false) {
         this.destX = destX;
         this.destY = destY;
         this.movementDurationMS = duration;
         this.beginMovementTime = Date.now();
         this.initialX = (typeof initialX === 'undefined') ? this.x : initialX;
         this.initialY = (typeof initialY === 'undefined') ? this.y : initialY;
+        if (suppressInputDuringMovement) {
+            normalPlayerInputSuppressed = true;
+            timePlayerInputSuppressed = Date.now();
+        }
     }
 
     methodToCallAfterMovement() {
         super.methodToCallAfterMovement();
         if (this.deleteAfterMovement === true)
-            this.deleteFromThingsHere();
-        this.setCaptionPositionInThingsHere();
+            this.dispose();
+        else
+            this.setCaptionPositionInThingsHere();
     }
 
     draw() {
@@ -416,17 +423,16 @@ class Thing extends GameElement {
     extraDiscardBehavior() {}
 
     // tryToPickUp() returns true if successful else false or an error message:
-    tryToPickUp() {
+    tryToPickUp(suppressSound = false) {
         // only call this on things in thingsHere in range of player.
         if (this.movable) {
             if (Object.keys(inventory).length >= MAX_ITEMS_IN_INVENTORY) {
                 return 'Too many things in inventory!';
             } else {
-                sounds['pickup'].play();
+                if (!suppressSound)
+                    sounds['pickup'].play();
                 inventory[this.word] = this;
                 this.setCoordinatesInInventory(Object.keys(inventory).length - 1);
-                // console.log(this.x);
-                // console.log(this.y);
                 this.moveCaptionDivIfAnyToInventory();
                 delete thingsHere[this.word];
                 if (typeof level.targetThing === 'string' && level.targetThing === this.word)
@@ -450,26 +456,41 @@ class Thing extends GameElement {
             100); // waiting 100 MS to redraw this so click won't affect whatever item slides into this item's place in the inventory
     }
 
-    discard() {
+    discard(suppressSound = false, xDistFromPlayer = undefined, yDistFromPlayer = undefined) {
         this.removeFromInventory();
         this.room = currentRoom;
-        this.x = player.x;
-        this.y = player.y;
-        let distanceToToss = player.halfWidth + this.halfWidth;
-        if (player.direction === Directions.UP)
-            this.y -= distanceToToss;
-        else if (player.direction === Directions.DOWN)
-            this.y += distanceToToss;
-        else if (player.direction === Directions.LEFT)
-            this.x -= distanceToToss;
-        else if (player.direction === Directions.RIGHT)
-            this.x += distanceToToss;
+        if (typeof xDistFromPlayer !== 'undefined') {
+            this.x = player.x + xDistFromPlayer;
+            this.y = player.y + yDistFromPlayer;
+        }
+        else {
+            this.x = player.x;
+            this.y = player.y;
+            let distanceToToss = player.halfWidth + this.halfWidth;
+            if (player.direction === Directions.UP)
+                this.y -= distanceToToss;
+            else if (player.direction === Directions.DOWN)
+                this.y += distanceToToss;
+            else if (player.direction === Directions.LEFT)
+                this.x -= distanceToToss;
+            else if (player.direction === Directions.RIGHT)
+                this.x += distanceToToss;
+        }
 
         thingsHere[this.word] = this;
         this.setCaptionPositionInThingsHere();
-        sounds['pickup'].play();
+        if (!suppressSound)
+            sounds['pickup'].play();
         this.extraDiscardBehavior();
     }
+
+    removeFromInventoryForUseOnScreen(xDistFromPlayer = 0, yDistFromPlayer = 0) {
+        this.discard(true, xDistFromPlayer, yDistFromPlayer);
+        if (typeof this.captionDiv !== 'undefined') {
+            this.captionDiv.style.display = 'none'; // don't display caption while saw being used
+        }
+    }
+
 
     moveCaptionDivIfAnyToInventory() {
         if (typeof this.captionDiv !== 'undefined') {
@@ -550,6 +571,7 @@ class Thing extends GameElement {
 
     passageBlockingBehavior() {
         displayMessage('blocked!', DEFAULT_MESSAGE_DURATION);
+        sounds['failure'].play();
     }
 
     // placeholder methods that subclasses needing specific behavior can override:
@@ -1651,6 +1673,16 @@ function closeBinder() {
     drawInventory(); // shouldn't be necessary when page images are scaled properly but for now they stray into inventory area.
 }
 
+function stopSuppressingPlayerInput() {
+    normalPlayerInputSuppressed = false;
+    timePlayerInputSuppressed = 0;
+}
+
+function startSuppressingPlayerInput(time = 8000) {
+    normalPlayerInputSuppressed = true;
+    timePlayerInputSuppressed = Date.now();
+    window.setTimeout(stopSuppressingPlayerInput, time);
+}
 
 function handleKeydown(e) {
     if (e.code === 'Escape') {
@@ -1754,6 +1786,15 @@ function checkIfClickWasMadeDouble() {
 }
 
 function handleClick(e) {
+    if (normalPlayerInputSuppressed) {
+        if (Date.now() < timePlayerInputSuppressed + MAX_TIME_TO_SUPPRESS_INPUT_MS)
+            return;
+        else {
+            // something went wrong and the code did not stop suppressing input in time, so just do it now
+            normalPlayerInputSuppressed = false;
+            timePlayerInputSuppressed = 0;
+        }
+    }
     if (Date.now() < lastClickTime + MAX_DOUBLE_CLICK_TIME_SEPARATION) {
         initialClickEvent = undefined;
         return processSingleOrDoubleClick(e, true);
@@ -1806,7 +1847,7 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
         console.log('hereeeee');
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             if (doubleRatherThanSingle) {
-                let result = thing.handleDblclick();
+                let result = thing.handleDblclick(e);
                 if (typeof result === 'boolean' && result === true)
                     break; // at most one thing should successfully handle dbl click
                 else if (typeof result === 'string')
@@ -1866,11 +1907,15 @@ function initialize() {
 
     player = new Player();
     sounds = {};
-    const soundlist = ['pickup', 'whoosh'];
 
+/*  eventually should set sounds this way, when we make our own sounds and can name as we wish:
+    const soundlist = ['pickup', 'whoosh'];
     for (let i = 0; i < soundlist.length; i++) {
         sounds[soundlist[i]] = new Audio('audio/' + soundlist[i] + '.wav');
-    }
+    } */
+    sounds['pickup'] =  new Audio('audio/pickup.wav');
+    sounds['discard'] =  new Audio('audio/pickup.wav'); // need separate discard sound!
+    sounds['whoosh'] = new Audio('audio.whoosh.wav');
     sounds['add-spell'] = new Audio('audio/magical_1.ogg');
     sounds['spell'] = new Audio('audio/magical_1.ogg');
     sounds['failure'] = new Audio('audio/342756__rhodesmas__failure-01.wav');

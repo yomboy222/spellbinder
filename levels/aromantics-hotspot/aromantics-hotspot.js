@@ -38,16 +38,16 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.numRightClicks = 0;
             }
 
-            handleClick() {
+            handleClick(e) {
 
             }
 
         }
 
         window.Aromatics = class Aromatics extends Thing {
-            handleDblclick() {
+            handleDblclick(e) {
                 if ((!this.word in inventory) || !('hotpot' in thingsHere || 'hotpots' in thingsHere))
-                    return super.handleDblclick();
+                    return super.handleDblclick(e);
 
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.

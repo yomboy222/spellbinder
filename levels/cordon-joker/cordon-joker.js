@@ -100,7 +100,7 @@ getLevelFunctions['cordon-joker'] = function() {
         }
 
         window.Rock = class Rock extends Thing {
-            handleDblclick() {
+            handleDblclick(e) {
                 this.soundToPlayAfterMovement = sounds['splash'];
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.
@@ -122,7 +122,7 @@ getLevelFunctions['cordon-joker'] = function() {
                         this.destY = cauldron.y - cauldron.halfHeight;
                     }
                 } else {
-                    super.handleDblclick();
+                    super.handleDblclick(e);
                 }
             }
 

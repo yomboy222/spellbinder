@@ -56,18 +56,18 @@ getLevelFunctions['tutorial level'] = function() {
                 };
                 return returnValue;
             }
-            handleDblclick() {
+            handleDblclick(e) {
                 if ('gate' in thingsHere && 'key' in inventory) {
                     let gate = thingsHere['gate'];
                     if (gate.inRangeOfPlayer(EXTRA_PICKUP_RADIUS)) {
                         gate.unlock();
                     }
                     else {
-                        return super.handleDblclick();
+                        return super.handleDblclick(e);
                     }
                 }
                 else {
-                    return super.handleDblclick();
+                    return super.handleDblclick(e);
                 }
             }
         }
