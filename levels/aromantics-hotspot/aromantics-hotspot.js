@@ -4,20 +4,13 @@
 
 /* manifesto should hint at aromatic vegetables */
 
-/* todo: make ski > skin > shin > shim puzzle in room to the right . the shim is used to prop up the collimator to make the sun ray hit the target */
-
 /*
-
 The true Path is not just Vegetarianism but Asceticism. The Elimination of Flavors such as Cheeses; Onion and other Aromatic Vegetables; Thyme and other Herbs,
 
 Ship's Manifest as of 6 April 1341:
 180 lbs Smoked Gouda
 90 lbs Onions
 30 lbs Dried Herbs
-
-
-
-
  */
 
 
@@ -26,20 +19,34 @@ levelList.push( { name:'aromantics-hotspot', difficulty:0 } );
 getLevelFunctions['aromantics-hotspot'] = function() {
 
     let level = new Level('aromantics-hotspot');
-    level.levelPath = 'aromantics-hotspot';
+    level.folderName = 'aromantics-hotspot';
 
     level.defineThingSubclasses = function() { 
 
         window.Armoire = class Armoire extends Thing {
-            constructor(word,room,x,y) {
-                super(word,room,x,y);
-                this.lastClickTime = 0;
-                this.numLeftClicks = 0;
-                this.numRightClicks = 0;
-            }
-
             handleClick(e) {
-
+                level.sounds['knock'].play();
+                if (level.tapestryClickCount >= 3) {
+                    level.armoireClickCount++;
+                    if (level.armoireClickCount === 3 && level.armoireOpen === false) {
+                        // change armoire image to open.
+                        level.armoireOpen = true;
+                        let newPassage = new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'N', 75, 50, 'secret room', 50, 90, true, 50, 50);
+                        passages.push(newPassage);
+                        rooms[currentRoom].passages.push(newPassage);
+                    }
+                }
+                else {
+                    level.armoireClickCount = 0;
+                    level.tapestryClickCount = 0;
+                }
+                console.log('a=' + level.armoireClickCount.toString() + ', t=' + level.tapestryClickCount.toString());
+            }
+            handleDblclick(e) {
+                return false;
+            }
+            okayToDisplayWord() {
+                return false;
             }
 
         }
@@ -79,6 +86,16 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 broth.setCaptionPositionInThingsHere();
                 cauldron.dispose();
                 this.dispose();
+            }
+        }
+
+        window.Hint = class Hint extends Thing {
+            extraTransformIntoBehavior() {
+                console.log('xScaleFactor is ' + xScaleFactor.toString());
+                let x = (50 * xScaleFactor)  + canvasOffsetX;
+                this.x = x;
+                let y = (40 * yScaleFactor) + canvasOffsetY;
+                this.y = y;
             }
         }
 
@@ -125,6 +142,17 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             }
         }
 
+        window.Lambkin = class Lambkin extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                let path = getLevelPathFromFolderName(level.folderName) + '/audio/baaaa.m4a';
+                console.log(path);
+                this.shriek = new Audio(path);
+            }
+            passageBlockingBehavior() {
+                this.shriek.play();
+            }
+        }
 
         window.Robot = class Robot extends Thing {
             extraTransformIntoBehavior() {
@@ -146,13 +174,46 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             }
         }
 
+
+        window.Tapestry = class Tapestry extends Thing {
+            handleClick(e) {
+                level.sounds['knock'].play();
+                if (level.armoireClickCount > 0) {
+                    level.tapestryClickCount = 1;
+                    level.armoireClickCount = 0;
+                }
+                else {
+                    level.tapestryClickCount++;
+                    level.armoireClickCount = 0;
+                }
+
+                console.log('a=' + level.armoireClickCount.toString() + ', t=' + level.tapestryClickCount.toString());
+            }
+            handleDblclick(e) {
+                return false;
+            }
+            okayToDisplayWord() {
+                return false;
+            }
+
+        }
+
+
+
         window.Tit = class Tit extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 this.startFlight();
+                this.useAnimationImages = false;
+            }
+
+            stopAnimating() {
+                this.useAnimationImages = false;
+                this.setCaptionPositionInThingsHere();
             }
 
             startFlight() {
+                this.useAnimationImages = true; // wing-flapping while flying
                 this.initialX = this.x;
                 this.initialY = this.y;
                 this.destY = this.y;
@@ -160,7 +221,8 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.movementType = MOVEMENT_TYPE_PARABOLIC;
                 this.movementDurationMS = 500 + Math.round(Math.abs(this.x - this.destX) * 2);
                 this.beginMovementTime = Date.now();
-                let nextTakeoffTime = this.movementDurationMS + Math.round(Math.random() * 1500);
+                this.methodToCallAfterMovement = this.stopAnimating.bind(this);
+                let nextTakeoffTime = this.movementDurationMS + 500 + Math.round(Math.random() * 1200);
                 window.setTimeout(this.startFlight.bind(this), nextTakeoffTime);
             }
         }
@@ -172,11 +234,14 @@ getLevelFunctions['aromantics-hotspot'] = function() {
         switch (word) {
             case 'armoire' : return new Armoire(word,room,x,y);
             case 'aromatics' : return new Aromatics(word,room,x,y);
+            case 'hint' : return new Hint(word,room,x,y);
             case 'hotpot' : return new Hotpot(word,room,x,y);
             case 'hotpots' : return new Hotpot(word,room,x,y);
+            case 'lambkin': return new Lambkin(word,room,x,y);
             case 'robot' : return new Robot(word,room,x,y);
             case 'robots' : return new Robot(word,room,x,y);
             case 'tit' : return new Tit(word,room,x,y);
+            case 'tapestry' : return new Tapestry(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
         }
     }
@@ -192,25 +257,28 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
     level.allWords = ['treasure', 'aromantics', 'aromatics', 'hotpot', 'hotpot', 'hotspot', 'hotspot', 'manifest', 'manifesto', 'romantics',
-        'boor', 'boot', 'booth', 'bot', 'broth', 'robot', 'roost', 'root', 'rot', 'shoot', 'short', 'shot', 'soot',
+        'boor', 'boot', 'booth', 'bot', 'broth', 'robot', 'roost', 'root', 'rot', 'shoot', 'shot', 'soot',
         'lambkin', 'lambskin',
         'tit','tint','tin','nit','hint',
     ];
-    level.initialThings = [ ['aromantics','room1',40,72],['hotspot','room1',57,40],['lambkin','room1',16,50],['tyrannosaur','room1',85,70],
+    level.initialThings = [ ['aromantics','room1',42,72],['hotspot','room1',57,40],['lambkin','room1',18,50],['tyrannosaur','room1',85,70],
         ['manifesto','room3',48,65],
-        ['tit','room2',65,25], ['armoire','room2',75,50],
-        ['treasure','room4',50,50]
+        ['tit','room2',65,25], ['armoire','room2',75,50], ['tapestry','room2',25,50],
+        ['treasure','secret room',50,50]
     ];
     level.immovableObjects = ['aromantics', 'hotpot', 'hotpot', 'hotspot', 'hotspot','manifest','manifesto','romantics',
         'boor', 'booth', 'broth', 'robot', 'roost', 'lambkin', 'tyrannosaur',
         'tit', 'hint'];
     level.targetThing = 'treasure';
-    level.initialRunes = [];
+    level.initialRunes = []; // ['h','t','n'];
     level.initialMessage = 'You need something to battle the Tyrannosaur!';
 
-    level.clickHandlerFunction = function(xWithinCanvas, yWithinCanvas) {
-
-    }
+    level.tapestryClickCount = 0;
+    level.lastTapestryClickTime = 0;
+    level.armoireClickCount = 0;
+    level.lastArmoireClickTime = 0;
+    level.armoireOpen = false;
+    level.sounds = { 'knock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/447075__sol5__golpe-mesa-nina.wav'), };
 
     level.rooms = {
         'room1': {
@@ -218,13 +286,13 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             filledPolygons: [],
             passages: [
                 new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 3, 50, 'room3', 90, 50, true, 65,50, 'lambkin', PASSAGE_STATE_BLOCKED, 20, 50 ),
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 70, 'room2', 10, 50, true, 50, 50, 'tyrannosaur', PASSAGE_STATE_BLOCKED, 77, 65)],
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 70, 'room2', 10, 70, true, 50, 75, 'tyrannosaur', PASSAGE_STATE_BLOCKED, 77, 65)],
         },
         'room2': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room1', 90, 70, true, 50, 50)
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room1', 90, 70, true, 36, 50)
             ],
             specificNewRoomBehavior: function() {
                 if ('tit' in thingsHere)
@@ -238,7 +306,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97,50,'room1',10,50, true, 38, 50)
             ]
         },
-        'room4': {
+        'secret room': {
             boundaries: [],
             filledPolygons: [],
             passages: [

@@ -7,7 +7,7 @@ levelList.push( { name:'soap-bowtie', difficulty:0 } );
 getLevelFunctions['soap-bowtie'] = function() {
 
     let level = new Level('soap-bowtie');
-    level.levelPath = 'soap-bowtie';
+    level.folderName = 'soap-bowtie';
 
     level.defineThingSubclasses = function() { 
 
@@ -29,10 +29,15 @@ getLevelFunctions['soap-bowtie'] = function() {
 
         window.Saw = class Saw extends Thing {
           handleDblclick(e) {
-            if (!(this.word in inventory) || !('fence' in thingsHere))
-                return super.handleDblclick(e);
+              if ((this.word in inventory) && ('hater' in thingsHere)) {
+                  displayMessageWithSound('The hater blocks your saw!' , sounds['failure'], DEFAULT_MESSAGE_DURATION);
+                  return false;
+              }
+              if (!(this.word in inventory) || !('fence' in thingsHere)) {
+                  return super.handleDblclick(e);
+              }
             this.strokeNumber = 0;
-            this.discard();
+            this.discard(true);
             let fence = thingsHere['fence'];
             this.x = fence.x - 25;
             this.y = fence.y - 25;
@@ -40,11 +45,11 @@ getLevelFunctions['soap-bowtie'] = function() {
             if (typeof this.captionDiv !== 'undefined') {
               this.captionDiv.style.display = 'none'; // don't display caption while saw being used
             }
-          }
+      }
 
           extraTransformIntoBehavior() {
               if (!(this.word in inventory)) {
-                  displayMessage('Remember, to pick something up, double-click it.');
+                  displayMessage('Remember, to pick something up, double-click it; and double-click it again to use it.');
               }
           }
 
@@ -73,7 +78,7 @@ getLevelFunctions['soap-bowtie'] = function() {
             }
             this.beginMovementTime = 0;
             this.movementDurationMS = 0;
-            this.tryToPickUp();
+            this.tryToPickUp(true);
             thingsHere['fence'].dispose();
           }
 /*

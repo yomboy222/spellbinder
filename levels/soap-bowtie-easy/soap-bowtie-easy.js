@@ -9,7 +9,7 @@ levelList.push( { name:'soap-bowtie-easy', difficulty:0 } );
 getLevelFunctions['soap-bowtie-easy'] = function() {
 
     let level = new Level('soap-bowtie-easy');
-    level.levelPath = 'soap-bowtie-easy';
+    level.folderName = 'soap-bowtie-easy';
 
     level.defineThingSubclasses = function() {
 
@@ -58,9 +58,9 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
                 }
                 // console.log(rotation);
                 if (this.beginMovementTime > 0) {
-                    ctx.setTransform(1, 0, 0, 1, this.x + 10, this.y - 50);
+                    ctx.setTransform(1, 0, 0, 1, this.x + 10, this.y + 30);
                     ctx.rotate(rotation);
-                    ctx.drawImage(this.image, 60 - this.halfWidth, 60 - this.halfHeight, this.width, this.height);
+                    ctx.drawImage(this.image, 30-this.halfWidth, -20-this.halfHeight, this.width, this.height);
                     ctx.rotate(0-rotation);
                     ctx.setTransform(1,0,0,1,0,0);
                 }
@@ -142,7 +142,7 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 52, 50, 'hater', PASSAGE_STATE_BLOCKED, 66, 50),
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 68, 50, 'hater', PASSAGE_STATE_BLOCKED, 66, 50),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room0', 90, 50, true, 48, 50)],
         },
         'room0': {

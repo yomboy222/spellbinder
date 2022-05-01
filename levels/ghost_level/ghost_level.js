@@ -10,7 +10,7 @@ levelList.push( {name:'ghost level', difficulty:5});
 getLevelFunctions['ghost level'] = function() {
 
     let level = new Level('ghost level');
-    level.levelPath = 'ghost_level';
+    level.folderName = 'ghost_level';
 
     level.defineThingSubclasses = function () {
 
@@ -223,7 +223,7 @@ getLevelFunctions['ghost level'] = function() {
         window.Host = class Host extends Thing {
             constructor(word, room, x, y) {
                 super(word, room, x, y);
-                this.sound = new Audio(levelPath + '/audio/host-speech.m4a');
+                this.sound = new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/host-speech.m4a');
                 this.sound.play();
                 this.deleteAfterMovement = true; // so if player leaves room before speech is over, this will still get deleted.
                 this.movementDurationMS = 5000 + 3000;
@@ -262,7 +262,7 @@ getLevelFunctions['ghost level'] = function() {
 
         window.Mantra = class Mantra extends Thing {
             extraTransformIntoBehavior() {
-                this.sound = new Audio(levelPath + '/audio/om.m4a');
+                this.sound = new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/om.m4a');
                 this.sound.play();
                 this.beginMovementTime = Date.now();
                 this.movementDurationMS = 3000;
@@ -350,7 +350,7 @@ getLevelFunctions['ghost level'] = function() {
                 }
             }
             methodToCallAfterMovement() {
-                let sound = new Audio(levelPath + '/audio/kaching.wav');
+                let sound = new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/kaching.wav');
                 sound.play();
                 otherData['toll paid time'] = Date.now();
                 let portcullis = thingsHere['portcullis'];
@@ -373,7 +373,7 @@ getLevelFunctions['ghost level'] = function() {
                     document.getElementById('binder-icon-holder').style.display = 'block';
                     this.solid = false;
                     sounds['pickup'].play();
-                    this.image.src = levelPath + '/things/stand-no-binder.png';
+                    this.image.src = getLevelPathFromFolderName(level.folderName) + '/things/stand-no-binder.png';
                 }
                 else {
                     return super.handleClick();
@@ -542,10 +542,10 @@ getLevelFunctions['ghost level'] = function() {
 
         };
         level.initializationFunction = function() {
-            otherData['bee image'].src = levelPath + '/things/bees-1.png';
-            otherData['bee sound'] = new Audio( 'audio/481647__joncon-library__bee-buzzing.wav');
-            otherData['dart image'].src = levelPath + '/things/dart.png';
-            otherData['lamplight image'].src = levelPath + '/things/Ellipse.png';
+            otherData['bee image'].src = getLevelPathFromFolderName(level.folderName) + '/things/bees-1.png';
+            otherData['bee sound'] = new Audio( getLevelPathFromFolderName(level.folderName) + 'audio/481647__joncon-library__bee-buzzing.wav');
+            otherData['dart image'].src = getLevelPathFromFolderName(level.folderName) + '/things/dart.png';
+            otherData['lamplight image'].src = getLevelPathFromFolderName(level.folderName) + '/things/Ellipse.png';
             // since this is an introductory level we make the player pick up the spell binder at the start. see class "Stand" above.
             document.getElementById('binder-icon-holder').style.display = 'none';
         };

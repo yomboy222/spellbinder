@@ -5,14 +5,14 @@ levelList.push( { name:'tear/dicer puzzle', difficulty:7 } );
 getLevelFunctions['tear/dicer puzzle'] = function() {
 
     let level = new Level('tear/dicer puzzle');
-    level.levelPath = 'puzzle_tear_dicer';
+    level.folderName = 'puzzle_tear_dicer';
 
     level.defineThingSubclasses = function() {
 
         window.Car = class Car extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
-                this.sound = new Audio(levelPath + '/audio/423990__amishrob__car-horn-beep-beep-two-beeps-honk-honk.wav');
+                this.sound = new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/423990__amishrob__car-horn-beep-beep-two-beeps-honk-honk.wav');
                 // this.imageEmpty = undefined;
                 // this.imageWithPlayer = new Image();
                 // this.imageWithPlayer.src = levelPath + '/things/car-with-player.png';

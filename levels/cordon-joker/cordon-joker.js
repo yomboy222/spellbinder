@@ -9,7 +9,7 @@ levelList.push( { name:'cordon-joker', difficulty:0 } );
 getLevelFunctions['cordon-joker'] = function() {
 
     let level = new Level('cordon-joker');
-    level.levelPath = 'cordon-joker';
+    level.folderName = 'cordon-joker';
 
     level.defineThingSubclasses = function() {
 
@@ -80,6 +80,22 @@ getLevelFunctions['cordon-joker'] = function() {
             passageBlockingBehavior() {
                 displayMessage('yikes!', DEFAULT_MESSAGE_DURATION);
                 level.sounds['condor'].play();
+                this.movementType = MOVEMENT_TYPE_PARABOLIC;
+                this.useAnimationImages = true;
+                this.width = this.images[0].width;
+                this.halfWidth = this.width / 2;
+                this.height = this.images[0].height;
+                this.halfHeight = this.height / 2;
+                this.setMovement(this.x,this.y,1200);
+            }
+
+            methodToCallAfterMovement() {
+                this.width = this.image.width;
+                this.halfWidth = this.width / 2;
+                this.height = this.image.height;
+                this.halfHeight = this.height / 2;
+                super.methodToCallAfterMovement();
+                this.useAnimationImages = false;
             }
         }
 
@@ -147,18 +163,19 @@ getLevelFunctions['cordon-joker'] = function() {
         }
     }
     level.initialRoom = 'room1';
-    level.initialX = 57; // expressed as % of way across x axis, i.e. value range is 0-100
+    level.initialX = 40; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 55;
     level.initialSpells = [ 'anagram', 'remove-edge', 'add-edge', 'change-letter' ];
     level.initialInventory = {};
     level.initialMessage = "To complete Gombrecht's potion, add a rock to the cauldron!";
-    level.backgroundMusicFile = 'IMSLP76367-PMLP02397-onclassical_salvatori_debussy_suite_iv.mp3';
-    level.allWords = [ 'cauldron','codon','coke','condo','condor','cordon','core','cork','donor','jock','joke','joker','ore','roc','rock','roe','rondo' ];
-    level.initialThings = [ ['cauldron','room1',25,70], ['cordon','room1',81,50],['joker','room2',60,70] ];
+    level.backgroundMusicFile = 'IMSLP111573-PMLP01846-M%C3%BAsica_Cl%C3%A1sica_-_Rondo_Alla_Turca._Wolfgang_Amadeus_Mozart.mp3'; // IMSLP76367-PMLP02397-onclassical_salvatori_debussy_suite_iv.mp3';
+    level.allWords = [ 'cauldron','codon','coke','condo','condor','cordon',
+        'core','cork','donor','jock','joke','joker','ore','roc','rock','roe','rondo' ];
+    level.initialThings = [ ['cauldron','room1',15,70], ['cordon','room1',65,57],['joker','room2',60,70] ];
     // level.targetThing = 'rock';
     level.immovableObjects = ['condor','condo','cordon','cauldron','donor','jock','roc'];
     level.initialRunes = [];
-    level.sounds = { 'condor' : new Audio('levels/' + level.levelPath + '/audio/362426__tec-studio__brd-hawk.wav') };
+    level.sounds = { 'condor' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/362426__tec-studio__brd-hawk.wav') };
 
 
     level.rooms = {
@@ -166,7 +183,7 @@ getLevelFunctions['cordon-joker'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 50, 50, 'cordon', PASSAGE_STATE_BLOCKED, 73, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 50, 50, 'cordon', PASSAGE_STATE_BLOCKED, 63, 55)],
         },
         'room2': {
             boundaries: [],

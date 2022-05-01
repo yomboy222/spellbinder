@@ -7,7 +7,7 @@ levelList.push( { name:'hemp-icon', difficulty:0 } );
 getLevelFunctions['hemp-icon'] = function() {
 
     let level = new Level('hemp-icon');
-    level.levelPath = 'hemp-icon';
+    level.folderName = 'hemp-icon';
 
     level.defineThingSubclasses = function() { 
 
@@ -28,19 +28,11 @@ getLevelFunctions['hemp-icon'] = function() {
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to the machine, so ignore any further clicks.
                 }
-                if ('vendingmachine' in thingsHere && 'coin' in inventory) {
-                    let vendingMachine = thingsHere['vendingmachine'];
-                    thingsHere['coin'] = this;
-                    this.deleteCaptionIfAny();
-                    this.removeFromInventory();
-                    this.movable = false; // so player can't pick up again as it moves into toll machine
+                if (currentRoom === 'room2' && level.muffinInVendingMachine === true && 'muffin' in thingsHere && 'coin' in inventory) {
+                    let muffin = thingsHere['muffin'];
+                    this.removeFromInventoryForUseOnScreen();
                     this.movementType = MOVEMENT_TYPE_PARABOLIC;
-                    this.beginMovementTime = Date.now();
-                    this.movementDurationMS = 1000;
-                    this.initialX = player.x;
-                    this.initialY = player.y;
-                    this.destX = vendingMachine.x;
-                    this.destY = vendingMachine.y;
+                    this.setMovement(muffin.x + 80, muffin.y + 40, 1000, player.x, player.y, true);
                 }
                 else {
                     return super.handleDblclick(e);
@@ -48,14 +40,19 @@ getLevelFunctions['hemp-icon'] = function() {
             }
 
             methodToCallAfterMovement() {
-                let sound = new Audio(levelPath + '/audio/kaching.wav');
-                sound.play();
                 let muffin = thingsHere['muffin'];
-                if (typeof muffin !== 'undefined' && muffin != null) {
-                    muffin.inVendingMachine = false;
-                    muffin.x += 50;
+                if (typeof muffin === 'undefined' || muffin === null) {
+                    this.returnToInventoryAfterUseOnScreen(); // something went wrong; just put coin back in inventory
                 }
-                this.dispose()
+                else {
+                    let sound = new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/kaching.wav');
+                    sound.play();
+                    let muffin = thingsHere['muffin'];
+                    level.muffinInVendingMachine = false;
+                    muffin.inVendingMachine = false;
+                    muffin.setMovement(muffin.x + 85, muffin.y + 170, 1000);
+                    this.dispose();
+                }
             }
         }
 
@@ -73,13 +70,22 @@ getLevelFunctions['hemp-icon'] = function() {
                 super(word,room,x,y);
                 this.inVendingMachine = true;
             }
-            handleDblclick(e) {
+            handleClick(e) {
                 if (this.inVendingMachine) {
-                    displayMessage('Alas, the muffin is inside the vending machine.');
+                    displayMessage('Alas, the muffin is inside the vending machine.', 3 * DEFAULT_MESSAGE_DURATION);
                     return true; // meaning we did handle it here.
                 }
                 else {
-                    return this.handleDblclick(e);
+                    return super.handleClick(e);
+                }
+            }
+            handleDblclick(e) {
+                if (this.inVendingMachine) {
+                    displayMessage('Alas, the muffin is inside the vending machine.', 3 * DEFAULT_MESSAGE_DURATION);
+                    return true; // meaning we did handle it here.
+                }
+                else {
+                    return super.handleDblclick(e);
                 }
             }
         }
@@ -116,12 +122,16 @@ getLevelFunctions['hemp-icon'] = function() {
             finishUse() {
                 let beefeater = thingsHere['beefeater'];
                 beefeater.dispose();
-                this.tryToPickUp(true);
+                this.returnToInventoryAfterUseOnScreen();
             }
 
         }
 
         window.Ruin = class Ruin extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.wordDisplayOffsetY = 100;
+            }
         }
 
         window.Ruins = class Ruins extends Thing {
@@ -159,43 +169,49 @@ getLevelFunctions['hemp-icon'] = function() {
         }
     }
     level.initialRoom = 'room1';
-    level.initialX = 50; // expressed as % of way across x axis, i.e. value range is 0-100 
-    level.initialY = 55;
+    level.initialX = 53; // expressed as % of way across x axis, i.e. value range is 0-100
+    level.initialY = 59;
     level.initialSpells = [ 'anagram', 'add-edge', 'remove-edge', 'change-edge' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
-    level.allWords = [ 'vendingmachine', 'beefeater','beefeaters','bike','blouse','boule','boules','bruin','burin','cascara','coin','coins','hem','hemp','hems','icon','icons','kepi','kepis','louse','maraca','maracas','marasca','mascara','mesh','mike','muffin','pike','pikes','puffin','puffins','ruin','ruins','spike','treasure','treasures' ];
+    level.allWords = [ 'beefeater','beefeaters','bike','blouse','boule','boules','bruin','burin',
+        'cascara','coin','coins',
+        'hem','hemp','hems','icon','icons','kepi','kepis','louse','maraca','maracas','mascara','mesh',
+        'muffin','pike','pikes','puffin','puffins','ruin','ruins','spike','treasure','treasures' ];
+    level.pluralWords = [ 'beefeaters','boules','coins', 'hems','icons','kepis','maracas',
+        'pikes','puffins' ];
     level.immovableObjects = [ 'vendingmachine', 'beefeater','beefeaters','bike','bruin','ruin','ruins' ];
     level.initialThings = [ ['cascara','room0',40,65],
-        ['beefeater','room1',18,50],['hemp','room1',40,65],['icon','room1',60,65],
-        ['vendingmachine','room2',40,69], ['muffin','room2',40,65],['kepi','room2',60,65],
-        ['boule','room3',40,65],['ruin','room3',81,50],
+        ['beefeater','room1',18,65],['hemp','room1',40,72],['icon','room1',63,67],
+        ['muffin','room2',36,45],['kepi','room2',75,65],
+        ['boule','room3',18,65],['ruin','room3',71,40],
         ['treasure','room4',40,65] ];
     level.targetThing = 'treasure';
     level.initialRunes = [];
-    level.sounds = { 'growl' : new Audio('levels/' + level.levelPath + '/audio/345733__noahpardo__deep-growl-1.wav') };
+    level.sounds = { 'growl' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/345733__noahpardo__deep-growl-1.wav') };
+    level.muffinInVendingMachine = true;
 
     level.rooms = {
         'room1': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room0', 90, 50, true, 50, 50, 'beefeater', PASSAGE_STATE_BLOCKED, 26, 50),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 50, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 65, 'room0', 90, 50, true, 50, 50, 'beefeater', PASSAGE_STATE_BLOCKED, 26, 65),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 65, 'room2', 10, 75, true, 66, 75)],
         },
         'room2': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room1', 90, 50, true, 50, 50),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room3', 10, 50, true, 50, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 75, 'room1', 90, 50, true, 50, 65),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 75, 'room3', 10, 50, true, 36, 50)],
         },
         'room3': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room2', 90, 50, true, 50, 50),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room4', 10, 50, true, 50, 50, 'ruin', PASSAGE_STATE_BLOCKED, 73, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room2', 90, 65, true, 50, 65),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room4', 10, 50, true, 50, 50, 'ruin', PASSAGE_STATE_BLOCKED, 60, 50)],
         },
         'room4': {
             boundaries: [],

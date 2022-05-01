@@ -4,13 +4,24 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
-implement suppress-player-input during multi-stage movements
+automate plural images
+
+different sounds for different spells?
 
 screen-resizing issues
 
 finish upgrading tutorial level.
 
 possibly put messages into an invisible div & let them just fit in sequentially
+
+consider marking words not necessary for level-solving as "bonus words". this would be a way to make red-herring words come across as positive, rather than as annoyances. exact definition might be tricky. can't just be "there exists a solution that doesn't involve the word", because could be two equally good (to be precise, say equally long) solutions to the level. more likely -- "any solution that involves this word could be simplified to remove it," but might be annoying to program automatic way to detect this.
+
+when changing object in inventory, don't change inventory order
+
+
+could also render bonus words as gray drawings but this seems a little extreme.
+
+look up promise architecture and async/await just to be aware of it.
 
 notification sound for messages
 
@@ -33,6 +44,8 @@ Music promoted by Audio Library https://youtu.be/7-rXQALDv-4
 
 sound from freesound.org, ...
 
+knock ... https://freesound.org/s/447075/
+notification ... https://freesound.org/s/316798/
 bear growl ... https://freesound.org/s/345733/
 failure sound -- https://freesound.org/s/342756/
 hawk -- https://freesound.org/s/362426/

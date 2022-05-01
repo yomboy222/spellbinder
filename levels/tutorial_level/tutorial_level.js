@@ -5,7 +5,7 @@ levelList.push( { name:'tutorial level', difficulty:1 });
 getLevelFunctions['tutorial level'] = function() {
 
     let level = new Level('tutorial level');
-    level.levelPath = 'tutorial_level';
+    level.folderName = 'tutorial_level';
 
     level.defineThingSubclasses = function() {
 
@@ -18,7 +18,7 @@ getLevelFunctions['tutorial level'] = function() {
         window.Cur = class Cur extends Thing{
             constructor(word,room,x,y) {
                 super(word,room,x,y);
-                this.sound = new Audio(levelPath + '/audio/327666__juan-merie-venter__dog-bark.wav');
+                this.sound = new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/327666__juan-merie-venter__dog-bark.wav');
             }
             passageBlockingBehavior() {
                 this.sound.play();
@@ -179,7 +179,7 @@ getLevelFunctions['tutorial level'] = function() {
 
     level.initializationFunction = function() {
         level.sounds = {
-            'unlock': new Audio(levelPath + '/audio/410983__mihirfreesound__unlocking-door.wav'),
+            'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),
         };
         document.getElementById('binder-icon-holder').style.display = 'none';
         window.setTimeout(level.showInitialTutorialMsg, 500);

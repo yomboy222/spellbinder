@@ -75,6 +75,7 @@ let sounds = {};
 let backgroundImage = new Image();
 let backgroundMusic = undefined;
 let musicPlaying = false;
+let okayToPlayMusic = true;
 let normalPlayerInputSuppressed = false;
 let timePlayerInputSuppressed = 0;
 const MAX_TIME_TO_SUPPRESS_INPUT_MS = 8000; // a failsafe in case code fails to un-suppress input
@@ -149,7 +150,6 @@ class Level {
         this.clickHandlerFunction = function(xWithinCanvas,yWithinCanvas) {
             return false; // false indicates click event not handled here
         };
-        this.postTransformBehavior = function(fromWord,toWord) {};
         this.levelCompleteMessage = 'Congratulations, you completed the level! Close this message to return to home screen.';
     }
 }
@@ -217,6 +217,7 @@ class GameElement {
             }
         }
     }
+    // this "initiateMovement" method should be replaced.
     initiateMovement(relSpeed = 1) {
         let distanceAsFractionOfPlayAreaWidth = Math.sqrt( ( (this.x - this.destX) * (this.x - this.destX)) + ((this.y - this.destY) * (this.y - this.destY)) )  / PLAY_AREA_WIDTH;
         this.movementDurationMS = distanceAsFractionOfPlayAreaWidth * 2000 / relSpeed;
@@ -304,9 +305,25 @@ class Thing extends GameElement {
         this.room = room;
         this.x = x;
         this.y = y;
+        if (typeof level !== 'undefined' && level != null && typeof level.pluralWords !== 'undefined' && level.pluralWords.indexOf(word) >= 0)
+            this.plural = true;
+        else
+            this.plural = false;
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
         this.image.onerror = this.handleMissingImage.bind(this);
-        this.image.src = levelPath + '/things/' + word.replace(' ', '_') + '.png';
+        this.baseImageName = word.replace(' ', '_');
+        this.image.src = levelPath + '/things/' + this.baseImageName + '.png';
+
+        // for cases with multiple images for animation, will load the images serially so don't need to specify total # of imgs
+        // (the process terminates when one of the images is not found)
+        this.allAnimationImagesLoaded = false;
+        this.images = []; // will be used to implement animation where relevant
+        this.frameDisplayTimeMS = 70;
+        this.processAnimationImage();
+        this.currentAnimationIndex = 0;
+        this.whenToSwitchAnimationImages = 0;
+        this.useAnimationImages = false;
+
         this.timeOfCreation = Date.now();
         this.movable = (immovableObjects.indexOf(word) < 0 && solidObjects.indexOf(word) < 0);
         this.solid = (solidObjects.indexOf(word) >= 0);
@@ -331,11 +348,40 @@ class Thing extends GameElement {
     }
 
     handleMissingImage() { // if image doesn't load
-        this.image.src = 'imgs/thing_placeholder.png';
-        this.height = 100;
-        this.width = 100;
-        this.halfHeight = 50;
-        this.halfWidth = 50;
+        if (this.word === 'treasure') {
+            // treasure is used in a bunch of levels so putting its image in main /imgs folder.
+            this.image.src = 'imgs/treasure.png';
+            this.width = 140;
+            this.height = 127;
+            this.halfWidth = 70;
+            this.halfHeight = 63;
+        }
+        else {
+            this.image.src = 'imgs/thing_placeholder.png';
+            this.height = 100;
+            this.width = 100;
+            this.halfHeight = 50;
+            this.halfWidth = 50;
+        }
+    }
+
+    processAnimationImage() {
+        let nextIndexToTry = this.images.length;
+        this.images.push(new Image);
+        this.images[nextIndexToTry].onload = this.processAnimationImage.bind(this);
+        this.images[nextIndexToTry].onerror = this.handleMissingAnimationImage.bind(this);
+        this.images[nextIndexToTry].src = levelPath + '/things/' + this.baseImageName + '_' + nextIndexToTry.toString() + '.png';
+    }
+
+    handleMissingAnimationImage() {
+        // last attempted animation-image load failed. if there were none at all, make this.images undefined.
+        if (this.images.length <= 1) {
+            this.images = undefined;
+        }
+        else {
+            this.images.pop(); // remove failed image
+        }
+        this.allAnimationImagesLoaded = true;
     }
 
     deleteFromThingsHere() {
@@ -401,7 +447,23 @@ class Thing extends GameElement {
             }
             ctx.globalAlpha = newAlpha;
         }
-        ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
+        if (this.useAnimationImages) {
+            if (Date.now() > this.whenToSwitchAnimationImages) {
+                this.currentAnimationIndex++;
+                if (this.currentAnimationIndex >= this.images.length) {
+                    this.currentAnimationIndex = 0;
+                }
+                this.whenToSwitchAnimationImages = Date.now() + this.frameDisplayTimeMS;
+            }
+            ctx.drawImage(this.images[this.currentAnimationIndex], this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
+        }
+        else if (this.plural) {
+            ctx.drawImage(this.image, this.x - this.halfWidth-15, this.y - this.halfHeight-15, this.width, this.height);
+            ctx.drawImage(this.image, this.x - this.halfWidth+15, this.y - this.halfHeight+15, this.width, this.height);
+        }
+        else {
+            ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
+        }
         ctx.globalAlpha = 1.0;
     }
 
@@ -491,6 +553,13 @@ class Thing extends GameElement {
         }
     }
 
+    returnToInventoryAfterUseOnScreen() {
+        if (typeof this.captionDiv !== 'undefined') {
+            this.captionDiv.style.display = 'block';
+        }
+        this.tryToPickUp(true);
+    }
+
 
     moveCaptionDivIfAnyToInventory() {
         if (typeof this.captionDiv !== 'undefined') {
@@ -541,14 +610,10 @@ class Thing extends GameElement {
             yWithinCanvas <= (this.y + adjustedHeight));
     }
 
-    displayCantPickUpMessage() {
-        if (typeof this.cannotPickUpMessage === 'string' && this.cannotPickUpMessage !== '')
-            displayMessage(this.cannotPickUpMessage, DEFAULT_MESSAGE_DURATION, this.x, this.y);
-    }
-
     // particular Thing subclasses may override this:
     handleClick() {
-        toggleSpellInputWindow(false,this.word);
+        if (this.okayToDisplayWord()) // i.e. only open spell-input window if the word is being shown
+            toggleSpellInputWindow(false,this.word);
     }
 
     handleDblclick(e) {
@@ -561,7 +626,7 @@ class Thing extends GameElement {
             return true; // meaning that this object handled the dblclick.
         }
         if (!this.movable) {
-            return this.displayCantPickUpMessage(); // the overall click-handling function will display this msg if no *other* object handles the dblclick successfully.
+            return this.cannotPickUpMessage; // the overall click-handling function will display this msg if no *other* object handles the dblclick successfully.
         }
         if (!this.inRangeOfPlayer(EXTRA_PICKUP_RADIUS)) {
             return ("You must be closer to pick this up.");
@@ -570,8 +635,7 @@ class Thing extends GameElement {
     }
 
     passageBlockingBehavior() {
-        displayMessage('blocked!', DEFAULT_MESSAGE_DURATION);
-        sounds['failure'].play();
+        displayMessageWithSound('blocked!',sounds['failure'], DEFAULT_MESSAGE_DURATION);
     }
 
     // placeholder methods that subclasses needing specific behavior can override:
@@ -868,6 +932,15 @@ function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treat
     return messageObject;
 }
 
+function displayMessageWithSound(msg, soundToPlay, durationMS = 0, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
+    if (typeof soundToPlay === 'undefined') {
+        soundToPlay = sounds['notification'];
+    }
+    displayMessage(msg, durationMS, x, y, treatCoordinatesAsPercentages);
+    soundToPlay.play();
+}
+
+
 function displaySequenceableMessage(msg, msgID, msgIDtoSupersede, durationMS = 0, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
     // if this supersedes another message, close that one:
     if (typeof msgIDtoSupersede != 'undefined') {
@@ -911,6 +984,7 @@ function spellAvailable(spell, involvesFinalS = false) {
 
     // at this point we know player doesn't have the explicitly specified spell ...
     switch (spell) {
+        case allSpells.REVERSAL: return spellsAvailable.indexOf(allSpells.ANAGRAM) >= 0;
         case allSpells.ADD: return spellsAvailable.indexOf(allSpells.ADD_NFS) >= 0;
         case allSpells.CHANGE :return spellsAvailable.indexOf(allSpells.CHANGE_NFS) >= 0;
         case allSpells.REMOVE : return spellsAvailable.indexOf(allSpells.REMOVE_NFS) >= 0;
@@ -1000,8 +1074,10 @@ function registerWordForScoringPurposes(word) {
         return; // already found.
     score += word.length;
     wordsFound.push(word);
-    console.log('here, word length ' + word.length)
     document.getElementById("score-span").innerText = score.toString();
+    if (typeof level.bonusWords !== 'undefined' && level.bonusWords.indexOf(word) >= 0) {
+        displayMessage('Bonus word!', DEFAULT_MESSAGE_DURATION);
+    }
 }
 
 function announceSpellFailure(msg) {
@@ -1100,8 +1176,8 @@ function castSpell() {
     };
 
     let actualPlayerSpellBeingUsed = getSpellToHighlight(spellRequested);
-    console.log(spellRequested);
-    console.log(actualPlayerSpellBeingUsed);
+//    console.log(spellRequested);
+//    console.log(actualPlayerSpellBeingUsed);
 
     if (actualPlayerSpellBeingUsed !== false) {
         let nameToHighlight = document.getElementById('spell-name-on-screen-' + actualPlayerSpellBeingUsed);
@@ -1193,8 +1269,6 @@ function executeTransformation() {
             newObject.setCaptionPositionInThingsHere();
         }
     }
-
-    level.postTransformBehavior(fromWord,toWord); // might move this into extraTransformIntoBehavior
 
     newObject.extraTransformIntoBehavior();
 
@@ -1299,9 +1373,11 @@ function toggleMusic() {
     if (typeof backgroundMusic === 'object') {
         if (musicPlaying === false) {
             musicPlaying = true;
+            okayToPlayMusic = true;
             startMusic();
         } else {
             musicPlaying = false;
+            okayToPlayMusic = false;
             backgroundMusic.pause();
         }
     }
@@ -1576,6 +1652,10 @@ function drawTopBinderImage() {
     // ctx.drawImage(binderImages['side_view_for_top'],0,-50);
 }
 
+function getLevelPathFromFolderName(folderName) {
+    return 'levels/' + folderName;
+}
+
 function loadLevel(lName = 'intro level') {
     console.log('loading level ' + lName);
     canvas.style.display = 'block';
@@ -1595,7 +1675,8 @@ function loadLevel(lName = 'intro level') {
 
     console.log(level);
 
-    levelPath = (typeof level.levelPath === 'string') ? 'levels/' + level.levelPath : 'levels/' + lName.replace(' ','_');
+    levelPath = getLevelPathFromFolderName(level.folderName);
+    // (typeof level.levelPath === 'string') ? 'levels/' + level.levelPath : 'levels/' + lName.replace(' ','_');
 
     level.defineThingSubclasses();
 
@@ -1638,7 +1719,7 @@ function loadLevel(lName = 'intro level') {
     document.getElementById('inner-score-div').innerHTML = 'score: <span id="score-span">0</span>';
     level.initializationFunction();
 
-    if (typeof level.backgroundMusicFile !== 'undefined') {
+    if (okayToPlayMusic && typeof level.backgroundMusicFile !== 'undefined') {
         let path = (level.backgroundMusicFile === 'Sneaky Snitch.mp3') ? 'audio/Sneaky Snitch.mp3' : levelPath + '/audio/' + level.backgroundMusicFile;
         backgroundMusic = new Audio(path);
         document.getElementById('music-toggle-div').style.display = 'block';
@@ -1654,7 +1735,7 @@ function loadLevel(lName = 'intro level') {
 
     newRoom(level.initialRoom, level.initialX, level.initialY, level.initialMessage);
 
-    animate();
+    window.setTimeout(animate,1000); // a total hack ... should intelligently wait until images/sounds loaded
 }
 
 function closeBinder() {
@@ -1842,25 +1923,26 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
                 thing.handleClick(e);
     }
 
+    messageToDisplayIfNothingHandlesSuccessfully = '';
     for ([word, thing] of Object.entries(thingsHere)) {
-        messageToDisplayIfNothingHandlesSuccessfully = '';
-        console.log('hereeeee');
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             if (doubleRatherThanSingle) {
                 let result = thing.handleDblclick(e);
-                if (typeof result === 'boolean' && result === true)
+                if (typeof result === 'boolean' && result === true) {
+                    messageToDisplayIfNothingHandlesSuccessfully = '';
                     break; // at most one thing should successfully handle dbl click
-                else if (typeof result === 'string')
+                }
+                else if (typeof result === 'string') {
                     messageToDisplayIfNothingHandlesSuccessfully = result;
+                }
             }
             else {
-                if (thing.okayToDisplayWord()) // i.e. only open spell-input window if the word is being shown
-                    thing.handleClick();
-                    break; // at most one thing should successfully handle click
+                thing.handleClick();
+                break; // at most one thing should successfully handle click
             }
-            if (messageToDisplayIfNothingHandlesSuccessfully != '') {
-                displayMessage(messageToDisplayIfNothingHandlesSuccessfully, 2 * DEFAULT_MESSAGE_DURATION);
-            }
+    }
+    if (messageToDisplayIfNothingHandlesSuccessfully !== '') {
+        displayMessageWithSound(messageToDisplayIfNothingHandlesSuccessfully, sounds['failure'], 2 * DEFAULT_MESSAGE_DURATION);
     }
 
     for (i = 0; i < passages.length; i++) {
@@ -1915,9 +1997,10 @@ function initialize() {
     } */
     sounds['pickup'] =  new Audio('audio/pickup.wav');
     sounds['discard'] =  new Audio('audio/pickup.wav'); // need separate discard sound!
-    sounds['whoosh'] = new Audio('audio.whoosh.wav');
+    sounds['whoosh'] = new Audio('audio/530448__mellau__whoosh-short-5.wav');
     sounds['add-spell'] = new Audio('audio/magical_1.ogg');
     sounds['spell'] = new Audio('audio/magical_1.ogg');
+    sounds['notification'] = new Audio('audio/563310__davince21__harp-motif3.ogg');
     sounds['failure'] = new Audio('audio/342756__rhodesmas__failure-01.wav');
     sounds['page turn'] = new Audio('audio/63318__flag2__page-turn-please-turn-over-pto-paper-turn-over.wav');
     sounds['fanfare'] = new Audio('audio/524849__mc5__short-brass-fanfare-1.wav');
