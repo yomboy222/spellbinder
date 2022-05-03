@@ -114,12 +114,13 @@ getLevelFunctions['soap-bowtie'] = function() {
     level.initialSpells = [ 'remove-letter', 'change-letter' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
-    level.allWords = [ 'aster','bacon','beacon','bootee','bootie','bowtie','eater','ester','fence','hammock','hater','haw','hoe','hop','hummock','paw','pea','pew','sap','saw','sea','soap','spa','treasure','water' ];
+    level.allWords = [ 'aster','bacon','beacon','bootie','bowtie','eater','ester','fence','hammock','hater','hoe','hummock','paw','pea','pew','sap','saw','sea','soap','spa','treasure','water' ];
     level.initialThings = [ ['bowtie','room1',34,40],['soap','room1',42,78],['fence','room1',72,50],
         ['hater','room2',50,50],
         ['beacon','room3',45,24],['hummock','room3',71,50],
         ['treasure','room4',40,65] ];
     level.immovableObjects = [ 'beacon','fence','hammock','hater','hummock','pew','spa','sea','water'  ];
+    level.bonusWords = [ 'aster','eater','ester','hoe','pea','sea','spa', ];
     level.targetThing = 'treasure';
     level.initialRunes = [];
 

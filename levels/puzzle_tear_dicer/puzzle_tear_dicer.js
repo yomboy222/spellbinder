@@ -99,6 +99,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     level.allWords = [ 'arc', 'rice', 'cart', 'dart', 'tear', 'tare', 'tar', 'rat', 'art', 'tea', 'ear', 'dicer', 'dice', 'ice', 'cider', 'eider', 'car', ];
     level.solidObjects  = ['mysterious-precipitation'];
     level.immovableObjects = [ 'arc', 'rice', 'car', 'cart', 'dart', 'tear', 'tare', 'tar', 'rat', 'art', 'tea', 'ear', 'dicer', 'dice', 'ice', 'cider', 'eider', ];
+    level.bonusWords =  [ 'arc', 'rice', 'cart', 'rat', 'dart', 'tear', 'tea', 'ear', 'dice', 'ice', ];
     level.bridgelikeObjects = [];
     level.otherGameData = {};
     level.initialThings = [

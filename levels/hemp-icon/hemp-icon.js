@@ -178,14 +178,15 @@ getLevelFunctions['hemp-icon'] = function() {
         'cascara','coin','coins',
         'hem','hemp','hems','icon','icons','kepi','kepis','louse','maraca','maracas','mascara','mesh',
         'muffin','pike','pikes','puffin','puffins','ruin','ruins','spike','treasure','treasures' ];
-    level.pluralWords = [ 'beefeaters','boules','coins', 'hems','icons','kepis','maracas',
-        'pikes','puffins' ];
+    level.pluralWords =  {'beefeaters':'beefeater','boules':'boule','coins':'coin', 'hems':'hem','icons':'icon',
+        'kepis':'kepi','maracas':'maraca', 'pikes':'pike','puffins':'puffin'} ;
     level.immovableObjects = [ 'vendingmachine', 'beefeater','beefeaters','bike','bruin','ruin','ruins' ];
     level.initialThings = [ ['cascara','room0',40,65],
         ['beefeater','room1',18,65],['hemp','room1',40,72],['icon','room1',63,67],
         ['muffin','room2',36,45],['kepi','room2',75,65],
         ['boule','room3',18,65],['ruin','room3',71,40],
         ['treasure','room4',40,65] ];
+    level.bonusWords = ['bike','mesh','spike'];
     level.targetThing = 'treasure';
     level.initialRunes = [];
     level.sounds = { 'growl' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/345733__noahpardo__deep-growl-1.wav') };

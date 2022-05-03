@@ -107,6 +107,9 @@ getLevelFunctions['trash/lobster level'] = function() {
     level.allWords = ['art', 'arts', 'bar', 'bars', 'bast', 'bat', 'bats', 'bolster', 'bolsters', 'bra', 'bras',
         'brat', 'brats', 'hart', 'harts', 'hat', 'hats', 'holster', 'holsters', 'lobster', 'lobsters', 'rat', 'rats',
         'star', 'tab', 'tabs', 'tar', 'tars', 'trash'];
+    level.pluralWords = {
+        'bars': 'bar', 'bats': 'bat', 'bolsters': 'bolster', 'bras': 'bra', 'brats': 'brat',
+        'harts':'hart','hats':'hat','holsters':'holster', 'lobsters':'lobster', 'rats':'rat','tabs':'tab', 'tars':'tar' };
     level.bonusWords = ['bar','bars','bast','bat','bats','bra','bras','hat','hats','star','tab','tabs'];
     level.solidObjects  = [ 'cauldron',  ];
     level.immovableObjects = [ 'hart', 'harts', ];

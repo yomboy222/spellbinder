@@ -127,6 +127,7 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
     level.allWords = [ 'bootie','bowtie','hammer','hater','jammer','java','lava','law','partition','paw','sap','saw','soap','treasure','water' ];
+    level.bonusWords = ['paw','law'];
     level.initialThings = [ ['bowtie','room1',24,65],['soap','room1',50,65],['hater','room1',72,50],
         ['jammer','room0',40,65],
         ['partition','room2',75,50],

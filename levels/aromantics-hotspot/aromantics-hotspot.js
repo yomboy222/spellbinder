@@ -238,6 +238,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             case 'hotpot' : return new Hotpot(word,room,x,y);
             case 'hotpots' : return new Hotpot(word,room,x,y);
             case 'lambkin': return new Lambkin(word,room,x,y);
+            case 'lambkins': return new Lambkin(word,room,x,y);
             case 'robot' : return new Robot(word,room,x,y);
             case 'robots' : return new Robot(word,room,x,y);
             case 'tit' : return new Tit(word,room,x,y);
@@ -256,12 +257,12 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     level.initialSpells = [ 'add-letter-nfs', 'remove-letter-nfs', 'change-letter-nfs' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
-    level.allWords = ['treasure', 'aromantics', 'aromatics', 'hotpot', 'hotpot', 'hotspot', 'hotspot', 'manifest', 'manifesto', 'romantics',
+    level.allWords = ['treasure', 'aromantics', 'aromatics', 'hotpot', 'hotspot', 'manifest', 'manifesto', 'romantics',
         'boor', 'boot', 'booth', 'bot', 'broth', 'robot', 'roost', 'root', 'rot', 'shoot', 'shot', 'soot',
         'lambkin', 'lambskin',
         'tit','tint','tin','nit','hint',
     ];
-    level.initialThings = [ ['aromantics','room1',42,72],['hotspot','room1',57,40],['lambkin','room1',18,50],['tyrannosaur','room1',85,70],
+    level.initialThings = [ ['aromantics','room1',42,72],['hotspot','room1',64,40],['lambkin','room1',18,50],['tyrannosaur','room1',85,70],
         ['manifesto','room3',48,65],
         ['tit','room2',65,25], ['armoire','room2',75,50], ['tapestry','room2',25,50],
         ['treasure','secret room',50,50]
@@ -269,6 +270,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     level.immovableObjects = ['aromantics', 'hotpot', 'hotpot', 'hotspot', 'hotspot','manifest','manifesto','romantics',
         'boor', 'booth', 'broth', 'robot', 'roost', 'lambkin', 'tyrannosaur',
         'tit', 'hint'];
+    level.bonusWords = ['boor', 'bot', 'roost', 'rot', 'shoot', 'shot', 'soot', 'tin', 'nit'];
     level.targetThing = 'treasure';
     level.initialRunes = []; // ['h','t','n'];
     level.initialMessage = 'You need something to battle the Tyrannosaur!';
@@ -303,7 +305,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97,50,'room1',10,50, true, 38, 50)
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97,50,'room1',10,50, true, 38, 35)
             ]
         },
         'secret room': {

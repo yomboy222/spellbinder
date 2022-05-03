@@ -100,6 +100,10 @@ getLevelFunctions['cordon-joker'] = function() {
         }
 
         window.Cordon = class Cordon extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.wordDisplayOffsetY = 80;
+            }
             extraTransformIntoBehavior() {
                 passages[0].obstacle = 'cordon';
                 passages[0].state = PASSAGE_STATE_BLOCKED;
@@ -174,6 +178,7 @@ getLevelFunctions['cordon-joker'] = function() {
     level.initialThings = [ ['cauldron','room1',15,70], ['cordon','room1',65,57],['joker','room2',60,70] ];
     // level.targetThing = 'rock';
     level.immovableObjects = ['condor','condo','cordon','cauldron','donor','jock','roc'];
+    level.bonusWords = ['codon', 'donor', 'jock', 'ore', 'roc', 'roe']
     level.initialRunes = [];
     level.sounds = { 'condor' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/362426__tec-studio__brd-hawk.wav') };
 

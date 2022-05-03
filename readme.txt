@@ -4,8 +4,6 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
-automate plural images
-
 different sounds for different spells?
 
 screen-resizing issues
@@ -21,7 +19,7 @@ when changing object in inventory, don't change inventory order
 
 could also render bonus words as gray drawings but this seems a little extreme.
 
-look up promise architecture and async/await just to be aware of it.
+look up promise architecture (for images loading) and async/await just to be aware of it.
 
 notification sound for messages
 

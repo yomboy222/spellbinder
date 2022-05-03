@@ -55,6 +55,9 @@ let spellsAvailable = [];
 let spellNamesOnScreen = [];
 let runes = [];
 let runeImages = []; let arrowImages = {};
+let defaultThingImage = undefined;
+let treasureImage = undefined;
+let numberOfThingImagesLoaded = 0;
 let runeAcquisitionTime = 0;
 let newRuneIndex = -1;
 let runesBeingReleased = [];
@@ -305,13 +308,16 @@ class Thing extends GameElement {
         this.room = room;
         this.x = x;
         this.y = y;
-        if (typeof level !== 'undefined' && level != null && typeof level.pluralWords !== 'undefined' && level.pluralWords.indexOf(word) >= 0)
+        if (typeof level !== 'undefined' && level !== null && typeof level.pluralWords !== 'undefined' && word in level.pluralWords) {
             this.plural = true;
-        else
+            this.baseImageName = level.pluralWords[word].replace(' ', '_'); // e.g. arch.png rather than arches.png
+        }
+        else {
             this.plural = false;
+            this.baseImageName = word.replace(' ', '_');
+        }
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
         this.image.onerror = this.handleMissingImage.bind(this);
-        this.baseImageName = word.replace(' ', '_');
         this.image.src = levelPath + '/things/' + this.baseImageName + '.png';
 
         // for cases with multiple images for animation, will load the images serially so don't need to specify total # of imgs
@@ -335,34 +341,44 @@ class Thing extends GameElement {
         this.inventoryImageRatio = 1.7; // factor by which to reduce each dimension when drawing in inventory.
         this.playAudioWhenTransformed = true;
         this.sound = undefined; // used for thing's primary sound. will be stopped if/when player leaves room where it is.
-        this.wordDisplayOffsetX = -28; // where to set "left" property of captionDev rel. to this.x. subclasses may redefine.
-        this.wordDisplayOffsetY = 32;// where to set "top" property of captionDev rel. to this.y. subclasses may redefine.
+        this.wordDisplayOffsetX = -18 - (4 * this.word.length); // where to set "left" property of captionDev rel. to this.x. subclasses may redefine.
+        this.wordDisplayOffsetY = 0;// where to set "top" property of captionDev rel. to this.y. subclasses may redefine.
     }
 
     setDimensionsFromImage() { // this gets called as soon as image loads
+        numberOfThingImagesLoaded++;
         this.width = this.image.width; // take dimensions directly from image
         this.height = this.image.height;
         this.halfWidth = this.width / 2; // to avoid having to recalculate at every frame
         this.halfHeight = this.height / 2;
+        if (this.wordDisplayOffsetY === 0) { // meaning it wasn't set explicitly in subclass constructor
+            this.wordDisplayOffsetY = this.halfHeight - 14;
+        }
+        if (this.word in thingsHere)
+            this.setCaptionPositionInThingsHere();
+
         drawInventory();
     }
 
     handleMissingImage() { // if image doesn't load
         if (this.word === 'treasure') {
+            this.image = treasureImage;
             // treasure is used in a bunch of levels so putting its image in main /imgs folder.
-            this.image.src = 'imgs/treasure.png';
+            /* this.image.src = 'imgs/treasure.png';
             this.width = 140;
             this.height = 127;
             this.halfWidth = 70;
-            this.halfHeight = 63;
+            this.halfHeight = 63; */
         }
         else {
-            this.image.src = 'imgs/thing_placeholder.png';
+            this.image = defaultThingImage;
+            /* this.image.src = 'imgs/thing_placeholder.png';
             this.height = 100;
             this.width = 100;
             this.halfHeight = 50;
-            this.halfWidth = 50;
+            this.halfWidth = 50; */
         }
+        this.setDimensionsFromImage();
     }
 
     processAnimationImage() {
@@ -1069,7 +1085,6 @@ function getSpellToHighlight(spell) {
 }
 
 function registerWordForScoringPurposes(word) {
-    console.log ('hey');
     if (wordsFound.indexOf(word) >= 0)
         return; // already found.
     score += word.length;
@@ -1138,8 +1153,7 @@ function castSpell() {
         runeReleased = singleRuneSpellData[2];
         involvesFinalS = singleRuneSpellData[3] && (runeNeeded === 's' || runeReleased === 's');
     }
-
-    console.log(spellRequested);
+    // console.log(spellRequested);
 
     // TODO: check for SYNONYM, etc.
 
@@ -1182,7 +1196,6 @@ function castSpell() {
     if (actualPlayerSpellBeingUsed !== false) {
         let nameToHighlight = document.getElementById('spell-name-on-screen-' + actualPlayerSpellBeingUsed);
         if (nameToHighlight !== null) {
-            console.log(nameToHighlight);
             nameToHighlight.classList.add('highlight-spell');
             setTimeout(unhighlightAllSpellNames, 1000);
         }
@@ -1664,7 +1677,6 @@ function loadLevel(lName = 'intro level') {
     levelComplete = false;
     score = 0;
 
-
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'none';
     showingIntroPage = false;
@@ -1695,6 +1707,7 @@ function loadLevel(lName = 'intro level') {
 
     thingsElsewhere = {};
     wordsFound = [];
+    numberOfThingImagesLoaded = 0;
     let objectData = level.initialThings;
     for (let i=0; i < objectData.length; i++) {
         let key = objectData[i][0];
@@ -1735,7 +1748,8 @@ function loadLevel(lName = 'intro level') {
 
     newRoom(level.initialRoom, level.initialX, level.initialY, level.initialMessage);
 
-    window.setTimeout(animate,1000); // a total hack ... should intelligently wait until images/sounds loaded
+    animate();
+    // window.setTimeout(animate,1000); // a total hack ... should intelligently wait until images/sounds loaded
 }
 
 function closeBinder() {
@@ -1867,6 +1881,16 @@ function checkIfClickWasMadeDouble() {
 }
 
 function handleClick(e) {
+    console.log(e);
+    if (typeof e.target !== 'undefined' && typeof e.target.tagName !== undefined) {
+        let tagName = e.target.tagName.toLowerCase();
+        console.log(tagName);
+        if (tagName.startsWith('button') || tagName.startsWith('a')) {
+            console.log('returning without setting timeout to checkIfClickWasMadeDouble');
+            return; // if clicking on an html link or button, this javascript should ignore it:
+        }
+    }
+
     if (normalPlayerInputSuppressed) {
         if (Date.now() < timePlayerInputSuppressed + MAX_TIME_TO_SUPPRESS_INPUT_MS)
             return;
@@ -1881,6 +1905,7 @@ function handleClick(e) {
         return processSingleOrDoubleClick(e, true);
     }
     if (!showingIntroPage) {
+        console.log('heeeee');
         initialClickEvent = e;
         lastClickTime = Date.now();
         window.setTimeout(checkIfClickWasMadeDouble, MAX_DOUBLE_CLICK_TIME_SEPARATION);
@@ -2025,6 +2050,12 @@ function initialize() {
         arrowImages[directions[i]] = new Image();
         arrowImages[directions[i]].src = 'imgs/arrow-' + directions[i] + '.png';
     }
+
+    // default thing image and treasure image
+    defaultThingImage = new Image();
+    defaultThingImage.src = 'imgs/thing_placeholder.png';
+    treasureImage = new Image();
+    treasureImage.src = 'imgs/treasure.png';
 
     // calculate alpha values for pulsing arrows & put in lookup table so don't have to keep recalculating:
     const numberOfFrames = 100;
