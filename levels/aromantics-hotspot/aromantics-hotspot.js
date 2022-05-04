@@ -150,25 +150,34 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.shriek = new Audio(path);
             }
             passageBlockingBehavior() {
+                this.setMovement(this.x,this.y,1000);
                 this.shriek.play();
+                this.useAnimationImages = true;
+            }
+            methodToCallAfterMovement() {
+                super.methodToCallAfterMovement();
+                this.useAnimationImages = false;
             }
         }
 
         window.Robot = class Robot extends Thing {
             extraTransformIntoBehavior() {
                 super.extraTransformIntoBehavior();
-                let monster = thingsHere['tyrannosaur'];
+                let monster = thingsHere['godzilloid'];
                 if (typeof monster === 'object') {
                     this.destX = monster.x - 90;
                     this.destY = monster.y + 50;
                     this.initiateMovement(0.2);
+                    this.useAnimationImages = true;
+                    this.frameDisplayTimeMS = 180;
                     this.methodToCallAfterMovement = this.killMonster.bind(this);
                 }
             }
 
             killMonster() {
                 super.methodToCallAfterMovement(); // updates caption location
-                let monster = thingsHere['tyrannosaur'];
+                this.useAnimationImages = false;
+                let monster = thingsHere['godzilloid'];
                 displayMessage('zap! (need graphics and sound for this)', DEFAULT_MESSAGE_DURATION);
                 monster.dispose();
             }
@@ -259,21 +268,21 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     level.backgroundMusicFile = undefined;
     level.allWords = ['treasure', 'aromantics', 'aromatics', 'hotpot', 'hotspot', 'manifest', 'manifesto', 'romantics',
         'boor', 'boot', 'booth', 'bot', 'broth', 'robot', 'roost', 'root', 'rot', 'shoot', 'shot', 'soot',
-        'lambkin', 'lambskin',
+        'lambkin', 'lambskin', 'godzilloid',
         'tit','tint','tin','nit','hint',
     ];
-    level.initialThings = [ ['aromantics','room1',42,72],['hotspot','room1',64,40],['lambkin','room1',18,50],['tyrannosaur','room1',85,70],
+    level.initialThings = [ ['aromantics','room1',42,72],['hotspot','room1',64,40],['lambkin','room1',18,50],['godzilloid','room1',81,75],
         ['manifesto','room3',48,65],
         ['tit','room2',65,25], ['armoire','room2',75,50], ['tapestry','room2',25,50],
         ['treasure','secret room',50,50]
     ];
     level.immovableObjects = ['aromantics', 'hotpot', 'hotpot', 'hotspot', 'hotspot','manifest','manifesto','romantics',
-        'boor', 'booth', 'broth', 'robot', 'roost', 'lambkin', 'tyrannosaur',
+        'boor', 'booth', 'broth', 'robot', 'roost', 'lambkin', 'godzilloid',
         'tit', 'hint'];
-    level.bonusWords = ['boor', 'bot', 'roost', 'rot', 'shoot', 'shot', 'soot', 'tin', 'nit'];
+    level.bonusWords = ['romantics', 'boor', 'bot', 'roost', 'rot', 'shoot', 'shot', 'soot', 'tin', 'nit'];
     level.targetThing = 'treasure';
     level.initialRunes = []; // ['h','t','n'];
-    level.initialMessage = 'You need something to battle the Tyrannosaur!';
+    level.initialMessage = 'You need something to battle the Godzilloid!';
 
     level.tapestryClickCount = 0;
     level.lastTapestryClickTime = 0;
@@ -288,7 +297,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             filledPolygons: [],
             passages: [
                 new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 3, 50, 'room3', 90, 50, true, 65,50, 'lambkin', PASSAGE_STATE_BLOCKED, 20, 50 ),
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 70, 'room2', 10, 70, true, 50, 75, 'tyrannosaur', PASSAGE_STATE_BLOCKED, 77, 65)],
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 70, 'room2', 10, 70, true, 50, 75, 'godzilloid', PASSAGE_STATE_BLOCKED, 77, 65)],
         },
         'room2': {
             boundaries: [],

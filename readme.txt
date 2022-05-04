@@ -4,6 +4,8 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
+investigate ways of dragging/dropping objects. takes place of double-click. same distinction between movable/immovable objects. one big advantage is you have a more intuitive procedure for "using one thing on/against/with another thing". tools become more appealing for puzzles.
+
 different sounds for different spells?
 
 screen-resizing issues
@@ -16,15 +18,9 @@ consider marking words not necessary for level-solving as "bonus words". this wo
 
 when changing object in inventory, don't change inventory order
 
-
-could also render bonus words as gray drawings but this seems a little extreme.
-
 look up promise architecture (for images loading) and async/await just to be aware of it.
 
-notification sound for messages
-
-obstacle things should have "obstacleDeactivated" property. this will help deal with things like the gate that gets pushed aside,
-or the meteor that gets pushed aside.
+notification sound for messages and an initial visual effect to draw attention
 
 
 PHASE 2 STUFF:

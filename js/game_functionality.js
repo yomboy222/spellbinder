@@ -177,6 +177,11 @@ class GameElement {
         this.deleteAfterMovement = false;
     }
     inRangeOfPlayer(extraRadius = 0) {
+        let deltaX = this.x - player.x;
+        let deltaY = this.y - player.y;
+        let dist = Math.sqrt( (deltaX * deltaX) + (deltaY*deltaY));
+        return (dist < CANVAS_WIDTH / 2);
+        /*
         if (this.collisionProfile === CollisionProfile.RECTANGULAR) {
             return (player.x > (this.x - this.halfWidth - player.halfWidth - extraRadius) &&
                 player.x < (this.x + this.halfWidth + player.halfWidth + extraRadius) &&
@@ -192,6 +197,8 @@ class GameElement {
             return ( (relX * relX) / (horizAxis * horizAxis) < 1 - ( (relY * relY) / (vertAxis * vertAxis)));
         }
         return false; // TODO: HANDLE OTHER COLLISION PROFILES
+
+         */
     }
 
     occupiesPoint(xWithinCanvas, yWithinCanvas) { // this is overridden by Thing to handle case where it's in inventory
@@ -319,6 +326,7 @@ class Thing extends GameElement {
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
         this.image.onerror = this.handleMissingImage.bind(this);
         this.image.src = levelPath + '/things/' + this.baseImageName + '.png';
+        this.visible = true;
 
         // for cases with multiple images for animation, will load the images serially so don't need to specify total # of imgs
         // (the process terminates when one of the images is not found)
@@ -455,6 +463,9 @@ class Thing extends GameElement {
     }
 
     draw() {
+        if (!this.visible)
+            return;
+
         if (this.word === fadeinWord) {
             let newAlpha = (Date.now() - fadeinTimer) / FADEOUT_DURATION_MS;
             if (newAlpha > 1.0) {
@@ -1694,6 +1705,7 @@ function loadLevel(lName = 'intro level') {
 
     currentRoom = undefined; // "undefined" will tell newRoom function that new level is starting.
     inventory = level.initialInventory;
+    player.direction = Directions.RIGHT;
     thingsHere = {}; // in newRoom(), things will be moved from thingsElsewhere to thingsHere.
     spellsAvailable = level.initialSpells;
     runes = level.initialRunes;
@@ -1882,14 +1894,19 @@ function checkIfClickWasMadeDouble() {
 
 function handleClick(e) {
     console.log(e);
+
     if (typeof e.target !== 'undefined' && typeof e.target.tagName !== undefined) {
         let tagName = e.target.tagName.toLowerCase();
         console.log(tagName);
-        if (tagName.startsWith('button') || tagName.startsWith('a')) {
+        if (!(tagName.startsWith('canvas') || tagName.startsWith('div'))) {  // "div" here for caption divs, but may want to give those divs their own onclick behavior to open spell form
             console.log('returning without setting timeout to checkIfClickWasMadeDouble');
             return; // if clicking on an html link or button, this javascript should ignore it:
         }
     }
+
+    // tell the browser we're handling this mouse event
+    e.preventDefault();
+    e.stopPropagation();
 
     if (normalPlayerInputSuppressed) {
         if (Date.now() < timePlayerInputSuppressed + MAX_TIME_TO_SUPPRESS_INPUT_MS)

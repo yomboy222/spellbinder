@@ -116,7 +116,53 @@ getLevelFunctions['cordon-joker'] = function() {
         window.Joke = class Joke extends Thing {
         }
 
+        window.Ore =  class Ore extends Thing {
+            handleDblclick(e) {
+                if (this.alreadyBeenInCauldron)
+                    return super.handleDblclick(e);
+
+                this.soundToPlayAfterMovement = sounds['splash'];
+                if (this.movable === false) {
+                    return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.
+                }
+                if (this.word in inventory) {
+                    let cauldron = thingsHere['cauldron'];
+                    if (cauldron.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
+                        this.deleteAfterMovement = false;
+                        this.alreadyBeenInCauldron = false;
+                        this.removeFromInventoryForUseOnScreen();
+                        this.movable = false; // so player can't pick up again as it moves
+                        this.movementType = MOVEMENT_TYPE_PARABOLIC;
+                        this.setMovement(cauldron.x, cauldron.y - cauldron.halfHeight, 1000, player.x, player.y, true);
+                    }
+                } else {
+                    super.handleDblclick(e);
+                }
+            }
+            methodToCallAfterMovement() {
+                super.methodToCallAfterMovement();
+                if (this.alreadyBeenInCauldron) {
+                    this.movable = true;
+                    this.returnToInventoryAfterUseOnScreen();
+                }
+                else {
+                    this.alreadyBeenInCauldron = true;
+                    displayMessage('Excellent! But see if you can obtain a real "rock" for the cauldron too.');
+                    this.visible = false;
+                    window.setTimeout(this.spitBackOut.bind(this), 1800);
+                }
+            }
+            spitBackOut() {
+                this.visible = true;
+                this.movementType = MOVEMENT_TYPE_PARABOLIC;
+                this.setMovement(player.x, player.y, 1000, this.x, this.y, true);
+            }
+        }
+
         window.Roc = class Roc extends Thing {
+            extraTransformIntoBehavior() {
+                displayMessage('Any resemblance to the condor is purely coincidental...', DEFAULT_MESSAGE_DURATION);
+            }
         }
 
         window.Rock = class Rock extends Thing {
@@ -128,18 +174,11 @@ getLevelFunctions['cordon-joker'] = function() {
                 if (this.word in inventory) {
                     let cauldron = thingsHere['cauldron'];
                     if (cauldron.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
-                        thingsHere[this.word] = this;
                         this.deleteAfterMovement = true;
-                        this.deleteCaptionIfAny();
-                        this.removeFromInventory();
+                        this.removeFromInventoryForUseOnScreen();
                         this.movable = false; // so player can't pick up again as it moves
                         this.movementType = MOVEMENT_TYPE_PARABOLIC;
-                        this.beginMovementTime = Date.now();
-                        this.movementDurationMS = 1000;
-                        this.initialX = player.x;
-                        this.initialY = player.y;
-                        this.destX = cauldron.x;
-                        this.destY = cauldron.y - cauldron.halfHeight;
+                        this.setMovement(cauldron.x, cauldron.y - cauldron.halfHeight, 1000, player.x, player.y, true);
                     }
                 } else {
                     super.handleDblclick(e);
@@ -161,6 +200,7 @@ getLevelFunctions['cordon-joker'] = function() {
             case 'cordon' : return new Cordon(word,room,x,y);
             case 'cork' : return new Cork(word,room,x,y);
             case 'joke' : return new Joke(word,room,x,y);
+            case 'ore' : return new Ore(word,room,x,y);
             case 'roc' : return new Roc(word,room,x,y);
             case 'rock' : return new Rock(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
@@ -178,7 +218,7 @@ getLevelFunctions['cordon-joker'] = function() {
     level.initialThings = [ ['cauldron','room1',15,70], ['cordon','room1',65,57],['joker','room2',60,70] ];
     // level.targetThing = 'rock';
     level.immovableObjects = ['condor','condo','cordon','cauldron','donor','jock','roc'];
-    level.bonusWords = ['codon', 'donor', 'jock', 'ore', 'roc', 'roe']
+    level.bonusWords = ['codon', 'donor', 'jock', 'ore', 'roe']
     level.initialRunes = [];
     level.sounds = { 'condor' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/362426__tec-studio__brd-hawk.wav') };
 
