@@ -4,7 +4,15 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
+implement "bonus word" message as a GameElement so that you can put animation around it.
+
+think how you can use css to draw attention to new messages (also get a good notification sound)
+
 investigate ways of dragging/dropping objects. takes place of double-click. same distinction between movable/immovable objects. one big advantage is you have a more intuitive procedure for "using one thing on/against/with another thing". tools become more appealing for puzzles.
+
+keep track of z-order of objects ... might need two separate arrays, things behind player and things in front of player? or one array with things and player included?
+
+redraw runes
 
 different sounds for different spells?
 
@@ -16,11 +24,8 @@ possibly put messages into an invisible div & let them just fit in sequentially
 
 consider marking words not necessary for level-solving as "bonus words". this would be a way to make red-herring words come across as positive, rather than as annoyances. exact definition might be tricky. can't just be "there exists a solution that doesn't involve the word", because could be two equally good (to be precise, say equally long) solutions to the level. more likely -- "any solution that involves this word could be simplified to remove it," but might be annoying to program automatic way to detect this.
 
-when changing object in inventory, don't change inventory order
-
 look up promise architecture (for images loading) and async/await just to be aware of it.
 
-notification sound for messages and an initial visual effect to draw attention
 
 
 PHASE 2 STUFF:
@@ -38,6 +43,8 @@ Music promoted by Audio Library https://youtu.be/7-rXQALDv-4
 
 sound from freesound.org, ...
 
+
+door opening ... https://freesound.org/s/632128/
 knock ... https://freesound.org/s/447075/
 notification ... https://freesound.org/s/316798/
 bear growl ... https://freesound.org/s/345733/

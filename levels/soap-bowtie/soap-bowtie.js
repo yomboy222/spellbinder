@@ -109,16 +109,17 @@ getLevelFunctions['soap-bowtie'] = function() {
         }
     }
     level.initialRoom = 'room1';
-    level.initialX = 55; // expressed as % of way across x axis, i.e. value range is 0-100
-    level.initialY = 55;
+    level.initialX = 45; // expressed as % of way across x axis, i.e. value range is 0-100
+    level.initialY = 75;
     level.initialSpells = [ 'remove-letter', 'change-letter' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
+    level.giveRoomsRandomBackgroundsUnlessSpecified = true;
     level.allWords = [ 'aster','bacon','beacon','bootie','bowtie','eater','ester','fence','hammock','hater','hoe','hummock','paw','pea','pew','sap','saw','sea','soap','spa','treasure','water' ];
-    level.initialThings = [ ['bowtie','room1',34,40],['soap','room1',42,78],['fence','room1',72,50],
-        ['hater','room2',50,50],
-        ['beacon','room3',45,24],['hummock','room3',71,50],
-        ['treasure','room4',40,65] ];
+    level.initialThings = [ ['bowtie','room1',19,67],['soap','room1',30,82],['fence','room1',72,75],
+        ['hater','room2',50,80],
+        ['beacon','room3',45,55],['hummock','room3',71,82],
+        ['treasure','room4',40,69] ];
     level.immovableObjects = [ 'beacon','fence','hammock','hater','hummock','pew','spa','sea','water'  ];
     level.bonusWords = [ 'aster','eater','ester','hoe','pea','sea','spa', ];
     level.targetThing = 'treasure';
@@ -129,27 +130,27 @@ getLevelFunctions['soap-bowtie'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 30, 50, 'fence', PASSAGE_STATE_BLOCKED, 64, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 75, 'room2', 10, 75, true, 30, 75, 'fence', PASSAGE_STATE_BLOCKED, 64, 75)],
         },
         'room2': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room3', 10, 50, true, 40, 50, 'hater', PASSAGE_STATE_BLOCKED, 40, 50),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room1', 90, 50, true, 50, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 75, 'room3', 10, 75, true, 35, 75, 'hater', PASSAGE_STATE_BLOCKED, 40, 75),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 75, 'room1', 90, 75, true, 50, 75)],
         },
         'room3': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room4', 10, 50, true, 50, 50, 'hummock', PASSAGE_STATE_BLOCKED, 64, 50),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room2', 90, 50, true, 70, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 75, 'room4', 10, 75, true, 50, 75, 'hummock', PASSAGE_STATE_BLOCKED, 64, 75),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 75, 'room2', 90, 75, true, 70, 75)],
         },
         'room4': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room3', 90, 50, true, 50, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 75, 'room3', 90, 75, true, 50, 75)],
         },
     };
     return level;

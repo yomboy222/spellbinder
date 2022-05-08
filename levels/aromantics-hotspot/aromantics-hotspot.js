@@ -25,22 +25,32 @@ getLevelFunctions['aromantics-hotspot'] = function() {
 
         window.Armoire = class Armoire extends Thing {
             handleClick(e) {
+                if (level.armoireOpen === true) {
+                    return false; // indicated not handled, so passage underneath can handle.
+                }
                 level.sounds['knock'].play();
                 if (level.tapestryClickCount >= 3) {
                     level.armoireClickCount++;
-                    if (level.armoireClickCount === 3 && level.armoireOpen === false) {
+                    console.log('a=' + level.armoireClickCount.toString() + ', t=' + level.tapestryClickCount.toString());
+                    if (level.armoireClickCount >= 3 && level.armoireOpen === false) {
+                        /* todo: sound here */
                         // change armoire image to open.
                         level.armoireOpen = true;
-                        let newPassage = new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'N', 75, 50, 'secret room', 50, 90, true, 50, 50);
+                        level.sounds['open door'].play();
+                        this.useAnimationImages = true; // open version stored as animation image armoire_0.png
+                        this.frameDisplayTimeMS = 0; // by convention this signals to never change frame
+                        let newPassage = new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'N', 75, 75, 'secret room', 50, 75, true, 50, 75);
                         passages.push(newPassage);
                         rooms[currentRoom].passages.push(newPassage);
+                        return true; // indicating handled here
                     }
                 }
                 else {
                     level.armoireClickCount = 0;
                     level.tapestryClickCount = 0;
+                    return false; // indicated not handled, so passage underneath can handle.
                 }
-                console.log('a=' + level.armoireClickCount.toString() + ', t=' + level.tapestryClickCount.toString());
+
             }
             handleDblclick(e) {
                 return false;
@@ -49,6 +59,13 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 return false;
             }
 
+        }
+
+        window.Aromantics = class Aromantics extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.wordDisplayOffsetY = 2; // to keep from going too far down / into inventory area
+            }
         }
 
         window.Aromatics = class Aromatics extends Thing {
@@ -212,8 +229,8 @@ getLevelFunctions['aromantics-hotspot'] = function() {
         window.Tit = class Tit extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
-                this.startFlight();
                 this.useAnimationImages = false;
+                this.startFlight();
             }
 
             stopAnimating() {
@@ -222,11 +239,21 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             }
 
             startFlight() {
+                // failsafe (should never occur):
+                if (!('armoire' in thingsHere)) {
+                    // try again in a second
+                    window.setTimeout(this.startFlight.bind(this), 1000);
+                    return;
+                }
+                let armoire = thingsHere['armoire'];
+                let midpoint = armoire.x;
+                let range = 170;
                 this.useAnimationImages = true; // wing-flapping while flying
                 this.initialX = this.x;
                 this.initialY = this.y;
-                this.destY = this.y;
-                this.destX = canvasOffsetX + (CANVAS_WIDTH / 2) + Math.round( Math.random() * CANVAS_WIDTH / 2.3);
+                this.destY = armoire.y - armoire.halfHeight;
+                this.destX = Math.round( midpoint + (range * Math.random()) - (range / 2) );
+                // console.log(this.destX);
                 this.movementType = MOVEMENT_TYPE_PARABOLIC;
                 this.movementDurationMS = 500 + Math.round(Math.abs(this.x - this.destX) * 2);
                 this.beginMovementTime = Date.now();
@@ -242,6 +269,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     level.getThing = function(word,room,x,y) {
         switch (word) {
             case 'armoire' : return new Armoire(word,room,x,y);
+            case 'aromantics' : return new Aromantics(word,room,x,y);
             case 'aromatics' : return new Aromatics(word,room,x,y);
             case 'hint' : return new Hint(word,room,x,y);
             case 'hotpot' : return new Hotpot(word,room,x,y);
@@ -250,6 +278,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             case 'lambkins': return new Lambkin(word,room,x,y);
             case 'robot' : return new Robot(word,room,x,y);
             case 'robots' : return new Robot(word,room,x,y);
+            case 'romantics' : return new Aromantics(word,room,x,y);
             case 'tit' : return new Tit(word,room,x,y);
             case 'tapestry' : return new Tapestry(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
@@ -261,25 +290,26 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     }
 
     level.initialRoom = 'room1';
-    level.initialX = 38; // expressed as % of way across x axis, i.e. value range is 0-100
-    level.initialY = 35;
+    level.initialX = 45; // expressed as % of way across x axis, i.e. value range is 0-100
+    level.initialY = 68;
     level.initialSpells = [ 'add-letter-nfs', 'remove-letter-nfs', 'change-letter-nfs' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
+    level.giveRoomsRandomBackgroundsUnlessSpecified = true;
     level.allWords = ['treasure', 'aromantics', 'aromatics', 'hotpot', 'hotspot', 'manifest', 'manifesto', 'romantics',
         'boor', 'boot', 'booth', 'bot', 'broth', 'robot', 'roost', 'root', 'rot', 'shoot', 'shot', 'soot',
         'lambkin', 'lambskin', 'godzilloid',
         'tit','tint','tin','nit','hint',
     ];
-    level.initialThings = [ ['aromantics','room1',42,72],['hotspot','room1',64,40],['lambkin','room1',18,50],['godzilloid','room1',81,75],
+    level.initialThings = [ ['aromantics','room1',42,87],['hotspot','room1',64,76],['lambkin','room1',18,80],['godzilloid','room1',81,80],
         ['manifesto','room3',48,65],
-        ['tit','room2',65,25], ['armoire','room2',75,50], ['tapestry','room2',25,50],
-        ['treasure','secret room',50,50]
+        ['armoire','room2',75,62], ['tapestry','room2',25,40], ['tit','room2',65,25],
+        ['treasure','secret room',40,70]
     ];
     level.immovableObjects = ['aromantics', 'hotpot', 'hotpot', 'hotspot', 'hotspot','manifest','manifesto','romantics',
         'boor', 'booth', 'broth', 'robot', 'roost', 'lambkin', 'godzilloid',
-        'tit', 'hint'];
-    level.bonusWords = ['romantics', 'boor', 'bot', 'roost', 'rot', 'shoot', 'shot', 'soot', 'tin', 'nit'];
+        'tit', ];
+    level.bonusWords = ['romantics', 'boor', 'bot', 'roost', 'rot', 'shoot', 'shot', 'soot', 'nit'];
     level.targetThing = 'treasure';
     level.initialRunes = []; // ['h','t','n'];
     level.initialMessage = 'You need something to battle the Godzilloid!';
@@ -289,21 +319,24 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     level.armoireClickCount = 0;
     level.lastArmoireClickTime = 0;
     level.armoireOpen = false;
-    level.sounds = { 'knock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/447075__sol5__golpe-mesa-nina.wav'), };
+    level.sounds = {
+        'knock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/447075__sol5__golpe-mesa-nina.wav'),
+        'open door': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/632128__audacitier__door-opening.mp3'),
+    };
 
     level.rooms = {
         'room1': {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 3, 50, 'room3', 90, 50, true, 65,50, 'lambkin', PASSAGE_STATE_BLOCKED, 20, 50 ),
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 70, 'room2', 10, 70, true, 50, 75, 'godzilloid', PASSAGE_STATE_BLOCKED, 77, 65)],
+                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 3, 75, 'room3', 90, 75, true, 65,75, 'lambkin', PASSAGE_STATE_BLOCKED, 20, 75 ),
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 70, 'room2', 10, 75, true, 50, 75, 'godzilloid', PASSAGE_STATE_BLOCKED, 77, 75)],
         },
         'room2': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room1', 90, 70, true, 36, 50)
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 68, 'room1', 90, 68, true, 45, 68)
             ],
             specificNewRoomBehavior: function() {
                 if ('tit' in thingsHere)
@@ -314,14 +347,14 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97,50,'room1',10,50, true, 38, 35)
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97,75,'room1',10,75, true, 38, 75)
             ]
         },
         'secret room': {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'S',50,97,'room2',50,10, true, 50, 50)
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'S',50,97,'room2',75,75, true, 50, 75)
             ]
         }
     };

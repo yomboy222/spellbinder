@@ -24,8 +24,8 @@ const PASSAGE_STATE_INACTIVE = 0; const PASSAGE_STATE_BLOCKED = 1; const PASSAGE
 let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
 let binderIconLeft = 0;
-const PLAYER_HEIGHT = 120;
-const PLAYER_WIDTH = 80;
+const PLAYER_HEIGHT = 160;
+const PLAYER_WIDTH = 106;
 let EXTRA_SPELL_RADIUS = 260; // currently don't want to make distance an issue. in the future might need to reduce this though.
 const EXTRA_PICKUP_RADIUS = 60;
 const MIN_HALFWIDTH = 20;
@@ -76,6 +76,7 @@ let arrowsAlpha = 0;
 let arrowsAlphaLookupTable = [];
 let sounds = {};
 let backgroundImage = new Image();
+const NUMBER_OF_DEFAULT_ROOM_BACKGROUNDS = 3;
 let backgroundMusic = undefined;
 let musicPlaying = false;
 let okayToPlayMusic = true;
@@ -150,9 +151,6 @@ class Level {
         this.keydownFunction = function(e) {
             return false; // false indicates keydown event not handled here
         };
-        this.clickHandlerFunction = function(xWithinCanvas,yWithinCanvas) {
-            return false; // false indicates click event not handled here
-        };
         this.levelCompleteMessage = 'Congratulations, you completed the level! Close this message to return to home screen.';
     }
 }
@@ -175,6 +173,7 @@ class GameElement {
         this.soundToPlayAfterMovement = undefined;
         this.messageToDisplayAfterMovement = undefined;
         this.deleteAfterMovement = false;
+        this.baseYOverride = undefined; // can be used to affect "layer" of drawing relative to player.
     }
     inRangeOfPlayer(extraRadius = 0) {
         let deltaX = this.x - player.x;
@@ -347,6 +346,7 @@ class Thing extends GameElement {
         this.captionLeftEdgeWithinCanvas = undefined;
         this.captionTopEdgeWithinCanvas = undefined;
         this.inventoryImageRatio = 1.7; // factor by which to reduce each dimension when drawing in inventory.
+        this.indexInInventory = undefined;
         this.playAudioWhenTransformed = true;
         this.sound = undefined; // used for thing's primary sound. will be stopped if/when player leaves room where it is.
         this.wordDisplayOffsetX = -18 - (4 * this.word.length); // where to set "left" property of captionDev rel. to this.x. subclasses may redefine.
@@ -434,11 +434,11 @@ class Thing extends GameElement {
         }
     }
 
-    dispose() {
+    dispose(recalculateInventoryIndexes = true) {
         this.unblockPassagesThisHadBeenBlocking();
         this.deleteCaptionIfAny();
         this.deleteFromThingsHere();
-        this.removeFromInventory();
+        this.removeFromInventory(recalculateInventoryIndexes); // will be false if just replacing this with a new object as result of spell
     }
 
     setMovement(destX, destY, duration, initialX = undefined, initialY = undefined, suppressInputDuringMovement = false) {
@@ -475,12 +475,14 @@ class Thing extends GameElement {
             ctx.globalAlpha = newAlpha;
         }
         if (this.useAnimationImages) {
-            if (Date.now() > this.whenToSwitchAnimationImages) {
-                this.currentAnimationIndex++;
-                if (this.currentAnimationIndex >= this.images.length) {
-                    this.currentAnimationIndex = 0;
+            if (this.frameDisplayTimeMS > 0) { // by convention we'll set this to zero for cases when we want to switch image but not actually animate.
+                if (Date.now() > this.whenToSwitchAnimationImages) {
+                    this.currentAnimationIndex++;
+                    if (this.currentAnimationIndex >= this.images.length) {
+                        this.currentAnimationIndex = 0;
+                    }
+                    this.whenToSwitchAnimationImages = Date.now() + this.frameDisplayTimeMS;
                 }
-                this.whenToSwitchAnimationImages = Date.now() + this.frameDisplayTimeMS;
             }
             ctx.drawImage(this.images[this.currentAnimationIndex], this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
         }
@@ -494,17 +496,24 @@ class Thing extends GameElement {
         ctx.globalAlpha = 1.0;
     }
 
-    setCoordinatesInInventory(index) {
-        this.x = (index * INVENTORY_SPACING) + INVENTORY_LEFT_MARGIN;
+    setCoordinatesInInventory() {
+        this.x = (this.indexInInventory * INVENTORY_SPACING) + INVENTORY_LEFT_MARGIN;
         this.y = INVENTORY_TOP + INVENTORY_TOP_MARGIN;
     }
 
     //TODO: FADEIN / FADEOUT OF INVENTORY ITEMS
-    drawInInventory(index) {
-        this.setCoordinatesInInventory(index);
-        ctx.drawImage(this.image, this.x - (this.halfWidth / this.inventoryImageRatio), this.y - (this.halfHeight / this.inventoryImageRatio),
-            this.width / this.inventoryImageRatio,
-            this.height / this.inventoryImageRatio);
+    drawInInventory() {
+        this.setCoordinatesInInventory();
+        if (this.plural) {
+            ctx.drawImage(this.image, this.x - (this.halfWidth / this.inventoryImageRatio) - 10, this.y - (this.halfHeight / this.inventoryImageRatio) - 10,
+                this.width / this.inventoryImageRatio, this.height / this.inventoryImageRatio);
+            ctx.drawImage(this.image, this.x - (this.halfWidth / this.inventoryImageRatio) + 10, this.y - (this.halfHeight / this.inventoryImageRatio) + 10,
+                this.width / this.inventoryImageRatio, this.height / this.inventoryImageRatio);
+        } else {
+            ctx.drawImage(this.image, this.x - (this.halfWidth / this.inventoryImageRatio), this.y - (this.halfHeight / this.inventoryImageRatio),
+                this.width / this.inventoryImageRatio,
+                this.height / this.inventoryImageRatio);
+        }
     }
 
     extraPickUpBehavior() {}
@@ -521,7 +530,8 @@ class Thing extends GameElement {
                 if (!suppressSound)
                     sounds['pickup'].play();
                 inventory[this.word] = this;
-                this.setCoordinatesInInventory(Object.keys(inventory).length - 1);
+                this.indexInInventory = Object.keys(inventory).length - 1;
+                this.setCoordinatesInInventory(this.indexInInventory);
                 this.moveCaptionDivIfAnyToInventory();
                 delete thingsHere[this.word];
                 if (typeof level.targetThing === 'string' && level.targetThing === this.word)
@@ -534,10 +544,29 @@ class Thing extends GameElement {
         }
     }
 
-    removeFromInventory() {
+    removeFromInventory(recalculateAllIndexes = true) {
         // note this is a *subset* of "discard" behavior, in fact discard() calls this method.
         // discard() furthermore moves the thing into thingsHere; but this is not always desired (like when throwing darts e.g.)
+
+        //failsafe:
+        if (!this.word in inventory)
+            return;
+
+        if (recalculateAllIndexes) {
+            for (let key in inventory) {
+                let otherThing = inventory[key];
+                console.log(otherThing);
+                console.log(otherThing.indexInInventory.toString());
+                if (otherThing.indexInInventory > this.indexInInventory) {
+                    otherThing.indexInInventory--;
+                }
+                console.log(otherThing.word + ' ' + otherThing.indexInInventory.toString());
+            }
+        }
+
         delete inventory[this.word];
+        this.indexInInventory = undefined;
+
         window.setTimeout(function () {
                 repositionInventoryItems();
                 drawInventory();
@@ -603,6 +632,9 @@ class Thing extends GameElement {
         if (typeof this.captionDiv != 'undefined') {
             this.captionDiv.classList.remove('in-inventory');
             this.captionTopEdgeWithinCanvas = this.y + canvasOffsetY + this.wordDisplayOffsetY;
+            // prevent going off bottom edge:
+            if (this.captionTopEdgeWithinCanvas >= canvasOffsetY + PLAY_AREA_HEIGHT - 60)
+                this.captionTopEdgeWithinCanvas = canvasOffsetY + PLAY_AREA_HEIGHT - 60;
             this.captionLeftEdgeWithinCanvas = this.x + canvasOffsetX + this.wordDisplayOffsetX;
             this.captionDiv.style.top = this.captionTopEdgeWithinCanvas.toString() + 'px';
             this.captionDiv.style.left = this.captionLeftEdgeWithinCanvas.toString() + 'px';
@@ -1189,6 +1221,7 @@ function castSpell() {
     if (!sourceThing.checkIfOkayToTransform())
         return;
 
+    // ********************************************
     // *** if we got here then the spell worked ***
 
     registerWordForScoringPurposes(toWord);
@@ -1248,29 +1281,20 @@ function executeTransformation() {
     let inInventory = (sourceThing.word in inventory);
 
     sourceThing.deactivateObstacle();
-
     sourceThing.extraTransformFromBehavior();
-
-    // if old thing has caption div (under current thinking, it always will) remove references to it / delete it:
-    if (typeof sourceThing.captionDiv !== 'undefined') {
-        sourceThing.captionDiv.remove();
-        sourceThing.captionDiv = undefined;
-    }
 
     if (sourceThing.playAudioWhenTransformed === true)
         sounds['spell'].play();
 
     // remove the source thing:
-    if (inInventory)
-        delete inventory[fromWord];
-    else
-        delete thingsHere[fromWord];
+    let thingToDelete = (inInventory) ? inventory[fromWord] : thingsHere[fromWord];
 
     // note that as of this comment, getThingButPossiblySubclass is in word_data.js,
     // also note "false" here means treat x and y as actual coordinates rather than percentages:
     let newObject = getThing(toWord, currentRoom, sourceThing.x, sourceThing.y, false);
 
     if (inInventory) {
+        newObject.indexInInventory = sourceThing.indexInInventory;
         inventory[toWord] = newObject;
     }
     else {
@@ -1281,6 +1305,8 @@ function executeTransformation() {
         newObject.discard();
         inInventory = false;
     }
+
+    thingToDelete.dispose(false);
 
     repositionInventoryItems();
     drawInventory();
@@ -1303,11 +1329,9 @@ function executeTransformation() {
 }
 
 function repositionInventoryItems() {
-    let index = 0;
     for (let [word, thing] of Object.entries(inventory)) {
-        thing.setCoordinatesInInventory(index);
+        thing.setCoordinatesInInventory();
         thing.moveCaptionDivIfAnyToInventory();
-        index++;
     }
 }
 
@@ -1334,8 +1358,7 @@ function drawInventory() {
     ctx.stroke();
     let index = 0;
     for (let [word, thing] of Object.entries(inventory)) {
-        thing.drawInInventory(index);
-        index++;
+        thing.drawInInventory();
     }
     for (let i = 0; i < runes.length; i++)
     {
@@ -1421,7 +1444,7 @@ function animate() {
 
     // clear and draw background for current room:
     ctx.clearRect(0, 0,  PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
-    if (typeof backgroundImage === 'object') {
+    if (typeof backgroundImage === 'object' && backgroundImage !== null && backgroundImage.complete && backgroundImage.naturalWidth != 0) {
         ctx.drawImage(backgroundImage, 0, 0);
     }
     // fill all filledPolygons if any:
@@ -1467,19 +1490,29 @@ function animate() {
         ctx.stroke();
     }
 
-    // draw the non-invisible passages in current room
-    for (let i = 0; i < passages.length; i++) {
-        passages[i].draw();
-    }
-
-    // draw all things sitting in current room
+    // update all things sitting in current room, and draw those "behind" player (judged by y value of their "base", usually y + halfHeight)
+    playerBaseY = player.y + player.halfHeight;
     for (let [word, thing] of Object.entries(thingsHere)) {
         thing.update();
-        thing.draw();
+        thingBaseY = (typeof thing.baseYOverride === 'undefined') ? thing.y + thing.halfHeight : thing.baseYOverride;
+        if (thingBaseY < playerBaseY)
+            thing.draw();
     }
 
     player.update();
     player.draw();
+
+    // draw all things sitting in current room "in front of" player (judged by y value)
+    for (let [word, thing] of Object.entries(thingsHere)) {
+        thingBaseY = (typeof thing.baseYOverride === 'undefined') ? thing.y + thing.halfHeight : thing.baseYOverride;
+        if (thingBaseY >= playerBaseY)
+            thing.draw();
+    }
+
+    // draw the non-invisible passages in current room
+    for (let i = 0; i < passages.length; i++) {
+        passages[i].draw();
+    }
 
     if (pageBeingShownInBinder != '') {
         if (pageBeingShownInBinder === allSpells.BINDER_COVER)
@@ -1617,13 +1650,7 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
         passages.push(p);
     }
 
-    if (typeof roomData.backgroundImageName !== 'undefined') {
-        backgroundImage = new Image();
-        backgroundImage.src = levelPath + '/rooms/' + newRoomName.replace(' ','_') + '/' + roomData.backgroundImageName;
-    }
-    else {
-        backgroundImage = undefined;
-    }
+    backgroundImage = roomData.backgroundImage;
 
     filledPolygons = [];
     if (typeof roomData.filledPolygons !== 'undefined') {
@@ -1680,6 +1707,22 @@ function getLevelPathFromFolderName(folderName) {
     return 'levels/' + folderName;
 }
 
+function handleMissingExplicitRoomBackground(imageObject,imageNameRoot,numberOfDefaultBackgroundsOfRelevantType) {
+    /* todo ... prevent duplicate use within a level */
+    let imageIndex = Math.round(Math.random() * numberOfDefaultBackgroundsOfRelevantType);
+    imageObject.src = 'imgs/reusable_backgrounds/' + imageNameRoot + imageIndex.toString() + '.png';
+}
+
+function handleMissingRoomBackgroundBothDirections() { // "this" will be bound to the background image object.
+    return handleMissingExplicitRoomBackground(this,'room',NUMBER_OF_DEFAULT_ROOM_BACKGROUNDS);
+}
+function handleMissingRoomBackgroundEastExit() {  // "this" will be bound to the background image object.
+    return handleMissingExplicitRoomBackground(this,'RoomExitE_',2);
+}
+function handleMissingRoomBackgroundWestExit() {  // "this" will be bound to the background image object.
+    return handleMissingExplicitRoomBackground(this,'RoomExitW_',2);
+}
+
 function loadLevel(lName = 'intro level') {
     console.log('loading level ' + lName);
     canvas.style.display = 'block';
@@ -1733,6 +1776,32 @@ function loadLevel(lName = 'intro level') {
             }
         }
         thingsElsewhere[key] = getThing(objectData[i][0], objectData[i][1], objectData[i][2], objectData[i][3]);
+    }
+
+    for (roomName in rooms) {
+        let hasWestExit = false;
+        let hasEastExit = false;
+        let passages = rooms[roomName].passages;
+        for (let i=0; i<passages.length; i++) {
+            if (passages[i].direction === 'W')
+                hasWestExit = true;
+            if (passages[i].direction === 'E')
+                hasEastExit = true;
+        }
+
+        console.log('roomName ' + hasWestExit.toString() + ' ' + hasEastExit.toString());
+
+        rooms[roomName].backgroundImage = new Image(PLAY_AREA_WIDTH,PLAY_AREA_HEIGHT);
+        if (hasWestExit && hasEastExit)
+            rooms[roomName].backgroundImage.onerror = handleMissingRoomBackgroundBothDirections.bind(rooms[roomName].backgroundImage);
+        else if (hasWestExit)
+            rooms[roomName].backgroundImage.onerror = handleMissingRoomBackgroundWestExit.bind(rooms[roomName].backgroundImage);
+        else if (hasEastExit)
+            rooms[roomName].backgroundImage.onerror = handleMissingRoomBackgroundEastExit.bind(rooms[roomName].backgroundImage);
+        else
+            rooms[roomName].backgroundImage.onerror = handleMissingRoomBackgroundBothDirections.bind(rooms[roomName].backgroundImage); // by default; now check other cases...
+
+        rooms[roomName].backgroundImage.src = levelPath + '/rooms/' + roomName.replace(' ','_') + '.png';
     }
 
     let spellListHtml = 'Spells in Binder:<br/>';
@@ -1893,13 +1962,13 @@ function checkIfClickWasMadeDouble() {
 }
 
 function handleClick(e) {
-    console.log(e);
+    // console.log(e);
 
     if (typeof e.target !== 'undefined' && typeof e.target.tagName !== undefined) {
         let tagName = e.target.tagName.toLowerCase();
-        console.log(tagName);
+        // console.log(tagName);
         if (!(tagName.startsWith('canvas') || tagName.startsWith('div'))) {  // "div" here for caption divs, but may want to give those divs their own onclick behavior to open spell form
-            console.log('returning without setting timeout to checkIfClickWasMadeDouble');
+            // console.log('returning without setting timeout to checkIfClickWasMadeDouble');
             return; // if clicking on an html link or button, this javascript should ignore it:
         }
     }
@@ -1922,7 +1991,6 @@ function handleClick(e) {
         return processSingleOrDoubleClick(e, true);
     }
     if (!showingIntroPage) {
-        console.log('heeeee');
         initialClickEvent = e;
         lastClickTime = Date.now();
         window.setTimeout(checkIfClickWasMadeDouble, MAX_DOUBLE_CLICK_TIME_SEPARATION);
@@ -1952,11 +2020,6 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
     let xWithinCanvas = e.x - canvasOffsetX;
     let yWithinCanvas = e.y - canvasOffsetY;
 
-    // first see if level-specific code says it will handle the click:
-    if (level.clickHandlerFunction(xWithinCanvas,yWithinCanvas) === true) {
-        return;
-    }
-
     for ([word, thing] of Object.entries(inventory)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             if (doubleRatherThanSingle)
@@ -1965,6 +2028,8 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
                 thing.handleClick(e);
     }
 
+    let handled = false;
+
     messageToDisplayIfNothingHandlesSuccessfully = '';
     for ([word, thing] of Object.entries(thingsHere)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
@@ -1972,6 +2037,7 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
                 let result = thing.handleDblclick(e);
                 if (typeof result === 'boolean' && result === true) {
                     messageToDisplayIfNothingHandlesSuccessfully = '';
+                    handled = true;
                     break; // at most one thing should successfully handle dbl click
                 }
                 else if (typeof result === 'string') {
@@ -1979,17 +2045,22 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
                 }
             }
             else {
-                thing.handleClick();
-                break; // at most one thing should successfully handle click
+                let result = thing.handleClick();
+                if (typeof result === 'boolean' && result === true) {
+                    handled = true;
+                }
+                // at most one thing should handle click
             }
     }
     if (messageToDisplayIfNothingHandlesSuccessfully !== '') {
         displayMessageWithSound(messageToDisplayIfNothingHandlesSuccessfully, sounds['failure'], 2 * DEFAULT_MESSAGE_DURATION);
     }
 
-    for (i = 0; i < passages.length; i++) {
-        if (passages[i].occupiesPoint(xWithinCanvas, yWithinCanvas))
-            passages[i].handleClick();
+    if (!handled) {
+        for (let i = 0; i < passages.length; i++) {
+            if (passages[i].occupiesPoint(xWithinCanvas, yWithinCanvas))
+                passages[i].handleClick();
+        }
     }
 
     drawInventory(); // important not to call this in individual Things' implementations of handleClick()!

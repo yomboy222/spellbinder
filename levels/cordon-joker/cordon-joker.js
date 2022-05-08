@@ -16,8 +16,9 @@ getLevelFunctions['cordon-joker'] = function() {
         window.Cauldron = class Cauldron extends Thing {
             constructor(word, room, x, y) {
                 super(word, room, x, y);
+                this.numberOfBubbles = 10;
                 this.bubbles = [];
-                for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < this.numberOfBubbles; i++) {
                     let bubble = this.getRandomBubbleData();
                     this.bubbles.push(bubble);
                 }
@@ -40,7 +41,7 @@ getLevelFunctions['cordon-joker'] = function() {
             update() {
                 super.update();
                 let now = Date.now();
-                for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < this.numberOfBubbles; i++) {
                     this.bubbles[i].y -= this.bubbles[i].delta;
                     if (now > this.bubbles[i].timeToPop) {
                         this.bubbles[i] = this.getRandomBubbleData();
@@ -52,7 +53,7 @@ getLevelFunctions['cordon-joker'] = function() {
                 super.draw();
                 ctx.strokeStyle = 'purple';
                 ctx.lineWidth = 2;
-                for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < this.numberOfBubbles; i++) {
                     ctx.beginPath();
                     ctx.arc(this.bubbles[i].x, this.bubbles[i].y, this.bubbles[i].radius, 0, 2 * Math.PI);
                     ctx.stroke();
@@ -61,6 +62,11 @@ getLevelFunctions['cordon-joker'] = function() {
         }
 
         window.Condo = class Condo extends Thing {
+            constructor(word, room, x, y) {
+                super(word, room, x, y);
+                // this.wordDisplayOffsetY = 10;
+            }
+
             extraTransformIntoBehavior() {
                 passages[0].obstacle = 'condo';
                 passages[0].state = PASSAGE_STATE_BLOCKED;
@@ -147,7 +153,7 @@ getLevelFunctions['cordon-joker'] = function() {
                 }
                 else {
                     this.alreadyBeenInCauldron = true;
-                    displayMessage('Excellent! But see if you can obtain a real "rock" for the cauldron too.');
+                    displayMessage('Excellent! But please put a real "rock" in the cauldron.');
                     this.visible = false;
                     window.setTimeout(this.spitBackOut.bind(this), 1800);
                 }
@@ -208,14 +214,14 @@ getLevelFunctions['cordon-joker'] = function() {
     }
     level.initialRoom = 'room1';
     level.initialX = 40; // expressed as % of way across x axis, i.e. value range is 0-100
-    level.initialY = 55;
+    level.initialY = 76;
     level.initialSpells = [ 'anagram', 'remove-edge', 'add-edge', 'change-letter' ];
     level.initialInventory = {};
     level.initialMessage = "To complete Gombrecht's potion, add a rock to the cauldron!";
     level.backgroundMusicFile = 'IMSLP111573-PMLP01846-M%C3%BAsica_Cl%C3%A1sica_-_Rondo_Alla_Turca._Wolfgang_Amadeus_Mozart.mp3'; // IMSLP76367-PMLP02397-onclassical_salvatori_debussy_suite_iv.mp3';
     level.allWords = [ 'cauldron','codon','coke','condo','condor','cordon',
         'core','cork','donor','jock','joke','joker','ore','roc','rock','roe','rondo' ];
-    level.initialThings = [ ['cauldron','room1',15,70], ['cordon','room1',65,57],['joker','room2',60,70] ];
+    level.initialThings = [ ['cauldron','room1',15,76], ['cordon','room1',65,76],['joker','room2',60,72] ];
     // level.targetThing = 'rock';
     level.immovableObjects = ['condor','condo','cordon','cauldron','donor','jock','roc'];
     level.bonusWords = ['codon', 'donor', 'jock', 'ore', 'roe']
@@ -228,13 +234,13 @@ getLevelFunctions['cordon-joker'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 50, 'room2', 10, 50, true, 50, 50, 'cordon', PASSAGE_STATE_BLOCKED, 63, 55)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 76, 'room2', 10, 76, true, 46, 76, 'cordon', PASSAGE_STATE_BLOCKED, 63, 76)],
         },
         'room2': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room1', 90, 50, true, 50, 50)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 76, 'room1', 90, 76, true, 50, 76)],
         },
     };
     return level;
