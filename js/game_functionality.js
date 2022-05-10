@@ -51,6 +51,7 @@ let wordsFound = [];
 let thingsElsewhere = {};
 let inventory = {};
 let thingsHere = {};
+let zOrderStack = []; // contains all GameObjects in room, in order in which they should be drawn on screen
 let spellsAvailable = [];
 let spellNamesOnScreen = [];
 let runes = [];
@@ -93,6 +94,7 @@ const FADEOUT_DURATION_MS = 1200;
 let fadeinTimer = 0;
 let fadeinWord = '';
 let frameCounter = 0;
+const NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE = 100;
 let showingIntroPage = true;
 let showingSpellInput = false;
 let levelComplete = false;
@@ -139,6 +141,7 @@ class Level {
         this.initialRunes = [];
         this.rooms = {};
         this.sounds = {};
+        this.completionBonus = 10;
         this.defineThingSubclasses = function() {};
         this.getThing = function(word,room,x,y) {
             return undefined; // undefined indicates no special Thing subclass for this word
@@ -173,7 +176,6 @@ class GameElement {
         this.soundToPlayAfterMovement = undefined;
         this.messageToDisplayAfterMovement = undefined;
         this.deleteAfterMovement = false;
-        this.baseYOverride = undefined; // can be used to affect "layer" of drawing relative to player.
     }
     inRangeOfPlayer(extraRadius = 0) {
         let deltaX = this.x - player.x;
@@ -243,6 +245,12 @@ class GameElement {
     }
     handleDblclick(e) {
         return false; // meaning that this object didn't actually handle the dblclick.
+    }
+    getBaseY() { // where the object is "planted" in the room, for purposes of calculating z-orders. larger baseY = nearer top of order
+        console.log(this.word);
+        let baseY = this.y + this.halfHeight;
+        console.log(baseY);
+        return baseY;
     }
 }
 
@@ -408,13 +416,12 @@ class Thing extends GameElement {
         this.allAnimationImagesLoaded = true;
     }
 
-    deleteFromThingsHere() {
-        this.deleteCaptionIfAny();
-        for (let [word, thing] of Object.entries(thingsHere)) {
-            if (thing === this) {
-                delete thingsHere[word];
-            }
-        }
+    deleteFromThingsHere(deleteCaptionToo = true, recalculateZOrder = true) {
+        if (deleteCaptionToo)
+            this.deleteCaptionIfAny();
+        delete thingsHere[this.word];
+        if (recalculateZOrder)
+            regenerateZOrderStack();
     }
 
     deleteCaptionIfAny() {
@@ -533,6 +540,7 @@ class Thing extends GameElement {
                 this.indexInInventory = Object.keys(inventory).length - 1;
                 this.setCoordinatesInInventory(this.indexInInventory);
                 this.moveCaptionDivIfAnyToInventory();
+                this.deleteFromThingsHere(false); // "false" means don't delete the caption
                 delete thingsHere[this.word];
                 if (typeof level.targetThing === 'string' && level.targetThing === this.word)
                     completeLevel();
@@ -542,6 +550,15 @@ class Thing extends GameElement {
         } else {
             return false;
         }
+    }
+
+    putIntoThingsHere(recalculateZOrders = true) {
+        thingsHere[this.word] = this;
+        delete thingsElsewhere[this.word]; // may not have been in thingsElsewhere but do this anyway
+        this.room = currentRoom;
+        this.setCaptionPositionInThingsHere();
+        if (recalculateZOrders)
+            regenerateZOrderStack();
     }
 
     removeFromInventory(recalculateAllIndexes = true) {
@@ -576,7 +593,7 @@ class Thing extends GameElement {
 
     discard(suppressSound = false, xDistFromPlayer = undefined, yDistFromPlayer = undefined) {
         this.removeFromInventory();
-        this.room = currentRoom;
+
         if (typeof xDistFromPlayer !== 'undefined') {
             this.x = player.x + xDistFromPlayer;
             this.y = player.y + yDistFromPlayer;
@@ -595,8 +612,8 @@ class Thing extends GameElement {
                 this.x += distanceToToss;
         }
 
-        thingsHere[this.word] = this;
-        this.setCaptionPositionInThingsHere();
+        this.putIntoThingsHere();
+
         if (!suppressSound)
             sounds['pickup'].play();
         this.extraDiscardBehavior();
@@ -615,7 +632,6 @@ class Thing extends GameElement {
         }
         this.tryToPickUp(true);
     }
-
 
     moveCaptionDivIfAnyToInventory() {
         if (typeof this.captionDiv !== 'undefined') {
@@ -1127,12 +1143,16 @@ function getSpellToHighlight(spell) {
     return false; // not recognized case.
 }
 
+function refreshScore() {
+    document.getElementById("score-span").innerText = score.toString();
+}
+
 function registerWordForScoringPurposes(word) {
     if (wordsFound.indexOf(word) >= 0)
         return; // already found.
     score += word.length;
     wordsFound.push(word);
-    document.getElementById("score-span").innerText = score.toString();
+    refreshScore();
     if (typeof level.bonusWords !== 'undefined' && level.bonusWords.indexOf(word) >= 0) {
         displayMessage('Bonus word!', DEFAULT_MESSAGE_DURATION);
     }
@@ -1298,7 +1318,7 @@ function executeTransformation() {
         inventory[toWord] = newObject;
     }
     else {
-        thingsHere[toWord] = newObject;
+        newObject.putIntoThingsHere();
     }
 
     if (inInventory && !newObject.movable) {
@@ -1377,6 +1397,14 @@ function drawInventory() {
     }
 }
 
+// zOrderStack is array of all game elements (currently, player and thingsHere) in order in which to draw
+function regenerateZOrderStack() {
+    zOrderStack = [player];
+    for (key in thingsHere)
+        zOrderStack.push(thingsHere[key]);
+    zOrderStack.sort((a,b) => a.getBaseY() - b.getBaseY() );
+}
+
 function showBinder(page = allSpells.BINDER_COVER) {
     timeOfLastBinderOpening = Date.now();
     stopDisplayingMsg(true); // "true" forces all messages to stop displaying
@@ -1433,7 +1461,7 @@ function toggleMusic() {
 function animate() {
 
     frameCounter++;
-    if (frameCounter > 99)
+    if (frameCounter >= NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE)
         frameCounter = 0;
     arrowsAlpha = arrowsAlphaLookupTable[frameCounter];
 
@@ -1564,6 +1592,8 @@ function teleport() {
 
 function completeLevel() {
     levelComplete = true;
+    score += level.completionBonus;
+    refreshScore();
     sounds['fanfare'].play();
     if (typeof backgroundMusic === 'object') {
         backgroundMusic.pause();
@@ -1608,17 +1638,17 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     toggleSpellInputWindow(true); // closes spell input
 
     for (let [word, thing] of Object.entries(thingsHere)) {
-        thing.deleteCaptionIfAny();
+
         if (!thing.deleteAfterMovement) {
             thingsElsewhere[word] = thing;
         }
         if (typeof thing.sound === 'object') {
             thing.sound.pause();
         }
-        // todo: if a thing is movement and some method is supposed to called at end of movement,
-        // but the movement won't end because room was exited, should call that method now before deleting thingsHere[word].
+        thing.deleteFromThingsHere(true, false); // true,false means delete caption but don't recalculate z order now
 
-        delete thingsHere[word];
+        // todo: if a thing is in movement and some method is supposed to called at end of movement,
+        // but the movement won't end because room was exited, should call that method now before deleting thingsHere[word].
     }
 
     // delete any messages that don't have timeout set:
@@ -1631,8 +1661,7 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     currentRoom = newRoomName;
     for (let [word, thing] of Object.entries(thingsElsewhere)) {
         if (thing.room === currentRoom) {
-            thingsHere[word] = thing;
-            delete thingsElsewhere[word];
+            thing.putIntoThingsHere(false); // "false" so that it doesn't recalculate whole z-order stack for each thing; just do once at end of this loop
             // put up captions for all things in new word.
             if (thing.okayToDisplayWord()) {
                 thing.captionDiv = getNewCaptionDiv(thing.word);
@@ -1642,6 +1671,10 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     }
     player.x = newPlayerXAsPercent * xScaleFactor;
     player.y = newPlayerYAsPercent * yScaleFactor;
+
+    regenerateZOrderStack();
+
+    console.log(zOrderStack);
 
     let roomData = rooms[newRoomName];
     passages = [];
@@ -2146,10 +2179,9 @@ function initialize() {
     treasureImage.src = 'imgs/treasure.png';
 
     // calculate alpha values for pulsing arrows & put in lookup table so don't have to keep recalculating:
-    const numberOfFrames = 100;
     arrowsAlphaLookupTable = [];
-    for (let i=0; i< numberOfFrames; i++) {
-        arrowsAlphaLookupTable.push(0.3 * Math.sin(i * 2.0 * Math.PI / numberOfFrames) + 0.4);
+    for (let i=0; i< NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE; i++) {
+        arrowsAlphaLookupTable.push(0.3 * Math.sin(i * 2.0 * Math.PI / NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE) + 0.4);
     }
 
     // load binder page images

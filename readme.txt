@@ -4,13 +4,19 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
+new strategy for loading images. in initialize, load 1st room images first, then signal to generate z-order, then load all other possible images
+
+i wonder if obstacle status is more important than "base Y" for z order. 
+
+make dynamic list of levels to play.
+
+have to recalculate z order only after all the halfheights are set!!
+
 implement "bonus word" message as a GameElement so that you can put animation around it.
 
 think how you can use css to draw attention to new messages (also get a good notification sound)
 
 investigate ways of dragging/dropping objects. takes place of double-click. same distinction between movable/immovable objects. one big advantage is you have a more intuitive procedure for "using one thing on/against/with another thing". tools become more appealing for puzzles.
-
-keep track of z-order of objects ... might need two separate arrays, things behind player and things in front of player? or one array with things and player included?
 
 redraw runes
 
@@ -18,11 +24,13 @@ different sounds for different spells?
 
 screen-resizing issues
 
-finish upgrading tutorial level.
+finish upgrading tutorial level -- including new images.
 
 possibly put messages into an invisible div & let them just fit in sequentially
 
 consider marking words not necessary for level-solving as "bonus words". this would be a way to make red-herring words come across as positive, rather than as annoyances. exact definition might be tricky. can't just be "there exists a solution that doesn't involve the word", because could be two equally good (to be precise, say equally long) solutions to the level. more likely -- "any solution that involves this word could be simplified to remove it," but might be annoying to program automatic way to detect this.
+
+deal with passage-blocking being reinstated when you transform thing *back* into obstacle. note the unblock method doesn't delete the name of the passage's obstacle. so the default transform-into behavior could be to look if any unblocked passages in the room *would* be blocked by new thing.
 
 look up promise architecture (for images loading) and async/await just to be aware of it.
 

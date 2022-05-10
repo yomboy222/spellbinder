@@ -3,6 +3,14 @@
     Doug McLellan 1/2022
  */
 
+.level-menu-item {
+    margin:3px;
+    padding:2px;
+
+}
+
+
+
 #game-container-div{
     position: relative;
 }

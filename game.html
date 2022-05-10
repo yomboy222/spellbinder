@@ -55,15 +55,7 @@
         you can double-click it to drop it, or to use it, if it has some special use (or can be eaten etc.).
         <br/><br/>
 
-        <button class="loadLevelButton" name="yo2" value="load tutorial level" onclick="loadLevel('tutorial level')">tutorial level</button>
-        <button class="loadLevelButton" name="yo" value="trash/lobster level" onclick="loadLevel('trash/lobster level')">trash/lobster puzzle</button>
-        <button class="loadLevelButton" name="yo3" value="ghost level" onclick="loadLevel('ghost level')">ghost level</button>
-        <button class="loadLevelButton" name="yo4" value="tear-dicer" onclick="loadLevel('tear/dicer puzzle')">tare/dicer puzzle</button>
-        <button class="loadLevelButton" name="yo5" value="soap-bowtie" onclick="loadLevel('soap-bowtie')">soap-bowtie level</button>
-        <button class="loadLevelButton" name="yo6" value="soap-bowtie-easy" onclick="loadLevel('soap-bowtie-easy')">easy soap-bowtie level</button>
-        <button class="loadLevelButton" name="yo7" value="cordon-joker" onclick="loadLevel('cordon-joker')">cordon-joker level</button>
-        <button class="loadLevelButton" name="yo5" value="aromantics-hotspot" onclick="loadLevel('aromantics-hotspot')">aromantics-hotspot level</button>
-        <button class="loadLevelButton" name="yo8" value="hemp-icon" onclick="loadLevel('hemp-icon')">hemp-icon level</button>
+        <div id="level-list-div"></div>
 
         <br/>
         <br/>
@@ -86,15 +78,18 @@
         <canvas id="canvas1" width="700px" height="600px"></canvas>
     </div>
     <script type="text/javascript" src="js/game_functionality.js"></script>
-    <script type="text/javascript" src="levels/ghost_level/ghost_level.js"></script>
     <script type="text/javascript" src="levels/tutorial_level/tutorial_level.js"></script>
+    <script type="text/javascript" src="levels/soap-bowtie-easy/soap-bowtie-easy.js"></script>
+    <script type="text/javascript" src="levels/hemp-icon/hemp-icon.js"></script>
+
+    <!-- script type="text/javascript" src="levels/ghost_level/ghost_level.js"></script -->
+
     <script type="text/javascript" src="levels/puzzle_tear_dicer/puzzle_tear_dicer.js"></script>
     <script type="text/javascript" src="levels/trash_lobster/trash_lobster.js"></script>
     <script type="text/javascript" src="levels/soap-bowtie/soap-bowtie.js"></script>
     <script type="text/javascript" src="levels/cordon-joker/cordon-joker.js"></script>
     <script type="text/javascript" src="levels/aromantics-hotspot/aromantics-hotspot.js"></script>
-    <script type="text/javascript" src="levels/soap-bowtie-easy/soap-bowtie-easy.js"></script>
-    <script type="text/javascript" src="levels/hemp-icon/hemp-icon.js"></script>
+    <script type="text/javascript" src="js/post_level_loading_code.js"></script>
 
 </body>
 </html>
