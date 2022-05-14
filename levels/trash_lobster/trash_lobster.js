@@ -99,8 +99,8 @@ getLevelFunctions['trash/lobster level'] = function() {
     }
 
     level.initialRoom = 'room1';
-    level.initialX = 35; // expressed as % of way across x axis, i.e. value range is 0-100
-    level.initialY = 35;
+    level.initialX = 39; // expressed as % of way across x axis, i.e. value range is 0-100
+    level.initialY = 62;
     level.initialSpells = [allSpells.ANAGRAM, allSpells.REMOVE_EDGE, allSpells.ADD_EDGE, allSpells.CHANGE_EDGE];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
@@ -116,9 +116,9 @@ getLevelFunctions['trash/lobster level'] = function() {
     level.bridgelikeObjects = [ ];
     level.otherGameData = {};
     level.initialThings = [
-        ['trash','room1', 24, 55],
-        ['lobster','room1',43,55],
-        ['cauldron','room1',75,55],
+        ['trash','room1', 24, 76],
+        ['lobster','room1',50,74],
+        ['cauldron','room1',75,74],
     ];
     level.initialRunes = [];
 

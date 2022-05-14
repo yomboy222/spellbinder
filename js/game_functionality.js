@@ -9,7 +9,7 @@ TODO: prevent player input while spell is executing or waiting to execute.
 /* global-scope variables: */
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
-const CANVAS_WIDTH = 700; const CANVAS_HEIGHT = 700; const TOP_BINDER_AREA_HEIGHT = 100;
+const CANVAS_WIDTH = 700; const CANVAS_HEIGHT = 600; const TOP_BINDER_AREA_HEIGHT = 100;
 const PLAY_AREA_WIDTH = 700; const PLAY_AREA_HEIGHT = 500;
 const xScaleFactor = PLAY_AREA_WIDTH / 100; const yScaleFactor = PLAY_AREA_HEIGHT / 100;
 const INVENTORY_WIDTH = 700; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
@@ -25,7 +25,7 @@ let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
 let binderIconLeft = 0;
 const PLAYER_HEIGHT = 160;
-const PLAYER_WIDTH = 106;
+const PLAYER_WIDTH = 56;
 let EXTRA_SPELL_RADIUS = 260; // currently don't want to make distance an issue. in the future might need to reduce this though.
 const EXTRA_PICKUP_RADIUS = 60;
 const MIN_HALFWIDTH = 20;
@@ -58,7 +58,10 @@ let runes = [];
 let runeImages = []; let arrowImages = {};
 let defaultThingImage = undefined;
 let treasureImage = undefined;
-let numberOfThingImagesLoaded = 0;
+let imagesRequiredForAllLevels = []; // will be set in initialize()
+let imagesRequiredToPlayThisLevel = []; // will be set in loadLevel()
+let additionalImagePathsToPreLoadForThisLevel = [];
+let additionalImagesToPreLoad = [];
 let runeAcquisitionTime = 0;
 let newRuneIndex = -1;
 let runesBeingReleased = [];
@@ -96,13 +99,13 @@ let fadeinWord = '';
 let frameCounter = 0;
 const NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE = 100;
 let showingIntroPage = true;
+let levelLaunched = false;
 let showingSpellInput = false;
 let levelComplete = false;
 let pageBeingShownInBinder = '';
 let allWords = []; // individual level-data files will fill this array.
 let solidObjects = [];
 let immovableObjects = [];
-let bridgelikeObjects = [];
 let ellipticalObjects = [];
 let lastClickTime = 0;
 let initialClickEvent = undefined; // used in a more-or-less-necessary hack to distinguish short click from long click
@@ -134,7 +137,6 @@ class Level {
         this.allWords=  [];
         this.solidObjects = [];
         this.immovableObjects = [];
-        this.bridgelikeObjects = [];
         this.ellipticalObjects = [];
         this.otherGameData = {};
         this.initialThings = [];
@@ -332,7 +334,7 @@ class Thing extends GameElement {
         }
         this.image.onload = this.setDimensionsFromImage.bind(this); // "bind(this)" is needed to prevent handler code from treating "this" as the event-triggering element.
         this.image.onerror = this.handleMissingImage.bind(this);
-        this.image.src = levelPath + '/things/' + this.baseImageName + '.png';
+        this.image.src = getImagePathForWord(word);
         this.visible = true;
 
         // for cases with multiple images for animation, will load the images serially so don't need to specify total # of imgs
@@ -362,7 +364,6 @@ class Thing extends GameElement {
     }
 
     setDimensionsFromImage() { // this gets called as soon as image loads
-        numberOfThingImagesLoaded++;
         this.width = this.image.width; // take dimensions directly from image
         this.height = this.image.height;
         this.halfWidth = this.width / 2; // to avoid having to recalculate at every frame
@@ -373,18 +374,18 @@ class Thing extends GameElement {
         if (this.word in thingsHere)
             this.setCaptionPositionInThingsHere();
 
-        drawInventory();
+        if (imagesRequiredToPlayThisLevel && !levelLaunched) {
+            launchLevelIfAllRequiredImagesLoaded();
+        }
+        else if (this.word in inventory) {
+            drawInventory();
+        }
     }
 
     handleMissingImage() { // if image doesn't load
         if (this.word === 'treasure') {
             this.image = treasureImage;
             // treasure is used in a bunch of levels so putting its image in main /imgs folder.
-            /* this.image.src = 'imgs/treasure.png';
-            this.width = 140;
-            this.height = 127;
-            this.halfWidth = 70;
-            this.halfHeight = 63; */
         }
         else {
             this.image = defaultThingImage;
@@ -745,7 +746,8 @@ class Thing extends GameElement {
 class Passage extends GameElement {
     constructor(type, direction, xAsPercent, yAsPercent, destinationRoom, destXAsPercent, destYAsPercent, activated = true,
                 newRoomDestXAsPercent = -1, newRoomDestYAsPercent = -1, obstacle = undefined,
-                state = PASSAGE_STATE_ACTIVE, blockedXAsPercent = -1, blockedYAsPercent = -1) {
+                state = PASSAGE_STATE_ACTIVE, blockedXAsPercent = -1, blockedYAsPercent = -1,
+                messageUponReachingDest = undefined) {
         super(xAsPercent * xScaleFactor, yAsPercent * yScaleFactor );
         // this.originRoom = originRoom; note -- currently don't need to specify originRoom because passage data will be packaged into room data.
         this.type = type;
@@ -760,6 +762,7 @@ class Passage extends GameElement {
         this.blockedX = blockedXAsPercent * xScaleFactor;
         this.blockedY = blockedYAsPercent * yScaleFactor;
         this.obstacle = obstacle; // the thing (if any) whose transformation or disposal unblocks this passage
+        this.messageUponReachingDest = messageUponReachingDest;
 
         if ( this.type.indexOf('left') >= 0 || this.type.indexOf('right') >= 0 || this.type.indexOf('vertical') >= 0) {
             this.height = PASSAGE_LENGTH;
@@ -792,7 +795,7 @@ class Passage extends GameElement {
             ctx.globalAlpha = 1.0;
         }
     }
-    handleClick() {
+    handleClick(e) {
         if (this.state === PASSAGE_STATE_ACTIVE || this.state === PASSAGE_STATE_BLOCKED) {
             // move to the passage or to "blocked" point. first, if player currently "occupying" a passage, unoccupy it:
             for (let i=0; i<passages.length;i++) {
@@ -850,10 +853,12 @@ class Passage extends GameElement {
 /* end class definitions; begin global functions */
 
 function arriveAtPassage() {
-    // TODO: check whether this passage actually leads to new room.
+
     if (destinationPassage.destinationRoom == currentRoom) {
         // this is a passage that can be "occupied" / doesn't go to another room.
         destinationPassage.state = PASSAGE_STATE_OCCUPIED;
+        if (typeof destinationPassage.messageUponReachingDest === 'string')
+            displayMessage(destinationPassage.messageUponReachingDest);
     }
     else {
         newRoom(destinationPassage.destinationRoom, destinationPassage.destXAsPercent, destinationPassage.destYAsPercent);
@@ -863,8 +868,13 @@ function arriveAtPassage() {
             player.initialY = player.y;
             player.destX = destinationPassage.newRoomDestXAsPercent * xScaleFactor;
             player.destY = destinationPassage.newRoomDestYAsPercent * yScaleFactor;
-            player.methodToCallAfterMovement = function () {
-            };
+            if (typeof destinationPassage.messageUponReachingDest === 'string') {
+                let msg = destinationPassage.messageUponReachingDest;
+                player.methodToCallAfterMovement = function() { displayMessage(msg); }
+            }
+            else {
+                player.methodToCallAfterMovement = function() {};
+            }
             player.initiateMovement();
         }
     }
@@ -915,20 +925,6 @@ function deleteCaptions(deleteInventoryCaptionsToo = false) {
     }
 }
 
-function hideAllCaptions() {
-    let captionDivs = document.getElementsByClassName('word-bubble');
-    for (let i = 0; i < captionDivs.length; i++) {
-        captionDivs[i].style.display='none';
-    }
-}
-
-function displayAllCaptions() {
-    let captionDivs = document.getElementsByClassName('word-bubble');
-    for (let i = 0; i < captionDivs.length; i++) {
-        captionDivs[i].style.display='block';
-    }
-}
-
 function stopDisplayingMsg(forceStopAll = false) {
 
     /* TODO: fade-out messages like this
@@ -943,6 +939,14 @@ function stopDisplayingMsg(forceStopAll = false) {
             closeMessage(id);
         }
     }
+}
+
+function getImagePathForWord(word) {
+    let baseImageName = word.replace(' ', '_'); // by default, unless...
+    if (typeof level !== 'undefined' && level !== null && typeof level.pluralWords !== 'undefined' && word in level.pluralWords) {
+        baseImageName = level.pluralWords[word].replace(' ', '_'); // e.g. arch.png rather than arches.png
+    }
+    return levelPath + '/things/' + baseImageName + '.png';
 }
 
 function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treatCoordinatesAsPercentages = false) {
@@ -1045,6 +1049,14 @@ function closeMessage(messageNumber, returnToIntro = false) {
 
 function getCanonicalAnagram(word) {
     return word.split('').sort().join(); // turns VEAL into AELV etc.
+}
+
+function getRuneImagePath(letter) {
+    return 'imgs/runes/Rune-' + letter.toUpperCase() + '.png';
+}
+
+function getRuneImageTag(letter) {
+    return '<img className="inline-rune" width="' + RUNE_DISPLAY_WIDTH.toString() + 'px" height="' + RUNE_DISPLAY_HEIGHT.toString() + 'px" src="' + getRuneImagePath(letter) + '">';
 }
 
 function spellAvailable(spell, involvesFinalS = false) {
@@ -1228,10 +1240,10 @@ function castSpell() {
 
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
         sounds['failure'].play();
-        displaySequenceableMessage('Sorry, you need a rune: <img class="inline-rune" src="imgs/runes/Rune-' + runeNeeded.toUpperCase() + '.png">', 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
+        displaySequenceableMessage('Sorry, you need a rune: ' + getRuneImageTag(runeNeeded), 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
             setTimeout(
-                function() { displaySequenceableMessage('To get a <img class="inline-rune" src="imgs/runes/Rune-B.png"> rune, change "bear" into "ear".', 'tutorial_instruction', 'missing-rune-message'); },
+                function() { displaySequenceableMessage('To get a ' + getRuneImageTag('b') + ' rune, change "bear" into "ear".', 'tutorial_instruction', 'missing-rune-message'); },
                 1.5 * DEFAULT_MESSAGE_DURATION
             );
         }
@@ -1405,37 +1417,25 @@ function regenerateZOrderStack() {
     zOrderStack.sort((a,b) => a.getBaseY() - b.getBaseY() );
 }
 
+function showOrHideDivsWithinGameContainerDiv(showRatherThanHide) {
+    let style = (showRatherThanHide) ? 'block' : 'none';
+    let containerDiv = document.getElementById('game-container-div');
+    let children = containerDiv.children; // getElementsByTagName('div');
+    for (let i=0; i<children.length; i++) {
+        if (children[i].id === 'music-toggle-div' && style === 'block' && typeof backgroundMusic === 'undefined')
+            continue; // i.e. don't actually show the music-toggling button if this level has no music.
+        if (children[i].tagName.toLowerCase() === 'div')
+            children[i].style.display = style;
+    }
+}
+
 function showBinder(page = allSpells.BINDER_COVER) {
     timeOfLastBinderOpening = Date.now();
     stopDisplayingMsg(true); // "true" forces all messages to stop displaying
     pageBeingShownInBinder = page;
     document.getElementById('binder-instructions').style.display = 'block';
-    document.getElementById('binder-icon-holder').style.display = 'none';
-    document.getElementById('horizontal-spell-list').style.display = 'none';
-    document.getElementById('score-div').style.display = 'none';
-    hideAllCaptions();
-    // console.log('should be showing ...');
-    // alert('hey');
+    showOrHideDivsWithinGameContainerDiv(false);
     return false; // will prevent links from being followed if this is called from a hyperlink
-}
-
-function handleBinderIconMouseover(e) {
-    if (pageBeingShownInBinder == '') {
-        let binderIconDiv = document.getElementById('binder-icon-holder');
-        binderIconDiv.classList.remove('binder-roll-up');
-        binderIconDiv.classList.add('binder-drop-down');
-        let spellListDiv = document.getElementById('spell-list');
-        spellListDiv.style.display = 'block';
-        spellListDiv.style.maxHeight = '250px';
-        spellListDiv.style.transition = 'max-height 1s linear';
-    }
-}
-
-function handleBinderIconMouseout(e) {
-    let binderIconDiv = document.getElementById('binder-icon-holder');
-    binderIconDiv.classList.remove('binder-drop-down');
-    binderIconDiv.classList.add('binder-roll-up');
-    document.getElementById('spell-list').style.display = 'none';
 }
 
 function startMusic() {
@@ -1465,14 +1465,9 @@ function animate() {
         frameCounter = 0;
     arrowsAlpha = arrowsAlphaLookupTable[frameCounter];
 
-    /*
-    timeMod2200 = Date.now() % 2200;
-    arrowsAlpha = 0.25 * Math.sin(timeMod2200 * 0.002856) + 0.5
-*/
-
     // clear and draw background for current room:
     ctx.clearRect(0, 0,  PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
-    if (typeof backgroundImage === 'object' && backgroundImage !== null && backgroundImage.complete && backgroundImage.naturalWidth != 0) {
+    if (typeof backgroundImage === 'object' && backgroundImage !== null && backgroundImage.complete && backgroundImage.naturalWidth !== 0) {
         ctx.drawImage(backgroundImage, 0, 0);
     }
     // fill all filledPolygons if any:
@@ -1578,7 +1573,7 @@ function animate() {
         runeObject.draw();
     }
 
-    if (!showingIntroPage)
+    if (levelLaunched)
         requestAnimationFrame(animate);
 }
 
@@ -1656,6 +1651,16 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
         if ( messageObj.duration === 0) {
             closeMessage(id);
         }
+    }
+
+    // if starting level with initial runes, draw player's attention to this fact:
+    if (typeof currentRoom === 'undefined' && runes.length > 0) {
+        let runeWord = (runes.length > 1) ? 'runes' : 'rune';
+        let msg = "Note you are starting with " + runes.length.toString() + " " + runeWord + ":<br/>";
+        for (let i=0; i<runes.length; i++) {
+            msg += getRuneImageTag(runes[i]) + " ";
+        }
+        displayMessage(msg, 2 * DEFAULT_MESSAGE_DURATION, 60, 85, true);
     }
 
     currentRoom = newRoomName;
@@ -1756,23 +1761,89 @@ function handleMissingRoomBackgroundWestExit() {  // "this" will be bound to the
     return handleMissingExplicitRoomBackground(this,'RoomExitW_',2);
 }
 
-function loadLevel(lName = 'intro level') {
-    console.log('loading level ' + lName);
+function loadOtherBackgroundsForThisLevel() {
+
+}
+
+
+// this function actually begins game-play in a (just-loaded) level, by hiding the home screen, displaying canvas, etc.
+function launchLevel() {
+    levelLaunched = true;
+    console.log('launching level');
+    removeLoadingImagesMessage();
     canvas.style.display = 'block';
     // document.getElementById('game-area').style.display = 'block';
+    let introDiv = document.getElementById('intro_screen_div');
+    introDiv.style.display = 'none';
+    showingIntroPage = false;
+
+    if (okayToPlayMusic && typeof level.backgroundMusicFile !== 'undefined') {
+        let path = (level.backgroundMusicFile === 'Sneaky Snitch.mp3') ? 'audio/Sneaky Snitch.mp3' : levelPath + '/audio/' + level.backgroundMusicFile;
+        backgroundMusic = new Audio(path);
+        document.getElementById('music-toggle-div').style.display = 'block';
+        startMusic();
+    }
+
+    /* todo: start pre-loading the remaining Thing images in this level, and background images. */
+
+    drawTopBinderImage();
+
+    newRoom(level.initialRoom, level.initialX, level.initialY, level.initialMessage);
+
+    animate();
+}
+
+function launchLevelIfAllRequiredImagesLoaded() {
+    if (levelLaunched)
+        return; // just a failsafe, don't re-launch if already launched!
+
+    for (let i=0; i<imagesRequiredToPlayThisLevel.length; i++) {
+        let im = imagesRequiredToPlayThisLevel[i];
+        if (typeof im !== 'object' || im == null || im.complete !== true || im.naturalWidth === 0) {
+            console.log('at least one required image still not loaded, not launching yet.');
+            console.log('missing: ' + im.src);
+            return; // at least one image not ready so don't do anything, just return
+        }
+    }
+
+    // ... all required images were loaded so launch level and start pre-loading additional images for level
+    launchLevel();
+    for (let i=0; i<additionalImagePathsToPreLoadForThisLevel.length; i++) {
+        let img = new Image();
+        img.onerror = handleMissingAdditionalImage.bind(img);
+        additionalImagesToPreLoad.push(img);
+        img.src = additionalImagePathsToPreLoadForThisLevel[i];
+    }
+}
+
+function handleMissingAdditionalImage() {
+    console.log('could not load image at ' + this.src);
+}
+
+function showLoadingImagesMessage() {
+    console.log('showing load msg');
+    let msgDiv = document.createElement('div');
+    msgDiv.id = 'load-level-message';
+    msgDiv.innerHTML = 'Loading level ... ';
+    let outerDiv = document.getElementById('intro_screen_div');
+    outerDiv.appendChild(msgDiv);
+}
+
+function removeLoadingImagesMessage() {
+    let div = document.getElementById('load-level-message');
+    if (typeof div === 'object' && div !== null)
+        div.remove();
+}
+
+function loadLevel(lName = 'intro level') {
+    console.log('loading level ' + lName);
     levelName = lName;
     levelComplete = false;
     score = 0;
 
-    let introDiv = document.getElementById('intro_screen_div');
-    introDiv.style.display = 'none';
-    showingIntroPage = false;
-    //document.getElementById('binder-icon-holder').style.display = 'block';
-    // document.getElementById('top-binder-div').style.display = 'block';
-
     level = getLevelFunctions[lName]();
 
-    console.log(level);
+    // console.log(level);
 
     levelPath = getLevelPathFromFolderName(level.folderName);
     // (typeof level.levelPath === 'string') ? 'levels/' + level.levelPath : 'levels/' + lName.replace(' ','_');
@@ -1789,13 +1860,15 @@ function loadLevel(lName = 'intro level') {
     allWords = level.allWords;
     solidObjects = level.solidObjects;
     immovableObjects = level.immovableObjects;
-    bridgelikeObjects = level.bridgelikeObjects;
     ellipticalObjects = level.ellipticalObjects;
     otherData = level.otherGameData;
 
     thingsElsewhere = {};
     wordsFound = [];
-    numberOfThingImagesLoaded = 0;
+    imagesRequiredToPlayThisLevel = [];
+    additionalImagePathsToPreLoadForThisLevel = [];
+    additionalImagesToPreLoad = [];
+    let namesOfRequiredImages = [];
     let objectData = level.initialThings;
     for (let i=0; i < objectData.length; i++) {
         let key = objectData[i][0];
@@ -1809,7 +1882,24 @@ function loadLevel(lName = 'intro level') {
             }
         }
         thingsElsewhere[key] = getThing(objectData[i][0], objectData[i][1], objectData[i][2], objectData[i][3]);
+        // register things in first room as necessary to launch the level:
+        if (objectData[i][1] === level.initialRoom && key !== 'treasure') { // treasure is used in a bunch of levels so putting its image in main /imgs folder.
+            imagesRequiredToPlayThisLevel.push(thingsElsewhere[key].image); // should probably handle case where an image in initial room is animated right off the bat ... let its subclass of thing define explicitly how many animation images it has
+            namesOfRequiredImages.push(key);
+        }
     }
+
+    console.log(imagesRequiredToPlayThisLevel);
+
+    // register paths for all OTHER attainable thing images in this level, to be pre-loaded after imagesRequiredToPlayThisLevel:
+    for (let i=0; i<level.allWords.length; i++) {
+        let word = allWords[i];
+        if (word !== 'treasure' && namesOfRequiredImages.indexOf(word) < 0) {
+            additionalImagePathsToPreLoadForThisLevel.push(getImagePathForWord(word));
+        }
+    }
+
+    /* TODO: change this so that only background of 1st room loads now. once that loads, trigger load of other backgrounds used. */
 
     for (roomName in rooms) {
         let hasWestExit = false;
@@ -1821,8 +1911,6 @@ function loadLevel(lName = 'intro level') {
             if (passages[i].direction === 'E')
                 hasEastExit = true;
         }
-
-        console.log('roomName ' + hasWestExit.toString() + ' ' + hasEastExit.toString());
 
         rooms[roomName].backgroundImage = new Image(PLAY_AREA_WIDTH,PLAY_AREA_HEIGHT);
         if (hasWestExit && hasEastExit)
@@ -1846,39 +1934,25 @@ function loadLevel(lName = 'intro level') {
     document.getElementById('inner-score-div').innerHTML = 'score: <span id="score-span">0</span>';
     level.initializationFunction();
 
-    if (okayToPlayMusic && typeof level.backgroundMusicFile !== 'undefined') {
-        let path = (level.backgroundMusicFile === 'Sneaky Snitch.mp3') ? 'audio/Sneaky Snitch.mp3' : levelPath + '/audio/' + level.backgroundMusicFile;
-        backgroundMusic = new Audio(path);
-        document.getElementById('music-toggle-div').style.display = 'block';
-        startMusic();
+    // launchLevel() will usually be called by onload handler of last required image, when it loads, but handle edge case of no required images:
+    if (imagesRequiredToPlayThisLevel.length === 0) {
+        launchLevel();
     }
-
-    drawTopBinderImage();
-
-   /* let initialMessage = undefined;
-    if (typeof level.initialMessage === 'string') {
-        initialMessage = level.initialMessage;
-    }*/
-
-    newRoom(level.initialRoom, level.initialX, level.initialY, level.initialMessage);
-
-    animate();
-    // window.setTimeout(animate,1000); // a total hack ... should intelligently wait until images/sounds loaded
+    else {
+        window.setTimeout(showLoadingImagesMessage, 1);
+    }
 }
 
 function closeBinder() {
     console.log('closing binder');
     pageBeingShownInBinder = '';
-    // document.getElementById('binder-icon-holder').style.display = 'block';
-    document.getElementById('horizontal-spell-list').style.display = 'block';
-    document.getElementById('score-div').style.display = 'block';
+    showOrHideDivsWithinGameContainerDiv(true);
     let leftPage = document.getElementById('binder-page-left');
     let rightPage = document.getElementById('binder-page-right');
     let instructionDiv = document.getElementById('binder-instructions');
     leftPage.style.display = 'none';
     rightPage.style.display = 'none';
     instructionDiv.style.display = 'none';
-    displayAllCaptions();
     drawInventory(); // shouldn't be necessary when page images are scaled properly but for now they stray into inventory area.
 }
 
@@ -1996,15 +2070,22 @@ function checkIfClickWasMadeDouble() {
 
 function handleClick(e) {
     // console.log(e);
-
+    let tagName = '';
     if (typeof e.target !== 'undefined' && typeof e.target.tagName !== undefined) {
-        let tagName = e.target.tagName.toLowerCase();
-        // console.log(tagName);
-        if (!(tagName.startsWith('canvas') || tagName.startsWith('div'))) {  // "div" here for caption divs, but may want to give those divs their own onclick behavior to open spell form
-            // console.log('returning without setting timeout to checkIfClickWasMadeDouble');
-            return; // if clicking on an html link or button, this javascript should ignore it:
-        }
+        tagName = e.target.tagName.toLowerCase();
     }
+
+    if (!tagName.startsWith('canvas') && !(tagName.startsWith('div'))) {  // only handle clicks here directly on canvas & caption divs, not "cast" button, links ...
+        // console.log('returning without setting timeout to checkIfClickWasMadeDouble');
+        return; // if clicking on an html link or button, this javascript should ignore it:
+    }
+
+    if (showingSpellInput && tagName.startsWith('canvas')) {
+        // if showing spell input div but player clicks outside it, put focus back inside it
+        document.getElementById('toWord').focus();
+        return;
+    }
+
 
     // tell the browser we're handling this mouse event
     e.preventDefault();
@@ -2023,7 +2104,7 @@ function handleClick(e) {
         initialClickEvent = undefined;
         return processSingleOrDoubleClick(e, true);
     }
-    if (!showingIntroPage) {
+    if (levelLaunched) {
         initialClickEvent = e;
         lastClickTime = Date.now();
         window.setTimeout(checkIfClickWasMadeDouble, MAX_DOUBLE_CLICK_TIME_SEPARATION);
@@ -2032,7 +2113,7 @@ function handleClick(e) {
 
 function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
 
-    if (showingIntroPage) {
+    if (!levelLaunched) {
     // TODO: maybe handle clicks on intro page programatically here??
         return;
     }
@@ -2108,6 +2189,11 @@ function resizePage() {
     scoreDiv.style.left = (canvasOffsetX + CANVAS_WIDTH - 155).toString() + 'px';
     scoreDiv.style.top = (canvasOffsetY + 10).toString() + 'px';
 
+    let musicDiv = document.getElementById('music-toggle-div');
+    musicDiv.style.left = (canvasOffsetX + CANVAS_WIDTH - 255).toString() + 'px';
+    musicDiv.style.top = (canvasOffsetY + 10).toString() + 'px';
+
+
     standardMessagePositions = [];
     const messageYoffset = 20; // canvasOffsetY + Math.round(CANVAS_HEIGHT / 8);
     const messageXoffset = Math.round(CANVAS_WIDTH / 2);
@@ -2160,7 +2246,7 @@ function initialize() {
         let lower = String.fromCharCode(i + 97);
         let upper = String.fromCharCode(i + 65);
         let runeImage = new Image(RUNE_IMAGE_WIDTH, RUNE_IMAGE_HEIGHT);
-        runeImage.src = 'imgs/runes/Rune-' + upper + '.png';
+        runeImage.src = getRuneImagePath(upper);
         runeImages.push(runeImage);
     }
 
@@ -2241,9 +2327,9 @@ function initialize() {
     rightPage.style.left = (canvasOffsetX + (CANVAS_WIDTH / 2) + 50).toString() + 'px';
     instructionDiv.style.top = (canvasOffsetY + PLAY_AREA_HEIGHT + 15).toString() + 'px';
     instructionDiv.style.left = (canvasOffsetX + 15).toString() + 'px';
-    instructionDiv.style.height = (CANVAS_HEIGHT - PLAY_AREA_HEIGHT - 45).toString() + 'px';
+    instructionDiv.style.height = ((CANVAS_HEIGHT - PLAY_AREA_HEIGHT) - 45).toString() + 'px';
     instructionDiv.style.width = (CANVAS_WIDTH.toString() - 45).toString() + 'px';
-    instructionDiv.innerText = "Click to close the Binder.";
+    instructionDiv.innerText = "Click anywhere to close the Binder.";
 }
 
 function showIntroScreen() {
@@ -2259,6 +2345,7 @@ function showIntroScreen() {
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'block';
     showingIntroPage = true;
+    levelLaunched = false;
     if (typeof backgroundMusic === 'object' && musicPlaying === true) {
         musicPlaying = false;
         backgroundMusic.pause();

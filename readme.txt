@@ -4,11 +4,23 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
+design loading message
+
+fix clicking on caption divs
+
+for tutorial: new cur image, key image; new curb image; make curb image fit into background image; 
 new strategy for loading images. in initialize, load 1st room images first, then signal to generate z-order, then load all other possible images
+
+pre-load all the non-level-specific images in initialize function (player, arrows, runes). then the background images too but don't make starting the game dependent on those.
+
+again, when starting level, say "loading" until first-room images and background are loaded. maybe wait 1.5 seconds to load and if not done, then put up the "loading" graphic.
+
+
 
 i wonder if obstacle status is more important than "base Y" for z order. 
 
-make dynamic list of levels to play.
+i think it really is worth redoing the background graphics to fade them out more.
+
 
 have to recalculate z order only after all the halfheights are set!!
 

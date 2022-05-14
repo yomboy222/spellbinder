@@ -103,7 +103,7 @@ getLevelFunctions['tutorial level'] = function() {
 
     level.showInitialTutorialMsg = function() {
         window.setTimeout( function() {
-                displaySequenceableMessage("Double-click the rutabaga to pick it up.", "tutorial_instruction", "", 0, 50, 5, true);
+                displaySequenceableMessage("Double-click the rutabaga: this is how you pick things up.", "tutorial_instruction", "", 0, 50, 5, true);
              },
             1000);
     }
@@ -122,7 +122,7 @@ getLevelFunctions['tutorial level'] = function() {
 
     level.initialRoom = 'room1';
     level.initialX = 50; // expressed as % of way across x axis, i.e. value range is 0-100
-    level.initialY = 50;
+    level.initialY = 80;
     level.initialSpells = ['remove-edge', 'add-edge'];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
@@ -135,29 +135,24 @@ getLevelFunctions['tutorial level'] = function() {
         'grabbed binder' : false,
     };
     level.initialThings = [
-        ['rutabaga','room1', 40, 50],
-        ['cur','room2',83,80],
-        ['bear','room2',67,53],
-        ['gate','room3',63,50],
-        ['key','room3',43,50],
-        ['treasure','room3',92,47],
+        ['rutabaga','room1', 65, 80],
+        ['cur','room2',79,80],
+        ['bear','room2',69,51],
+        ['gate','room3',40,80],
+        ['key','room3',17,80],
+        ['treasure','room3',93,80],
     ];
     level.initialRunes = [];
     level.rooms = {
         'room1': {
-            boundaries: [ ['n',10, 30, 30, 30], ['n',10,70,30,70], ['n',10,30,10,70], ['d',30,30,42,18], ['n',42,18,54,18],
-                ['d',54,18,66,30], ['n',66,30,100,30], ['d',30,70,42,82], ['n',42,82,54,82], ['d',54,82,66,70], ['n',66,70,100,70] ],
-            filledPolygons: [ ['r',0,0,10,100],['r',10,0,20,30],['p',30,30,42,18,42,0,30,0],['r',42,0,58,18],
-                ['p',54,18,66,30,100,30,100,18],  ['r',10,70,20,30], ['p',30,70,42,82,42,100,30,100],
-                ['r',42,82,58,18], ['p',54,82,66,70,100,70,100,82], ],
-            passages: [new Passage(PassageTypes.BASIC_RIGHT, 'E',95, 50, 'room2', 12, 80,
-                true, 64, 80)],
+            passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',95, 75, 'room2', 12, 75,
+                true, 60, 80)],
         },
         'room2': {
             boundaries: [ ['n',0,97,100,97], ['n',0,62,56,62], ['n',56,62,56,35], ['n',56,35,84,35], ['n',84,35,84,62], ['n',84,62,100,62]],
             filledPolygons: [ ['r',0,0,100,35], ['r',0,35,56,27], ['r',84,35,16,27], ['r',0,97,100,3], ],
-            passages: [new Passage(PassageTypes.BASIC_RIGHT, 'E', 95, 80, 'room3', 12, 50,
-                true, 53, 50, 'cur', PASSAGE_STATE_BLOCKED, 76, 80),
+            passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E', 95, 80, 'room3', 12, 80,
+                true, 30, 80, 'cur', PASSAGE_STATE_BLOCKED, 76, 80),
                 new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 5, 80, 'room1', 88,50, true, 50, 50),
                 ],
             specificNewRoomBehavior: function() {
@@ -165,11 +160,9 @@ getLevelFunctions['tutorial level'] = function() {
             }
         },
         'room3': {
-            boundaries: [ ['n',0,36,96,36], ['n',96,36,96,64], ['n',0,64,96,64], ],
-            filledPolygons: [ ['r',0,0,100,36], ['r',96,36,4,64], ['r',0,64,96,36], ],
-            passages: [ new Passage(PassageTypes.INVISIBLE_VERTICAL,'W',5, 50, 'room2', 88, 80, true,64,80),
-                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',78,50, 'room3', 78, 50, true,
-                    -1, -1,'gate', PASSAGE_STATE_BLOCKED, 57, 50),
+            passages: [ new Passage(PassageTypes.INVISIBLE_VERTICAL,'W',5, 78, 'room2', 88, 80, true,64,80),
+                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',76,78, 'room3', 78, 80, true,
+                    -1, -1,'gate', PASSAGE_STATE_BLOCKED, 57, 80, 'Now double-click the treasure to pick it up!'),
             ],
             specificNewRoomBehavior: function() {
                 window.setTimeout(level.showRoom3Message, 1200);
@@ -181,7 +174,6 @@ getLevelFunctions['tutorial level'] = function() {
         level.sounds = {
             'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),
         };
-        document.getElementById('binder-icon-holder').style.display = 'none';
         window.setTimeout(level.showInitialTutorialMsg, 500);
     };
 

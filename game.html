@@ -11,9 +11,6 @@
 </head>
 <body>
     <div id="binder-instructions"></div>
-    <div id="music-toggle-div">
-        <button id="musicToggleButton" name="music toggle" value="music on/off" onclick="toggleMusic()">music on/off</button>
-    </div>
     <div id="spell-input-div">
         <form id="spell-form" action="#" autocomplete="off">
             Change <span id="fromWord"></span>
@@ -75,8 +72,13 @@
     <div id="game-container-div">
         <div id="horizontal-spell-list"></div>
         <div id="score-div"><a href="javascript:confirmQuit()"><img src="imgs/home.png"></a> <div id="inner-score-div"></div></div>
+        <div id="music-toggle-div">
+            <button id="musicToggleButton" name="music toggle" value="music on/off" onclick="toggleMusic()">music on/off</button>
+        </div>
+
         <canvas id="canvas1" width="700px" height="600px"></canvas>
     </div>
+
     <script type="text/javascript" src="js/game_functionality.js"></script>
     <script type="text/javascript" src="levels/tutorial_level/tutorial_level.js"></script>
     <script type="text/javascript" src="levels/soap-bowtie-easy/soap-bowtie-easy.js"></script>
@@ -88,6 +90,7 @@
     <script type="text/javascript" src="levels/trash_lobster/trash_lobster.js"></script>
     <script type="text/javascript" src="levels/soap-bowtie/soap-bowtie.js"></script>
     <script type="text/javascript" src="levels/cordon-joker/cordon-joker.js"></script>
+    <script type="text/javascript" src="levels/goon-hut/goon-hut.js"></script>
     <script type="text/javascript" src="levels/aromantics-hotspot/aromantics-hotspot.js"></script>
     <script type="text/javascript" src="js/post_level_loading_code.js"></script>
 
