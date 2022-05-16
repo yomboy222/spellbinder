@@ -178,6 +178,7 @@ class GameElement {
         this.soundToPlayAfterMovement = undefined;
         this.messageToDisplayAfterMovement = undefined;
         this.deleteAfterMovement = false;
+        this.enableInputAfterMovement = false;
     }
     inRangeOfPlayer(extraRadius = 0) {
         let deltaX = this.x - player.x;
@@ -230,7 +231,6 @@ class GameElement {
             }
         }
     }
-    // this "initiateMovement" method should be replaced.
     initiateMovement(relSpeed = 1) {
         let distanceAsFractionOfPlayAreaWidth = Math.sqrt( ( (this.x - this.destX) * (this.x - this.destX)) + ((this.y - this.destY) * (this.y - this.destY)) )  / PLAY_AREA_WIDTH;
         this.movementDurationMS = distanceAsFractionOfPlayAreaWidth * 2000 / relSpeed;
@@ -244,6 +244,9 @@ class GameElement {
             this.soundToPlayAfterMovement.play();
         if (typeof this.messageToDisplayAfterMovement !== 'undefined')
             displayMessage(this.messageToDisplayAfterMovement);
+        if (this.enableInputAfterMovement) {
+            stopSuppressingPlayerInput();
+        }
     }
     handleDblclick(e) {
         return false; // meaning that this object didn't actually handle the dblclick.
@@ -254,6 +257,19 @@ class GameElement {
         console.log(baseY);
         return baseY;
     }
+    setMovement(destX, destY, duration, initialX = undefined, initialY = undefined, suppressInputDuringMovement = false, enableInputAfterMovement = false) {
+        this.destX = destX;
+        this.destY = destY;
+        this.movementDurationMS = duration;
+        this.beginMovementTime = Date.now();
+        this.initialX = (typeof initialX === 'undefined') ? this.x : initialX;
+        this.initialY = (typeof initialY === 'undefined') ? this.y : initialY;
+        if (suppressInputDuringMovement) {
+            startSuppressingPlayerInput();
+        }
+        this.enableInputAfterMovement = enableInputAfterMovement;
+    }
+
 }
 
 class Rune extends GameElement {
@@ -279,7 +295,9 @@ class Rune extends GameElement {
             runesBeingReleased = [];
         }
         else {
-            executeTransformation(); // this means the rune has moved across the screen to target, so now commit the actual transformation.
+            // this means the rune has moved across the screen to target, so now commit the actual transformation.
+            stopSuppressingPlayerInput();
+            executeTransformation();
             runesBeingAbsorbed = [];
         }
     }
@@ -361,6 +379,7 @@ class Thing extends GameElement {
         this.sound = undefined; // used for thing's primary sound. will be stopped if/when player leaves room where it is.
         this.wordDisplayOffsetX = -18 - (4 * this.word.length); // where to set "left" property of captionDev rel. to this.x. subclasses may redefine.
         this.wordDisplayOffsetY = 0;// where to set "top" property of captionDev rel. to this.y. subclasses may redefine.
+        this.reblocksPassageUponReturn = false;
     }
 
     setDimensionsFromImage() { // this gets called as soon as image loads
@@ -449,18 +468,6 @@ class Thing extends GameElement {
         this.removeFromInventory(recalculateInventoryIndexes); // will be false if just replacing this with a new object as result of spell
     }
 
-    setMovement(destX, destY, duration, initialX = undefined, initialY = undefined, suppressInputDuringMovement = false) {
-        this.destX = destX;
-        this.destY = destY;
-        this.movementDurationMS = duration;
-        this.beginMovementTime = Date.now();
-        this.initialX = (typeof initialX === 'undefined') ? this.x : initialX;
-        this.initialY = (typeof initialY === 'undefined') ? this.y : initialY;
-        if (suppressInputDuringMovement) {
-            normalPlayerInputSuppressed = true;
-            timePlayerInputSuppressed = Date.now();
-        }
-    }
 
     methodToCallAfterMovement() {
         super.methodToCallAfterMovement();
@@ -734,12 +741,18 @@ class Thing extends GameElement {
 
     extraTransformIntoBehavior() {}
 
-    deactivateObstacle() {
+    activateOrDeactivateObstacle(activateRatherThanDeactivate = false) {
         for (let i=0; i<passages.length; i++) {
             if (passages[i].obstacle === this.word) {
-                passages[i].unblock();
+                if (activateRatherThanDeactivate)
+                    passages[i].block();
+                else
+                    passages[i].unblock();
             }
         }
+    }
+    deactivateObstacle() {
+        this.activateOrDeactivateObstacle();
     }
 }
 
@@ -802,11 +815,9 @@ class Passage extends GameElement {
                 if (passages[i].state == PASSAGE_STATE_OCCUPIED)
                     passages[i].state = PASSAGE_STATE_ACTIVE;
             }
-            player.beginMovementTime = Date.now();
-            player.initialX = player.x;
-            player.initialY = player.y;
-            player.destX = (this.state === PASSAGE_STATE_BLOCKED) ? this.blockedX : this.x;
-            player.destY = (this.state === PASSAGE_STATE_BLOCKED) ? this.blockedY : this.y;
+            let destX = (this.state === PASSAGE_STATE_BLOCKED) ? this.blockedX : this.x;
+            let destY = (this.state === PASSAGE_STATE_BLOCKED) ? this.blockedY : this.y;
+            player.setMovement(destX, destY, 1500, player.x, player.y, true, true);
 
             if (this.state === PASSAGE_STATE_BLOCKED) {
                 player.blockingThing = thingsHere[this.obstacle];
@@ -843,7 +854,9 @@ class Passage extends GameElement {
             yWithinCanvas >= (this.y - adjustedHeight) &&
             yWithinCanvas <= (this.y + adjustedHeight));
     }
-
+    block() {
+        this.state = PASSAGE_STATE_BLOCKED;
+    }
     unblock() {
         this.activated = true;
         this.state = PASSAGE_STATE_ACTIVE;
@@ -864,17 +877,17 @@ function arriveAtPassage() {
         newRoom(destinationPassage.destinationRoom, destinationPassage.destXAsPercent, destinationPassage.destYAsPercent);
 
         if (destinationPassage.newRoomDestXAsPercent > 0 && destinationPassage.newRoomDestYAsPercent > 0) {
-            player.initialX = player.x;
-            player.initialY = player.y;
-            player.destX = destinationPassage.newRoomDestXAsPercent * xScaleFactor;
-            player.destY = destinationPassage.newRoomDestYAsPercent * yScaleFactor;
+            player.setMovement(destinationPassage.newRoomDestXAsPercent * xScaleFactor, destinationPassage.newRoomDestYAsPercent * yScaleFactor, 1500, undefined, undefined, true, true);
+
             if (typeof destinationPassage.messageUponReachingDest === 'string') {
-                let msg = destinationPassage.messageUponReachingDest;
-                player.methodToCallAfterMovement = function() { displayMessage(msg); }
+                player.messageToDisplayAfterMovement = destinationPassage.messageUponReachingDest;
             }
-            else {
+/*             else {
                 player.methodToCallAfterMovement = function() {};
             }
+
+ */
+
             player.initiateMovement();
         }
     }
@@ -1195,11 +1208,6 @@ function castSpell() {
         return;
     }
 
-    if (allWords.indexOf(toWord) < 0) { // target word not recognized as a possible object
-        announceSpellFailure("Sorry, that didn't work.");
-        return;
-    }
-
     // have now verified the fromWord is available and toWord is a thing; find out what kind of transformation this is
     let spellRequested = '';
     let runeNeeded = undefined;
@@ -1240,13 +1248,18 @@ function castSpell() {
 
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
         sounds['failure'].play();
-        displaySequenceableMessage('Sorry, you need a rune: ' + getRuneImageTag(runeNeeded), 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
+        displaySequenceableMessage('Sorry, this would require a rune:<br/> ' + getRuneImageTag(runeNeeded), 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
             setTimeout(
                 function() { displaySequenceableMessage('To get a ' + getRuneImageTag('b') + ' rune, change "bear" into "ear".', 'tutorial_instruction', 'missing-rune-message'); },
                 1.5 * DEFAULT_MESSAGE_DURATION
             );
         }
+        return;
+    }
+
+    if (allWords.indexOf(toWord) < 0) { // target word not recognized as a possible object
+        announceSpellFailure("Sorry, that didn't work.");
         return;
     }
 
@@ -1292,6 +1305,7 @@ function castSpell() {
         let coords = getRuneCoordinates(indexToDelete);
         let runeToUse = new Rune(coords.x, coords.y, sourceThing.x, sourceThing.y, runeNeeded, false);
         runesBeingAbsorbed.push(runeToUse);
+        startSuppressingPlayerInput(); // don't let player cast spells or leave room etc. until transformation is actually executed (when rune reaches destination)
     }
 
     if (typeof runeReleased != 'undefined') {
@@ -1351,6 +1365,9 @@ function executeTransformation() {
             newObject.setCaptionPositionInThingsHere();
         }
     }
+
+    if (newObject.reblocksPassageUponReturn)
+        newObject.activateOrDeactivateObstacle(true);
 
     newObject.extraTransformIntoBehavior();
 
@@ -1961,10 +1978,11 @@ function stopSuppressingPlayerInput() {
     timePlayerInputSuppressed = 0;
 }
 
-function startSuppressingPlayerInput(time = 8000) {
+function startSuppressingPlayerInput(time = 0) {
     normalPlayerInputSuppressed = true;
     timePlayerInputSuppressed = Date.now();
-    window.setTimeout(stopSuppressingPlayerInput, time);
+    if (time > 0)
+        window.setTimeout(stopSuppressingPlayerInput, time);
 }
 
 function handleKeydown(e) {
@@ -2096,8 +2114,7 @@ function handleClick(e) {
             return;
         else {
             // something went wrong and the code did not stop suppressing input in time, so just do it now
-            normalPlayerInputSuppressed = false;
-            timePlayerInputSuppressed = 0;
+            stopSuppressingPlayerInput();
         }
     }
     if (Date.now() < lastClickTime + MAX_DOUBLE_CLICK_TIME_SEPARATION) {
