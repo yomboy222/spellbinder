@@ -70,8 +70,8 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.destY = cauldron.y - cauldron.halfHeight;
             }
 
-            methodToCallAfterMovement() {
-                super.methodToCallAfterMovement();
+            concludeMovement() {
+                super.concludeMovement();
                 let cauldron = ('hotpots' in thingsHere) ? thingsHere['hotpots'] : thingsHere['hotpot'];
                 let broth = new Hotpot('broth',currentRoom,cauldron.x,cauldron.y);
                 thingsHere['broth'] = broth;
@@ -134,12 +134,12 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                     this.destX = monster.x - 90;
                     this.destY = monster.y + 50;
                     this.initiateMovement(0.2);
-                    this.methodToCallAfterMovement = this.killMonster.bind(this);
+                    this.concludeMovement = this.killMonster.bind(this);
                 }
             }
 
             killMonster() {
-                super.methodToCallAfterMovement(); // updates caption location
+                super.concludeMovement(); // updates caption location
                 let monster = thingsHere['tyrannosaur'];
                 displayMessage('zap! (need graphics and sound for this)', DEFAULT_MESSAGE_DURATION);
                 monster.dispose();

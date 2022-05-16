@@ -41,7 +41,7 @@ getLevelFunctions['goon-hut'] = function() {
                     let portcullis = thingsHere['portcullis'];
                     this.removeFromInventoryForUseOnScreen();
                     this.setMovement(portcullis.x, portcullis.y, 1000, player.x, player.y, true);
-                    this.methodToCallAfterMovement = function() {
+                    this.concludeMovement = function() {
                         level.sounds['unlock'].play();
                         thingsHere['portcullis'].unblockPassagesThisHadBeenBlocking();
                         this.returnToInventoryAfterUseOnScreen();

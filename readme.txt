@@ -8,7 +8,8 @@ in new level, maybe multiple tools? design simple puzzle for multiple tools
 
 design loading message
 
-fix clicking on caption divs
+aromantics-hotspot room 2 needs background w/ east wall
+easy soap-bowtie: make hammer look more like sledgehammer
 
 for tutorial: new cur image, key image; new curb image; make curb image fit into background image; 
 new strategy for loading images. in initialize, load 1st room images first, then signal to generate z-order, then load all other possible images

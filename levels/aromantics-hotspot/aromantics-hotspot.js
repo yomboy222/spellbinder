@@ -93,9 +93,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.destX = cauldron.x;
                 this.destY = cauldron.y - cauldron.halfHeight;
             }
-
-            methodToCallAfterMovement() {
-                super.methodToCallAfterMovement();
+            extraPostMovementBehavior() {
                 let cauldron = ('hotpots' in thingsHere) ? thingsHere['hotpots'] : thingsHere['hotpot'];
                 let broth = new Hotpot('broth',currentRoom,cauldron.x,cauldron.y);
                 thingsHere['broth'] = broth;
@@ -171,15 +169,13 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.shriek.play();
                 this.useAnimationImages = true;
             }
-            methodToCallAfterMovement() {
-                super.methodToCallAfterMovement();
+            extraPostMovementBehavior() {
                 this.useAnimationImages = false;
             }
         }
 
         window.Robot = class Robot extends Thing {
             extraTransformIntoBehavior() {
-                super.extraTransformIntoBehavior();
                 let monster = thingsHere['godzilloid'];
                 if (typeof monster === 'object') {
                     this.destX = monster.x - 90;
@@ -187,12 +183,11 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                     this.initiateMovement(0.2);
                     this.useAnimationImages = true;
                     this.frameDisplayTimeMS = 180;
-                    this.methodToCallAfterMovement = this.killMonster.bind(this);
+                    this.extraPostMovementBehavior = this.killMonster.bind(this);
                 }
             }
 
             killMonster() {
-                super.methodToCallAfterMovement(); // updates caption location
                 this.useAnimationImages = false;
                 let monster = thingsHere['godzilloid'];
                 displayMessage('zap! (need graphics and sound for this)', DEFAULT_MESSAGE_DURATION);
@@ -233,11 +228,6 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.startFlight();
             }
 
-            stopAnimating() {
-                this.useAnimationImages = false;
-                this.setCaptionPositionInThingsHere();
-            }
-
             startFlight() {
                 // failsafe (should never occur):
                 if (!('armoire' in thingsHere)) {
@@ -257,13 +247,11 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.movementType = MOVEMENT_TYPE_PARABOLIC;
                 this.movementDurationMS = 500 + Math.round(Math.abs(this.x - this.destX) * 2);
                 this.beginMovementTime = Date.now();
-                this.methodToCallAfterMovement = this.stopAnimating.bind(this);
+                this.extraPostMovementBehavior = this.stopAnimating;
                 let nextTakeoffTime = this.movementDurationMS + 500 + Math.round(Math.random() * 1200);
                 window.setTimeout(this.startFlight.bind(this), nextTakeoffTime);
             }
         }
-
-
     }
 
     level.getThing = function(word,room,x,y) {

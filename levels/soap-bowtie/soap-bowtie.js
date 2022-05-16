@@ -28,7 +28,8 @@ getLevelFunctions['soap-bowtie'] = function() {
         }
 
         window.Saw = class Saw extends Thing {
-          handleDblclick(e) {
+            handleDblclick(e) {
+
               if ((this.word in inventory) && ('hater' in thingsHere)) {
                   displayMessageWithSound('The hater blocks your saw!' , sounds['failure'], DEFAULT_MESSAGE_DURATION);
                   return false;
@@ -36,56 +37,43 @@ getLevelFunctions['soap-bowtie'] = function() {
               if (!(this.word in inventory) || !('fence' in thingsHere)) {
                   return super.handleDblclick(e);
               }
-            this.strokeNumber = 0;
-            this.discard(true);
-            let fence = thingsHere['fence'];
-            this.x = fence.x - 25;
-            this.y = fence.y - 25;
-            this.startStroke();
-            if (typeof this.captionDiv !== 'undefined') {
-              this.captionDiv.style.display = 'none'; // don't display caption while saw being used
+              this.strokeNumber = 0;
+              this.removeFromInventoryForUseOnScreen();
+              let fence = thingsHere['fence'];
+              this.x = fence.x - 25;
+              this.y = fence.y - 25;
+              this.startStroke();
             }
-      }
 
-          extraTransformIntoBehavior() {
+            extraTransformIntoBehavior() {
               if (!(this.word in inventory)) {
                   displayMessage('Remember, to pick something up, double-click it; and double-click it again to use it.');
               }
-          }
-
-            /* TODO: suppress player input during motion */
-
-          startStroke() {
-              this.strokeNumber++;
-              let destX = this.x - 70;
-              let destY = this.y + 4;
-              let time = 180;
-              if (this.strokeNumber % 2 == 1) {
-                destX = this.x + 70;
-                destY = this.y + 13;
-                time = 280;
-              }
-              this.setMovement(destX, destY, time);
-              if (this.strokeNumber < 8)
-                this.methodToCallAfterMovement = this.startStroke.bind(this);
-              else
-                this.methodToCallAfterMovement = this.removeFence.bind(this);
-          }
-
-          removeFence() {
-            if (typeof this.captionDiv !== 'undefined') {
-              this.captionDiv.style.display = 'block';
             }
-            this.beginMovementTime = 0;
-            this.movementDurationMS = 0;
-            this.tryToPickUp(true);
-            thingsHere['fence'].dispose();
-          }
-/*
-          okayToDisplayWord() {
-            return (typeof this.beginMovementTime == 'undefined' || this.beginMovementTime < 1)
-          }
-*/
+
+              startStroke() {
+                  startSuppressingPlayerInput();
+                  this.strokeNumber++;
+                  let destX = this.x - 70;
+                  let destY = this.y + 4;
+                  let time = 180;
+                  if (this.strokeNumber % 2 == 1) {
+                    destX = this.x + 70;
+                    destY = this.y + 13;
+                    time = 280;
+                  }
+                  this.setMovement(destX, destY, time);
+                  if (this.strokeNumber < 8)
+                    this.extraPostMovementBehavior = this.startStroke.bind(this);
+                  else
+                    this.extraPostMovementBehavior = this.removeFence.bind(this);
+              }
+
+              removeFence() {
+                    stopSuppressingPlayerInput();
+                  this.returnToInventoryAfterUseOnScreen();
+                  thingsHere['fence'].dispose();
+              }
         }
 
         window.Treasure = class Treasure extends Thing {

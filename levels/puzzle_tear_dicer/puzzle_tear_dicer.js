@@ -51,18 +51,10 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
             }
             update() {
                 this.y = this.initialY - 190 + (Math.round(Date.now() / 5 ) % 356);
-            //    this.frameCtr = ( Math.round(Date.now() / 40 ) % 6 );
-            //    if (this.frameCtr > 5)
-            //        this.frameCtr = 0;
-            //    this.image = this.images[this.frameCtr];
             }
             passageBlockingBehavior() {
                 displayMessage('This magical precipitation stings!', DEFAULT_MESSAGE_DURATION, this.initialX, this.initialY);
             }
-            handleCollision() {
-                displayMessage('This magical precipitation stings!', DEFAULT_MESSAGE_DURATION, this.initialX, this.initialY);
-            }
-
             okayToDisplayWord() {
                 return false;
             }
@@ -73,12 +65,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
                 completeLevel();
                 return super.tryToPickUp();
             }
-            handleCollision() {
-                completeLevel();
-                super.handleCollision();
-            }
         }
-
     }
 
     level.getThing = function(word,room,x,y) {
@@ -91,7 +78,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     }
 
     level.initialRoom = 'room1';
-    level.initialX = 20; // expressed as % of way across x axis, i.e. value range is 0-100
+    level.initialX = 23; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 84;
     level.initialSpells = ['anagram', 'remove-edge', 'add-edge', 'change-edge'];
     level.initialInventory = {};
@@ -103,17 +90,17 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     level.bridgelikeObjects = [];
     level.otherGameData = {};
     level.initialThings = [
-        ['tare','room1', 8, 73],
-        ['dicer','room1',28,73],
-        ['treasure','room1',90,86],
-        ['mysterious-precipitation', 'room1', 50, 50],
+        ['tare','room1', 12, 80],
+        ['dicer','room1',33,80],
+        ['treasure','room1',92,86],
+        ['mysterious-precipitation', 'room1', 56, 50],
     ];
     level.initialRunes = [];
     level.rooms = {
         'room1': {
             boundaries: [ ['i',0,50,100,50] ],
             filledPolygons: [],
-            passages: [  new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',72,83, 'room1',72, 83, true, 72, 83, 'mysterious-precipitation', PASSAGE_STATE_BLOCKED, 50, 84 ) ],
+            passages: [  new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',75,83, 'room1',72, 83, true, 72, 83, 'mysterious-precipitation', PASSAGE_STATE_BLOCKED, 50, 84 ) ],
             backgroundImageName: 'road-background.png',
         },
     };

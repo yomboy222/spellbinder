@@ -114,8 +114,8 @@ getLevelFunctions['cordon-joker'] = function() {
                 }
             }
 
-            methodToCallAfterMovement() {
-                super.methodToCallAfterMovement();
+            concludeMovement() {
+                super.concludeMovement();
                 window.setTimeout(completeLevel, 2000);
             }
         }

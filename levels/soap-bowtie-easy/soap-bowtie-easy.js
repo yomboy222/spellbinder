@@ -39,13 +39,13 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
                 }
                 this.setMovement(destX, destY, time);
                 if (this.strokeNumber < 8) {
-                    this.methodToCallAfterMovement = this.startStroke.bind(this);
+                    this.extraPostMovementBehavior = this.startStroke.bind(this);
                 }
                 else if ('partition' in thingsHere) {
-                    this.methodToCallAfterMovement = this.removePartition.bind(this);
+                    this.extraPostMovementBehavior = this.removePartition.bind(this);
                 }
                 else { // trying to remove ravelin but too strong.
-                    this.methodToCallAfterMovement = this.failToRemoveRavelin.bind(this);
+                    this.extraPostMovementBehavior = this.failToRemoveRavelin.bind(this);
                 }
             }
 

@@ -56,9 +56,9 @@ getLevelFunctions['soap-bowtie'] = function() {
               }
               this.setMovement(destX, destY, time);
               if (this.strokeNumber < 8)
-                this.methodToCallAfterMovement = this.startStroke.bind(this);
+                this.concludeMovement = this.startStroke.bind(this);
               else
-                this.methodToCallAfterMovement = this.removeFence.bind(this);
+                this.concludeMovement = this.removeFence.bind(this);
           }
 
           removeFence() {

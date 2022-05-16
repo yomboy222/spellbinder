@@ -36,8 +36,7 @@ getLevelFunctions['trash/lobster level'] = function() {
                     super.handleDblclick();
                 }
             }
-            methodToCallAfterMovement() {
-                super.methodToCallAfterMovement();
+            extraPostMovementBehavior() {
                 window.setTimeout(completeLevel, 2000);
             }
 

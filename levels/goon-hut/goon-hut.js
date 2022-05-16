@@ -49,29 +49,28 @@ getLevelFunctions['goon-hut'] = function() {
             }
         }
 
+        window.Shifter = class Shifter extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.reblocksPassageUponReturn = true;
+                this.frameDisplayTimeMS = 1300;
+                window.setTimeout(this.startAnimating.bind(this), 1200);
+            }
+        }
+
         window.Soiree = class Soiree extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
-                this.useAnimationImages = true;
-                this.frameDisplayTimeMS = 1000;
+                //this.useAnimationImages = true;
+                //this.frameDisplayTimeMS = 1000;
             }
             passageBlockingBehavior() {
                 displayMessageWithSound('Black tie only!',sounds['failure'], DEFAULT_MESSAGE_DURATION);
                 this.useAnimationImages = true;
                 window.setTimeout(this.stopAnimating.bind(this), DEFAULT_MESSAGE_DURATION);
             }
-            stopAnimating() {
-                this.useAnimationImages = false;
-            }
             okayToDisplayWord() {
                 return false;
-            }
-        }
-
-        window.Shifter = class Shifter extends Thing {
-            constructor(word,room,x,y) {
-                super(word,room,x,y);
-                this.reblocksPassageUponReturn = true;
             }
         }
 
@@ -81,7 +80,7 @@ getLevelFunctions['goon-hut'] = function() {
                     let portcullis = thingsHere['portcullis'];
                     this.removeFromInventoryForUseOnScreen();
                     this.setMovement(portcullis.x, portcullis.y, 1000, player.x, player.y, true);
-                    this.methodToCallAfterMovement = function() {
+                    this.extraPostMovementBehavior = function() {
                         level.sounds['unlock'].play();
                         window.setTimeout(this.concludeUse.bind(this), 2000);
                     };
@@ -101,7 +100,15 @@ getLevelFunctions['goon-hut'] = function() {
         window.Treasure = class Treasure extends Thing {
         }
 
-        window.Vat = class Vat extends Thing {
+        window.Tux = class Tux extends Thing {
+            extraPickUpBehavior() {
+                // need to change player images.
+                level.setOrUnsetSoireeObstacle();
+            }
+            extraDiscardBehavior() {
+                // need to change player images.
+                level.setOrUnsetSoireeObstacle();
+            }
         }
 
         window.Wool = class Wool extends Thing {
@@ -123,12 +130,12 @@ getLevelFunctions['goon-hut'] = function() {
             case 'soiree' : return new Soiree(word,room,x,y);
             case 'tool' : return new Tool(word,room,x,y);
             case 'treasure' : return new Treasure(word,room,x,y);
-            case 'vat' : return new Vat(word,room,x,y);
+            case 'tux' : return new Tux(word,room,x,y);
             case 'wool' : return new Wool(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
         }
     }
-    level.initialRoom = 'room1';
+    level.initialRoom = 'room2';
     level.initialX = 55; // expressed as % of way across x axis, i.e. value range is 0-100 
     level.initialY = 75;
     level.initialSpells = [ 'reversal', 'change-letter' ];
@@ -136,13 +143,26 @@ getLevelFunctions['goon-hut'] = function() {
     level.backgroundMusicFile = undefined;
     level.allWords = [ 'gang','gnat','goal','goat','gong','goon','gown','gut','hat','hut','loon','loot','lout','nut','oat','oven','oxen','portcullis','shifter','snifter','soiree','tang','tool','toon','town','treasure','tug','tun','tux','vat','wool' ];
     level.bonusWords = [ 'gang','goal','gong','gut','hat','loon','lout','oat','toon','town','tug','vat','wool' ];
-    level.initialThings = [ ['hut','room1',40,81],['goon','room1',18,68],['portcullis','room1',81,68],['loot','room0',18,81],['oxen','room0',55,81],['tang','room2',40,81],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81] ];
+    level.initialThings = [  ['tux','room3',30,60],  ['hut','room1',40,81],['goon','room1',18,68],['portcullis','room1',81,68],['loot','room0',18,81],['oxen','room0',55,81],['tang','room2',40,81],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81] ];
     level.targetThing = 'treasure';
     level.immovableObjects = [ 'gang','gnat','goal','goat','gong','goon','hut','lout','oven','oxen','portcullis','shifter','soiree','town','tug','tun','vat' ];
     level.initialRunes = ['v','w'];
     level.sounds = {
         'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),
     };
+    level.setOrUnsetSoireeObstacle = function() {
+        if (currentRoom != 'room3' || !('soiree' in thingsHere) )
+            return;
+        let soiree = thingsHere['soiree'];
+        if ('tux' in inventory) {
+            console.log('here');
+            soiree.activateOrDeactivateObstacle(false);
+        }
+        else {
+            console.log('here2');
+            soiree.activateOrDeactivateObstacle(true);
+        }
+    }
 
     level.rooms = {
         'room1': {
@@ -173,6 +193,9 @@ getLevelFunctions['goon-hut'] = function() {
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room2', 90, 77, true, 50, 77),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',75, 77, 'room3', 75, 77, true, -1, -1, 'soiree', PASSAGE_STATE_BLOCKED, 35, 75),
             ],
+            specificNewRoomBehavior: function() {
+                level.setOrUnsetSoireeObstacle();
+            },
         },
     };
     return level;

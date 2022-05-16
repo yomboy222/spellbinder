@@ -217,8 +217,7 @@ class GameElement {
     update() {
         if (this.beginMovementTime > 0) {
             if (Date.now() > this.beginMovementTime + this.movementDurationMS) {
-                this.beginMovementTime = 0;
-                this.methodToCallAfterMovement();
+                this.concludeMovement();
             } else {
                 let fractionTraversed = (Date.now() - this.beginMovementTime) / this.movementDurationMS;
                 this.x = this.initialX + ((this.destX - this.initialX) * fractionTraversed);
@@ -236,7 +235,7 @@ class GameElement {
         this.movementDurationMS = distanceAsFractionOfPlayAreaWidth * 2000 / relSpeed;
         this.beginMovementTime = Date.now();
     }
-    methodToCallAfterMovement() {
+    concludeMovement() {
         this.beginMovementTime = 0;
         this.x = this.destX;
         this.y = this.destY;
@@ -247,6 +246,7 @@ class GameElement {
         if (this.enableInputAfterMovement) {
             stopSuppressingPlayerInput();
         }
+        this.extraPostMovementBehavior();
     }
     handleDblclick(e) {
         return false; // meaning that this object didn't actually handle the dblclick.
@@ -269,7 +269,7 @@ class GameElement {
         }
         this.enableInputAfterMovement = enableInputAfterMovement;
     }
-
+    extraPostMovementBehavior() {}
 }
 
 class Rune extends GameElement {
@@ -289,8 +289,7 @@ class Rune extends GameElement {
         this.halfHeight = this.height / 2;
     }
 
-    methodToCallAfterMovement() {
-        super.methodToCallAfterMovement();
+    extraPostMovementBehavior() {
         if (this.beingReleasedRatherThanAbsorbed === true) {
             runesBeingReleased = [];
         }
@@ -468,9 +467,8 @@ class Thing extends GameElement {
         this.removeFromInventory(recalculateInventoryIndexes); // will be false if just replacing this with a new object as result of spell
     }
 
-
-    methodToCallAfterMovement() {
-        super.methodToCallAfterMovement();
+    concludeMovement() {
+        super.concludeMovement();
         if (this.deleteAfterMovement === true)
             this.dispose();
         else
@@ -509,6 +507,22 @@ class Thing extends GameElement {
             ctx.drawImage(this.image, this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
         }
         ctx.globalAlpha = 1.0;
+    }
+
+    startAnimating() {
+        this.useAnimationImages = true;
+        this.width = this.images[0].width;
+        this.halfWidth = this.width / 2;
+        this.height = this.images[0].height;
+        this.halfHeight = this.height / 2;
+    }
+
+    stopAnimating() {
+        this.useAnimationImages = false;
+        this.width = this.image.width;
+        this.halfWidth = this.width / 2;
+        this.height = this.image.height;
+        this.halfHeight = this.height / 2;
     }
 
     setCoordinatesInInventory() {
@@ -821,13 +835,13 @@ class Passage extends GameElement {
 
             if (this.state === PASSAGE_STATE_BLOCKED) {
                 player.blockingThing = thingsHere[this.obstacle];
-                player.methodToCallAfterMovement = playerBlocked;
+                player.extraPostMovementBehavior = playerBlocked;
                 player.retreatX = player.x;
                 player.retreatY = player.y;
             }
             else {
                 player.blockingThing = undefined;
-                player.methodToCallAfterMovement = arriveAtPassage;
+                player.extraPostMovementBehavior = arriveAtPassage;
             }
             switch (this.direction) {
                 case 'N' : player.direction = Directions.UP; break;
@@ -865,6 +879,7 @@ class Passage extends GameElement {
 
 /* end class definitions; begin global functions */
 
+// this will be bound to player object using "player.extraPostMovementBehavior = arriveAtPassage":
 function arriveAtPassage() {
 
     if (destinationPassage.destinationRoom == currentRoom) {
@@ -882,15 +897,10 @@ function arriveAtPassage() {
             if (typeof destinationPassage.messageUponReachingDest === 'string') {
                 player.messageToDisplayAfterMovement = destinationPassage.messageUponReachingDest;
             }
-/*             else {
-                player.methodToCallAfterMovement = function() {};
-            }
-
- */
-
             player.initiateMovement();
         }
     }
+    player.extraPostMovementBehavior = function(){}; // done with this movement so clear out future post-movement behavior
 }
 
 function playerBlocked() {
@@ -899,7 +909,7 @@ function playerBlocked() {
     player.initialY = player.y;
     player.destX = player.retreatX;
     player.destY = player.retreatY;
-    player.methodToCallAfterMovement = function(){}; // TODO: this should be a function that orients player image so not facing "backwards"
+    player.extraPostMovementBehavior = function(){}; // TODO: this should be a function that orients player image so not facing "backwards"
     player.initiateMovement();
 }
 

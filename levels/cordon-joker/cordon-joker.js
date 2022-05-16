@@ -87,21 +87,12 @@ getLevelFunctions['cordon-joker'] = function() {
                 displayMessage('yikes!', DEFAULT_MESSAGE_DURATION);
                 level.sounds['condor'].play();
                 this.movementType = MOVEMENT_TYPE_PARABOLIC;
-                this.useAnimationImages = true;
-                this.width = this.images[0].width;
-                this.halfWidth = this.width / 2;
-                this.height = this.images[0].height;
-                this.halfHeight = this.height / 2;
+                this.startAnimating();
                 this.setMovement(this.x,this.y,1200);
             }
 
-            methodToCallAfterMovement() {
-                this.width = this.image.width;
-                this.halfWidth = this.width / 2;
-                this.height = this.image.height;
-                this.halfHeight = this.height / 2;
-                super.methodToCallAfterMovement();
-                this.useAnimationImages = false;
+            extraPostMovementBehavior() {
+                this.stopAnimating();
             }
         }
 
@@ -112,7 +103,7 @@ getLevelFunctions['cordon-joker'] = function() {
             }
             extraTransformIntoBehavior() {
                 passages[0].obstacle = 'cordon';
-                passages[0].state = PASSAGE_STATE_BLOCKED;
+                passages[0].block();
             }
         }
 
@@ -145,8 +136,7 @@ getLevelFunctions['cordon-joker'] = function() {
                     super.handleDblclick(e);
                 }
             }
-            methodToCallAfterMovement() {
-                super.methodToCallAfterMovement();
+            extraPostMovementBehavior() {
                 if (this.alreadyBeenInCauldron) {
                     this.movable = true;
                     this.returnToInventoryAfterUseOnScreen();
@@ -191,8 +181,7 @@ getLevelFunctions['cordon-joker'] = function() {
                 }
             }
 
-            methodToCallAfterMovement() {
-                super.methodToCallAfterMovement();
+            extraPostMovementBehavior() {
                 window.setTimeout(completeLevel, 2000);
             }
         }

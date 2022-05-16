@@ -32,14 +32,14 @@ getLevelFunctions['hemp-icon'] = function() {
                     let muffin = thingsHere['muffin'];
                     this.removeFromInventoryForUseOnScreen();
                     this.movementType = MOVEMENT_TYPE_PARABOLIC;
-                    this.setMovement(muffin.x + 80, muffin.y - 100, 1000, player.x, player.y, true);
+                    this.setMovement(muffin.x + 80, muffin.y - 80, 1000, player.x, player.y, true);
                 }
                 else {
                     return super.handleDblclick(e);
                 }
             }
 
-            methodToCallAfterMovement() {
+            extraPostMovementBehavior() {
                 normalPlayerInputSuppressed = false;
                 let muffin = thingsHere['muffin'];
                 if (typeof muffin === 'undefined' || muffin === null) {
@@ -100,7 +100,6 @@ getLevelFunctions['hemp-icon'] = function() {
                     this.strokeNumber = 0;
                     this.startStroke();
                     startSuppressingPlayerInput(3000);
-
                 }
                 else {
                     return super.handleDblclick(e);
@@ -117,9 +116,9 @@ getLevelFunctions['hemp-icon'] = function() {
                 }
                 this.setMovement(destX, destY, time);
                 if (this.strokeNumber < 6)
-                    this.methodToCallAfterMovement = this.startStroke;
+                    this.extraPostMovementBehavior = this.startStroke;
                 else
-                    this.methodToCallAfterMovement = this.finishUse;
+                    this.extraPostMovementBehavior = this.finishUse;
 
             }
             finishUse() {

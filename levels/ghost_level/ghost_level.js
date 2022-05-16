@@ -349,7 +349,7 @@ getLevelFunctions['ghost level'] = function() {
                     return super.handleClick();
                 }
             }
-            methodToCallAfterMovement() {
+            concludeMovement() {
                 let sound = new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/kaching.wav');
                 sound.play();
                 otherData['toll paid time'] = Date.now();
