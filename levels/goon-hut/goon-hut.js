@@ -135,7 +135,7 @@ getLevelFunctions['goon-hut'] = function() {
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
         }
     }
-    level.initialRoom = 'room2';
+    level.initialRoom = 'room1';
     level.initialX = 55; // expressed as % of way across x axis, i.e. value range is 0-100 
     level.initialY = 75;
     level.initialSpells = [ 'reversal', 'change-letter' ];
@@ -143,13 +143,15 @@ getLevelFunctions['goon-hut'] = function() {
     level.backgroundMusicFile = undefined;
     level.allWords = [ 'gang','gnat','goal','goat','gong','goon','gown','gut','hat','hut','loon','loot','lout','nut','oat','oven','oxen','portcullis','shifter','snifter','soiree','tang','tool','toon','town','treasure','tug','tun','tux','vat','wool' ];
     level.bonusWords = [ 'gang','goal','gong','gut','hat','loon','lout','oat','toon','town','tug','vat','wool' ];
-    level.initialThings = [  ['tux','room3',30,60],  ['hut','room1',40,81],['goon','room1',18,68],['portcullis','room1',81,68],['loot','room0',18,81],['oxen','room0',55,81],['tang','room2',40,81],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81] ];
+    level.initialThings = [ ['hut','room1',40,81],['goon','room1',18,68],['portcullis','room1',81,68],['loot','room0',18,81],['oxen','room0',55,81],['tang','room2',40,81],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81] ];
     level.targetThing = 'treasure';
     level.immovableObjects = [ 'gang','gnat','goal','goat','gong','goon','hut','lout','oven','oxen','portcullis','shifter','soiree','town','tug','tun','vat' ];
     level.initialRunes = ['v','w'];
     level.sounds = {
         'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),
     };
+    level.initialMessage = 'Your goal: get the treasure!';
+
     level.setOrUnsetSoireeObstacle = function() {
         if (currentRoom != 'room3' || !('soiree' in thingsHere) )
             return;

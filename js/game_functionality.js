@@ -1438,10 +1438,28 @@ function drawInventory() {
 
 // zOrderStack is array of all game elements (currently, player and thingsHere) in order in which to draw
 function regenerateZOrderStack() {
-    zOrderStack = [player];
-    for (key in thingsHere)
-        zOrderStack.push(thingsHere[key]);
-    zOrderStack.sort((a,b) => a.getBaseY() - b.getBaseY() );
+    // console.log('regenerating z order');
+    // obstacles will get drawn first, then other things (plus player) according to baseY.
+    let obstacles = [];
+    let obstacleWords = [];
+    let nonObstacles = [player];
+    for (let i=0; i<passages.length; i++) {
+        let potentialObstacleName = passages[i].obstacle;
+        if (typeof potentialObstacleName === 'string' && potentialObstacleName in thingsHere && obstacles.indexOf(potentialObstacleName) < 0) {
+            obstacleWords.push(potentialObstacleName);
+            obstacles.push(thingsHere[potentialObstacleName]);
+        }
+    }
+    for (let key in thingsHere) {
+        if (obstacleWords.indexOf(key) < 0)
+            nonObstacles.push(thingsHere[key]);
+    }
+    nonObstacles.sort((a,b) => a.getBaseY() - b.getBaseY() );
+
+    // console.log(obstacles);
+    // console.log(nonObstacles);
+
+    zOrderStack = obstacles.concat(nonObstacles);
 }
 
 function showOrHideDivsWithinGameContainerDiv(showRatherThanHide) {
@@ -1540,23 +1558,17 @@ function animate() {
         ctx.stroke();
     }
 
+    //
     // update all things sitting in current room, and draw those "behind" player (judged by y value of their "base", usually y + halfHeight)
-    playerBaseY = player.y + player.halfHeight;
+    player.update();
+
     for (let [word, thing] of Object.entries(thingsHere)) {
         thing.update();
-        thingBaseY = (typeof thing.baseYOverride === 'undefined') ? thing.y + thing.halfHeight : thing.baseYOverride;
-        if (thingBaseY < playerBaseY)
-            thing.draw();
     }
 
-    player.update();
-    player.draw();
-
-    // draw all things sitting in current room "in front of" player (judged by y value)
-    for (let [word, thing] of Object.entries(thingsHere)) {
-        thingBaseY = (typeof thing.baseYOverride === 'undefined') ? thing.y + thing.halfHeight : thing.baseYOverride;
-        if (thingBaseY >= playerBaseY)
-            thing.draw();
+    // zOrderStack is array of the game elements on screen (player + things), in the order they should be drawn at each frame
+    for (let i=0; i<zOrderStack.length;i++) {
+        zOrderStack[i].draw();
     }
 
     // draw the non-invisible passages in current room
@@ -1704,8 +1716,6 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     player.x = newPlayerXAsPercent * xScaleFactor;
     player.y = newPlayerYAsPercent * yScaleFactor;
 
-    regenerateZOrderStack();
-
     console.log(zOrderStack);
 
     let roomData = rooms[newRoomName];
@@ -1728,6 +1738,9 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
             }
             filledPolygons.push(scaledPolygon);
         }
+
+        regenerateZOrderStack(); // the game elements on screen (player + things), in the order they should be drawn at each frame
+
     }
 
     boundaries = [];
@@ -1816,6 +1829,8 @@ function launchLevel() {
     drawTopBinderImage();
 
     newRoom(level.initialRoom, level.initialX, level.initialY, level.initialMessage);
+
+    level.initializationFunction();
 
     animate();
 }
@@ -1959,7 +1974,6 @@ function loadLevel(lName = 'intro level') {
     // document.getElementById('spell-list').innerHTML = spellListHtml;
     document.getElementById('horizontal-spell-list').innerHTML = spellListHtml;
     document.getElementById('inner-score-div').innerHTML = 'score: <span id="score-span">0</span>';
-    level.initializationFunction();
 
     // launchLevel() will usually be called by onload handler of last required image, when it loads, but handle edge case of no required images:
     if (imagesRequiredToPlayThisLevel.length === 0) {

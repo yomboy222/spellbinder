@@ -112,6 +112,8 @@ getLevelFunctions['soap-bowtie'] = function() {
     level.bonusWords = [ 'aster','eater','ester','hoe','pea','sea','spa', ];
     level.targetThing = 'treasure';
     level.initialRunes = [];
+    level.initialMessage = 'Your goal: get the treasure!';
+
 
     level.rooms = {
         'room1': {

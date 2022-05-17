@@ -192,6 +192,7 @@ getLevelFunctions['hemp-icon'] = function() {
     level.targetThing = 'treasure';
     level.initialRunes = [];
     level.sounds = { 'growl' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/345733__noahpardo__deep-growl-1.wav') };
+    level.initialMessage = 'Your goal: get the treasure!';
     level.muffinInVendingMachine = true;
 
     level.rooms = {

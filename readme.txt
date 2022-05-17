@@ -8,7 +8,8 @@ in new level, maybe multiple tools? design simple puzzle for multiple tools
 
 design loading message
 
-aromantics-hotspot room 2 needs background w/ east wall
+make hater say "i'm melting!"
+
 easy soap-bowtie: make hammer look more like sledgehammer
 
 for tutorial: new cur image, key image; new curb image; make curb image fit into background image; 
