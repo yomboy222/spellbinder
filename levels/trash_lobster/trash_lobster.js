@@ -1,8 +1,8 @@
 /* trash_lobster.js */
 
-levelList.push( { name:'trash/lobster level', difficulty:4 });
+levelList.push( { name:'trash-lobster puzzle', difficulty:4 });
 
-getLevelFunctions['trash/lobster level'] = function() {
+getLevelFunctions['trash-lobster puzzle'] = function() {
 
     let level = new Level('trash/lobster level');
     level.folderName = 'trash_lobster';
@@ -15,21 +15,13 @@ getLevelFunctions['trash/lobster level'] = function() {
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.
                 }
-                if (this.word in inventory) {
+                if (this.getKey() in inventory) {
                     let cauldron = thingsHere['cauldron'];
-                    if (cauldron.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
-                        thingsHere[this.word] = this;
+                    if (cauldron.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 60)) {
+                        this.removeFromInventoryForUseOnScreen();
                         this.deleteAfterMovement = true;
-                        this.deleteCaptionIfAny();
-                        this.removeFromInventory();
-                        this.movable = false; // so player can't pick up again as it moves
                         this.movementType = MOVEMENT_TYPE_PARABOLIC;
-                        this.beginMovementTime = Date.now();
-                        this.movementDurationMS = 1000;
-                        this.initialX = player.x;
-                        this.initialY = player.y;
-                        this.destX = cauldron.x;
-                        this.destY = cauldron.y - cauldron.halfHeight;
+                        this.setMovement(cauldron.x, cauldron.y - cauldron.halfHeight, 1000, undefined, undefined, true, false);
                     }
                 }
                 else {

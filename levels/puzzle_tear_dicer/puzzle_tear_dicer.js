@@ -1,8 +1,8 @@
 /* puzzle_tear_dicer.js */
 
-levelList.push( { name:'tear/dicer puzzle', difficulty:7 } );
+levelList.push( { name:'tear-dicer puzzle', difficulty:7 } );
 
-getLevelFunctions['tear/dicer puzzle'] = function() {
+getLevelFunctions['tear-dicer puzzle'] = function() {
 
     let level = new Level('tear/dicer puzzle');
     level.folderName = 'puzzle_tear_dicer';
@@ -108,7 +108,7 @@ getLevelFunctions['tear/dicer puzzle'] = function() {
     level.initializationFunction = function() {
         window.setTimeout(
             function() {
-                displayMessage("Hint: at one point in this puzzle you'll need to turn something into a kind of duck. It's not super-obscure, but less common than 'mallard', say.", 7000 );
+                displayMessage("Hint: at one point in this puzzle you'll need to turn something into a kind of duck. It's not super-obscure, but less common than 'mallard', say.");
             },
             2500
         )

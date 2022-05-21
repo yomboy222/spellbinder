@@ -30,11 +30,11 @@ getLevelFunctions['soap-bowtie'] = function() {
         window.Saw = class Saw extends Thing {
             handleDblclick(e) {
 
-              if ((this.word in inventory) && ('hater' in thingsHere)) {
+              if ((this.getKey() in inventory) && ('hater' in thingsHere)) {
                   displayMessageWithSound('The hater blocks your saw!' , sounds['failure'], DEFAULT_MESSAGE_DURATION);
                   return false;
               }
-              if (!(this.word in inventory) || !('fence' in thingsHere)) {
+              if (!(this.getKey() in inventory) || !('fence' in thingsHere)) {
                   return super.handleDblclick(e);
               }
               this.strokeNumber = 0;
@@ -46,7 +46,7 @@ getLevelFunctions['soap-bowtie'] = function() {
             }
 
             extraTransformIntoBehavior() {
-              if (!(this.word in inventory)) {
+              if (!(this.getKey() in inventory)) {
                   displayMessage('Remember, to pick something up, double-click it; and double-click it again to use it.');
               }
             }

@@ -4,9 +4,9 @@
 
 /* todo: make hater block the saw if you try to use it on him */
 
-levelList.push( { name:'soap-bowtie-easy', difficulty:0 } );
+levelList.push( { name:'easy soap-bowtie level', difficulty:0 } );
 
-getLevelFunctions['soap-bowtie-easy'] = function() {
+getLevelFunctions['easy soap-bowtie level'] = function() {
 
     let level = new Level('soap-bowtie-easy');
     level.folderName = 'soap-bowtie-easy';
@@ -15,7 +15,7 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
 
         window.Hammer = class Hammer extends Thing {
             handleDblclick(e) {
-                if (!(this.word in inventory) || !(('partition' in thingsHere) || ('ravelin' in thingsHere)))
+                if (!(this.getKey() in inventory) || !(('partition' in thingsHere) || ('ravelin' in thingsHere)))
                     return super.handleDblclick(e);
                 this.strokeNumber = 0;
                 this.removeFromInventoryForUseOnScreen();
@@ -131,8 +131,8 @@ getLevelFunctions['soap-bowtie-easy'] = function() {
     level.bonusWords = ['paw','law'];
     level.initialThings = [ ['bowtie','room1',24,82],['soap','room1',50,82],['hater','room1',72,75],
         ['jammer','room0',40,80],
-        ['partition','room2',75,74],
-        ['lava','room3',72,83],['treasure','room4',40,81] ];
+        ['partition','room2',75,76],
+        ['lava','room3',72,85],['treasure','room4',40,81] ];
     level.immovableObjects = [ 'partition','jammer','hater','water','lava' ];
 
     level.targetThing = 'treasure';

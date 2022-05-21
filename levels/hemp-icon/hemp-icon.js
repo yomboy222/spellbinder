@@ -69,7 +69,8 @@ getLevelFunctions['hemp-icon'] = function() {
         window.Muffin = class Muffins extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
-                this.inVendingMachine = true;
+                if (level.muffinInVendingMachine === true) // have to check this in case player transforms puffin *back* into muffin
+                   this.inVendingMachine = true;
             }
             handleClick(e) {
                 if (this.inVendingMachine) {

@@ -67,6 +67,7 @@ let newRuneIndex = -1;
 let runesBeingReleased = [];
 let runesBeingAbsorbed = [];
 let transformationToExecute = undefined;
+let thingBeingTransformed = undefined;
 let rooms = {};
 let passages = [];
 let boundaries = [];
@@ -156,7 +157,7 @@ class Level {
         this.keydownFunction = function(e) {
             return false; // false indicates keydown event not handled here
         };
-        this.levelCompleteMessage = 'Congratulations, you completed the level! Close this message to return to home screen.';
+        this.levelCompleteMessage = 'Congratulations, you completed the level, earning <SCORE> points! Close this message to return to home screen.';
     }
 }
 
@@ -252,9 +253,9 @@ class GameElement {
         return false; // meaning that this object didn't actually handle the dblclick.
     }
     getBaseY() { // where the object is "planted" in the room, for purposes of calculating z-orders. larger baseY = nearer top of order
-        console.log(this.word);
+        // console.log(this.word)''
         let baseY = this.y + this.halfHeight;
-        console.log(baseY);
+        // console.log(baseY);
         return baseY;
     }
     setMovement(destX, destY, duration, initialX = undefined, initialY = undefined, suppressInputDuringMovement = false, enableInputAfterMovement = false) {
@@ -335,12 +336,15 @@ class Player extends GameElement {
  }
 
 class Thing extends GameElement {
-    constructor(word, room, x, y) {
+    constructor(word, room, x, y, isonymIndex = undefined) {
         super(x, y);
         this.word = word;
         this.room = room;
         this.x = x;
         this.y = y;
+        if (typeof isonymIndex !== 'undefined') {
+            this.isonymIndex = isonymIndex; // used when you have multiple things with same "word" property
+        }
         if (typeof level !== 'undefined' && level !== null && typeof level.pluralWords !== 'undefined' && word in level.pluralWords) {
             this.plural = true;
             this.baseImageName = level.pluralWords[word].replace(' ', '_'); // e.g. arch.png rather than arches.png
@@ -381,6 +385,13 @@ class Thing extends GameElement {
         this.reblocksPassageUponReturn = false;
     }
 
+    getKey() { // the key used for this thing in thingsHere, thingsElsewhere, inventory:
+        if (typeof this.isonymIndex === 'undefined')
+            return this.word;
+        else
+            return this.word + this.isonymIndex.toString();
+    }
+
     setDimensionsFromImage() { // this gets called as soon as image loads
         this.width = this.image.width; // take dimensions directly from image
         this.height = this.image.height;
@@ -389,13 +400,13 @@ class Thing extends GameElement {
         if (this.wordDisplayOffsetY === 0) { // meaning it wasn't set explicitly in subclass constructor
             this.wordDisplayOffsetY = this.halfHeight - 14;
         }
-        if (this.word in thingsHere)
+        if (this.getKey() in thingsHere)
             this.setCaptionPositionInThingsHere();
 
         if (imagesRequiredToPlayThisLevel && !levelLaunched) {
             launchLevelIfAllRequiredImagesLoaded();
         }
-        else if (this.word in inventory) {
+        else if (this.getKey() in inventory) {
             drawInventory();
         }
     }
@@ -438,12 +449,13 @@ class Thing extends GameElement {
     deleteFromThingsHere(deleteCaptionToo = true, recalculateZOrder = true) {
         if (deleteCaptionToo)
             this.deleteCaptionIfAny();
-        delete thingsHere[this.word];
+        delete thingsHere[this.getKey()];
         if (recalculateZOrder)
             regenerateZOrderStack();
     }
 
     deleteCaptionIfAny() {
+        console.log('deleting captionDiv for ' + this.getKey());
         if (typeof this.captionDiv !== 'undefined') {
             this.captionDiv.remove(); // take div out of DOM hierarchy
             this.captionDiv = undefined; // ... and mark for garbage removal
@@ -468,10 +480,10 @@ class Thing extends GameElement {
     }
 
     concludeMovement() {
-        super.concludeMovement();
+        super.concludeMovement(); // this calls extraPostMovementBehavior, which could return thing to inventory
         if (this.deleteAfterMovement === true)
             this.dispose();
-        else
+        else if (this.getKey() in thingsHere)
             this.setCaptionPositionInThingsHere();
     }
 
@@ -550,7 +562,7 @@ class Thing extends GameElement {
     extraDiscardBehavior() {}
 
     // tryToPickUp() returns true if successful else false or an error message:
-    tryToPickUp(suppressSound = false) {
+    tryToPickUp(suppressSound = false, tryToReturnToSamePlaceInInventory = false) {
         // only call this on things in thingsHere in range of player.
         if (this.movable) {
             if (Object.keys(inventory).length >= MAX_ITEMS_IN_INVENTORY) {
@@ -558,12 +570,12 @@ class Thing extends GameElement {
             } else {
                 if (!suppressSound)
                     sounds['pickup'].play();
-                inventory[this.word] = this;
-                this.indexInInventory = Object.keys(inventory).length - 1;
+                inventory[this.getKey()] = this;
+                if (typeof this.indexInInventory === 'undefined' || !tryToReturnToSamePlaceInInventory)
+                    this.indexInInventory = Object.keys(inventory).length - 1;
                 this.setCoordinatesInInventory(this.indexInInventory);
-                this.moveCaptionDivIfAnyToInventory();
                 this.deleteFromThingsHere(false); // "false" means don't delete the caption
-                delete thingsHere[this.word];
+                this.moveCaptionDivIfAnyToInventory();
                 if (typeof level.targetThing === 'string' && level.targetThing === this.word)
                     completeLevel();
                 this.extraPickUpBehavior();
@@ -575,8 +587,8 @@ class Thing extends GameElement {
     }
 
     putIntoThingsHere(recalculateZOrders = true) {
-        thingsHere[this.word] = this;
-        delete thingsElsewhere[this.word]; // may not have been in thingsElsewhere but do this anyway
+        thingsHere[this.getKey()] = this;
+        delete thingsElsewhere[this.getKey()]; // may not have been in thingsElsewhere but do this anyway
         this.room = currentRoom;
         this.setCaptionPositionInThingsHere();
         if (recalculateZOrders)
@@ -588,29 +600,29 @@ class Thing extends GameElement {
         // discard() furthermore moves the thing into thingsHere; but this is not always desired (like when throwing darts e.g.)
 
         //failsafe:
-        if (!this.word in inventory)
+        if (!this.getKey() in inventory)
             return;
 
         if (recalculateAllIndexes) {
             for (let key in inventory) {
                 let otherThing = inventory[key];
-                console.log(otherThing);
-                console.log(otherThing.indexInInventory.toString());
+                // console.log(otherThing);
+                // console.log(otherThing.indexInInventory.toString());
                 if (otherThing.indexInInventory > this.indexInInventory) {
                     otherThing.indexInInventory--;
                 }
-                console.log(otherThing.word + ' ' + otherThing.indexInInventory.toString());
+                // console.log(otherThing.word + ' ' + otherThing.indexInInventory.toString());
             }
+            this.indexInInventory = undefined; // if not recalculating, might be because just removing from inventory for use on screen, in which case will want to put back in same position afterwards.
+            window.setTimeout(function () {
+                    repositionInventoryItems();
+                    drawInventory();
+                },
+                100); // waiting 100 MS to redraw this so click won't affect whatever item slides into this item's place in the inventory
+
         }
 
-        delete inventory[this.word];
-        this.indexInInventory = undefined;
-
-        window.setTimeout(function () {
-                repositionInventoryItems();
-                drawInventory();
-            },
-            100); // waiting 100 MS to redraw this so click won't affect whatever item slides into this item's place in the inventory
+        delete inventory[this.getKey()];
     }
 
     discard(suppressSound = false, xDistFromPlayer = undefined, yDistFromPlayer = undefined) {
@@ -642,7 +654,10 @@ class Thing extends GameElement {
     }
 
     removeFromInventoryForUseOnScreen(xDistFromPlayer = 0, yDistFromPlayer = 0) {
-        this.discard(true, xDistFromPlayer, yDistFromPlayer);
+        this.removeFromInventory(false); // false means don't recalculate inventory indexes since this will be returned after movement.
+        this.x = player.x + xDistFromPlayer;
+        this.y = player.y + yDistFromPlayer;
+        this.putIntoThingsHere();
         if (typeof this.captionDiv !== 'undefined') {
             this.captionDiv.style.display = 'none'; // don't display caption while saw being used
         }
@@ -652,13 +667,19 @@ class Thing extends GameElement {
         if (typeof this.captionDiv !== 'undefined') {
             this.captionDiv.style.display = 'block';
         }
-        this.tryToPickUp(true);
+        this.tryToPickUp(true, true);
     }
 
     moveCaptionDivIfAnyToInventory() {
         if (typeof this.captionDiv !== 'undefined') {
+            console.log('here moving caption');
+
             this.captionLeftEdgeWithinCanvas = canvasOffsetX + this.x - 18;
             this.captionTopEdgeWithinCanvas = canvasOffsetY + PLAY_AREA_HEIGHT + 58;
+
+            console.log(this.captionLeftEdgeWithinCanvas);
+            console.log(this.captionTopEdgeWithinCanvas);
+
             this.captionDiv.classList.add('in-inventory');
             this.captionDiv.style.left = this.captionLeftEdgeWithinCanvas.toString() + 'px';
             this.captionDiv.style.top = this.captionTopEdgeWithinCanvas.toString() + 'px';
@@ -693,7 +714,7 @@ class Thing extends GameElement {
 
         let adjustedWidth = this.halfWidth;
         let adjustedHeight = this.halfHeight;
-        if (this.word in inventory) {
+        if (this.getKey() in inventory) {
             adjustedHeight = adjustedHeight / this.inventoryImageRatio;
             adjustedWidth = adjustedWidth / this.inventoryImageRatio;
         }
@@ -709,12 +730,14 @@ class Thing extends GameElement {
 
     // particular Thing subclasses may override this:
     handleClick() {
-        if (this.okayToDisplayWord()) // i.e. only open spell-input window if the word is being shown
-            toggleSpellInputWindow(false,this.word);
+        if (this.okayToDisplayWord()) { // i.e. only open spell-input window if the word is being shown
+            thingBeingTransformed = this;
+            toggleSpellInputWindow(false, this.word);
+        }
     }
 
     handleDblclick(e) {
-        if (this.word in inventory) {
+        if (this.getKey() in inventory) {
             if (currentRoom === 'darkroom') {
                 displayMessage("Don't put anything down here, you might lose it!");
             } else {
@@ -913,21 +936,27 @@ function playerBlocked() {
     player.initiateMovement();
 }
 
-function getThing(word, room, x, y, treatXandYasPercentages = true, otherArgs = undefined) {
+function getThing(word, room, x, y, treatXandYasPercentages = true, isonymIndex = undefined) {
     if (treatXandYasPercentages) {
         x = x * xScaleFactor;
         y = y * yScaleFactor;
     }
     // first see if there is a subclass of Thing defined for this word in level-specific code:
     let thing = level.getThing(word,room,x,y);
-    if (!(typeof thing === 'object')) {
-        thing = new Thing(word,room,x,y); // otherwise get a plain-vanilla Thing
+    if (typeof thing !== 'object') { // i.e. if the level doesn't instantiate it as a special subclass of Thing ...
+        thing = new Thing(word, room, x, y, isonymIndex);
+    }
+    if (typeof isonymIndex !== 'undefined') {
+        thing.isonymIndex = isonymIndex;
     }
     return thing;
 }
 
-function getNewCaptionDiv(word) {
+function getNewCaptionDiv(word, idKey = undefined) {
+    if (typeof idKey === 'undefined')
+        idKey = word;
     let captionDiv = document.createElement('div');
+    captionDiv.id = idKey;
     captionDiv.classList.add('word-bubble');
     captionDiv.classList.add('visible-now');
     captionDiv.innerText = word;
@@ -1182,14 +1211,32 @@ function refreshScore() {
     document.getElementById("score-span").innerText = score.toString();
 }
 
+function modifyScore(delta) {
+    score += delta;
+    refreshScore();
+}
+
 function registerWordForScoringPurposes(word) {
     if (wordsFound.indexOf(word) >= 0)
         return; // already found.
-    score += word.length;
+    let isAlternateFormOfWordAlreadyFound = false; // by default; will change to true if we find alternate form ...
+    if (typeof level.pluralWords !== 'undefined') {
+        for (let i = 0; i < wordsFound.length; i++) {
+            let otherWord = wordsFound[i];
+            // console.log('checking against ' + otherWord);
+            if ( (otherWord in level.pluralWords && word === level.pluralWords[otherWord])
+                || (word in level.pluralWords && otherWord === level.pluralWords[word]) ) {
+                isAlternateFormOfWordAlreadyFound = true;
+                // console.log('true!!');
+            }
+        }
+    }
     wordsFound.push(word);
-    refreshScore();
-    if (typeof level.bonusWords !== 'undefined' && level.bonusWords.indexOf(word) >= 0) {
-        displayMessage('Bonus word!', DEFAULT_MESSAGE_DURATION);
+    if (!isAlternateFormOfWordAlreadyFound) {
+        modifyScore(word.length);
+        if (typeof level.bonusWords !== 'undefined' && level.bonusWords.indexOf(word) >= 0) {
+            displayMessage('Bonus word!', DEFAULT_MESSAGE_DURATION);
+        }
     }
 }
 
@@ -1200,21 +1247,26 @@ function announceSpellFailure(msg) {
 
 function castSpell() {
     toggleSpellInputWindow(true); // close the window
-    toWord = document.getElementById('toWord').value.toLowerCase().trim();
-    fromWord = document.getElementById('fromWord').innerText.toLowerCase().trim();
-    if (typeof toWord != 'string' || typeof fromWord != 'string' || toWord.length < 1 || fromWord.length < 1 || fromWord == toWord )
+    let sourceThing = thingBeingTransformed;
+    if (typeof sourceThing !== 'object') {
+        announceSpellFailure('Error --- thingBeingTransformed was not set.');
         return;
-    let inInventory = (fromWord in inventory);
-    let sourceThing = undefined;
+    }
+    fromWord = sourceThing.word;
+    toWord = document.getElementById('toWord').value.toLowerCase().trim();
+
+    if (typeof toWord !== 'string' || typeof fromWord !== 'string' || toWord.length < 1 || fromWord.length < 1 || fromWord == toWord ) {
+        return;
+    }
+
+    fromWord = sourceThing.word;
+    let fromKey = sourceThing.getKey();
+
+    let inInventory = (fromKey in inventory);
 
     // check whether fromWord is in inventory or in thingsHere:
-    if (inInventory) {
-        sourceThing = inventory[fromWord];
-    } else if (fromWord in thingsHere) {
-        sourceThing = thingsHere[fromWord];
-    }
-    else {
-        announceSpellFailure('Nothing called "' + fromWord + '" is available here.');
+    if (!inInventory && !(fromKey in thingsHere)) {
+        announceSpellFailure('Error --- nothing called "' + fromWord + '" is available here.');
         return;
     }
 
@@ -1333,8 +1385,9 @@ function executeTransformation() {
     let toWord = transformationToExecute.toWord;
     let runeReleased = transformationToExecute.runeReleased;
     let runeNeeded = transformationToExecute.runeNeeded;
+    let fromKey = sourceThing.getKey();
 
-    let inInventory = (sourceThing.word in inventory);
+    let inInventory = (fromKey in inventory);
 
     sourceThing.deactivateObstacle();
     sourceThing.extraTransformFromBehavior();
@@ -1342,16 +1395,17 @@ function executeTransformation() {
     if (sourceThing.playAudioWhenTransformed === true)
         sounds['spell'].play();
 
-    // remove the source thing:
-    let thingToDelete = (inInventory) ? inventory[fromWord] : thingsHere[fromWord];
-
     // note that as of this comment, getThingButPossiblySubclass is in word_data.js,
     // also note "false" here means treat x and y as actual coordinates rather than percentages:
     let newObject = getThing(toWord, currentRoom, sourceThing.x, sourceThing.y, false);
 
+    if (typeof sourceThing.isonymIndex !== 'undefined') {
+        newObject.isonymIndex = sourceThing.isonymIndex; // so if there are multiple "loot" objects distinguished by isonymIndex, same can hold for "tool" objects
+    }
+
     if (inInventory) {
         newObject.indexInInventory = sourceThing.indexInInventory;
-        inventory[toWord] = newObject;
+        inventory[newObject.getKey()] = newObject;
     }
     else {
         newObject.putIntoThingsHere();
@@ -1362,13 +1416,13 @@ function executeTransformation() {
         inInventory = false;
     }
 
-    thingToDelete.dispose(false);
+    sourceThing.dispose(false);
 
     repositionInventoryItems();
     drawInventory();
 
     if (newObject.okayToDisplayWord()) {
-        newObject.captionDiv = getNewCaptionDiv(toWord);
+        newObject.captionDiv = getNewCaptionDiv(toWord, newObject.getKey());
         if (inInventory) {
             newObject.moveCaptionDivIfAnyToInventory();
         } else {
@@ -1626,8 +1680,7 @@ function teleport() {
 
 function completeLevel() {
     levelComplete = true;
-    score += level.completionBonus;
-    refreshScore();
+    modifyScore(level.completionBonus);
     sounds['fanfare'].play();
     if (typeof backgroundMusic === 'object') {
         backgroundMusic.pause();
@@ -1648,7 +1701,7 @@ function completeLevel() {
     messageObject.timeAtMessageCreation = Date.now();
     messageObject.duration = 0;
     msgDiv.innerHTML = '<div class="window-closing-div"><a href="#" onclick="closeMessage(' + messageCounter.toString( ) + ',true)">X</a></div>';
-    msgDiv.innerHTML += level.levelCompleteMessage;
+    msgDiv.innerHTML += level.levelCompleteMessage.replace('<SCORE>', '<span style="color:red; font-weight:bold">' + score.toString() + '</span>');
     msgDiv.style.display = 'block';
     messages[messageCounter] = messageObject;
 }
@@ -1674,7 +1727,8 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     for (let [word, thing] of Object.entries(thingsHere)) {
 
         if (!thing.deleteAfterMovement) {
-            thingsElsewhere[word] = thing;
+            // console.log('putting into thingsElsewhere ' + thing.getKey() + " = " + word);
+            thingsElsewhere[thing.getKey()] = thing;
         }
         if (typeof thing.sound === 'object') {
             thing.sound.pause();
@@ -1703,16 +1757,25 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     }
 
     currentRoom = newRoomName;
-    for (let [word, thing] of Object.entries(thingsElsewhere)) {
+
+    for (let [key, thing] of Object.entries(thingsElsewhere)) {
+
+        console.log('checking ' + key + '=' + thing.getKey());
+        console.log(thing.isonymIndex);
+
         if (thing.room === currentRoom) {
+            console.log('putting into things here');
             thing.putIntoThingsHere(false); // "false" so that it doesn't recalculate whole z-order stack for each thing; just do once at end of this loop
             // put up captions for all things in new word.
             if (thing.okayToDisplayWord()) {
-                thing.captionDiv = getNewCaptionDiv(thing.word);
+                thing.captionDiv = getNewCaptionDiv(thing.word, thing.getKey());
                 thing.setCaptionPositionInThingsHere();
             }
         }
     }
+
+    console.log(thingsHere);
+
     player.x = newPlayerXAsPercent * xScaleFactor;
     player.y = newPlayerYAsPercent * yScaleFactor;
 
@@ -1738,9 +1801,6 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
             }
             filledPolygons.push(scaledPolygon);
         }
-
-        regenerateZOrderStack(); // the game elements on screen (player + things), in the order they should be drawn at each frame
-
     }
 
     boundaries = [];
@@ -1762,6 +1822,8 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
                 b[3] * xScaleFactor, b[4] * yScaleFactor, orientation]);
         }
     }
+
+    regenerateZOrderStack(); // the game elements on screen (player + things), in the order they should be drawn at each frame
 
     if (typeof roomData.specificNewRoomBehavior === 'function')
         roomData.specificNewRoomBehavior();
@@ -1913,23 +1975,28 @@ function loadLevel(lName = 'intro level') {
     let namesOfRequiredImages = [];
     let objectData = level.initialThings;
     for (let i=0; i < objectData.length; i++) {
-        let key = objectData[i][0];
-        wordsFound.push(key); // so player doesn't get score credit for transforming something into one of these "given" words
-        if (key in thingsElsewhere) {
-            // the following code is because might have to append digit to word to get unique key for it:
-            for (let j=1; j<10; j++) {
-                key = objectData[i][0] + j.toString();
-                if (!(key in thingsElsewhere))
-                    break;
-            }
+        let word = objectData[i][0];
+        let initialRoom = objectData[i][1];
+        let initialX = objectData[i][2];
+        let initialY = objectData[i][3];
+        let key = word; // the isonym index will be appended to this, if supplied
+        let isonymIndex = undefined;
+        wordsFound.push(word); // so player doesn't get score credit for transforming something into one of these "given" words
+        if (objectData[i].length > 4) {
+            isonymIndex = objectData[i][4];
+            key = key + isonymIndex.toString();
         }
-        thingsElsewhere[key] = getThing(objectData[i][0], objectData[i][1], objectData[i][2], objectData[i][3]);
+        console.log(key);
+        thingsElsewhere[key] = getThing(word, initialRoom, initialX, initialY, true, isonymIndex);
+        console.log(thingsElsewhere[key].isonymIndex);
+        console.log(thingsElsewhere[key].getKey());
         // register things in first room as necessary to launch the level:
-        if (objectData[i][1] === level.initialRoom && key !== 'treasure') { // treasure is used in a bunch of levels so putting its image in main /imgs folder.
+        if (initialRoom === level.initialRoom && key !== 'treasure') { // treasure is used in a bunch of levels so putting its image in main /imgs folder.
             imagesRequiredToPlayThisLevel.push(thingsElsewhere[key].image); // should probably handle case where an image in initial room is animated right off the bat ... let its subclass of thing define explicitly how many animation images it has
             namesOfRequiredImages.push(key);
         }
     }
+    // console.log(thingsElsewhere);
 
     console.log(imagesRequiredToPlayThisLevel);
 
@@ -1940,6 +2007,13 @@ function loadLevel(lName = 'intro level') {
             additionalImagePathsToPreLoadForThisLevel.push(getImagePathForWord(word));
         }
     }
+    if (typeof level.additionalImageNamesToPreload !== 'undefined') {
+        for (let i=0; i<level.additionalImageNamesToPreload.length; i++) {
+            additionalImagePathsToPreLoadForThisLevel.push(getImagePathForWord(level.additionalImageNamesToPreload[i]));
+        }
+    }
+
+    console.log(additionalImagePathsToPreLoadForThisLevel);
 
     /* TODO: change this so that only background of 1st room loads now. once that loads, trigger load of other backgrounds used. */
 
@@ -2128,7 +2202,6 @@ function handleClick(e) {
         return;
     }
 
-
     // tell the browser we're handling this mouse event
     e.preventDefault();
     e.stopPropagation();
@@ -2175,6 +2248,13 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
     let xWithinCanvas = e.x - canvasOffsetX;
     let yWithinCanvas = e.y - canvasOffsetY;
 
+    for (let i = 0; i < passages.length; i++) {
+        if (passages[i].occupiesPoint(xWithinCanvas, yWithinCanvas)) {
+            passages[i].handleClick();
+            return;
+        }
+    }
+
     for ([word, thing] of Object.entries(inventory)) {
         if (thing.occupiesPoint(xWithinCanvas, yWithinCanvas))
             if (doubleRatherThanSingle)
@@ -2209,13 +2289,6 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
     }
     if (messageToDisplayIfNothingHandlesSuccessfully !== '') {
         displayMessageWithSound(messageToDisplayIfNothingHandlesSuccessfully, sounds['failure'], 2 * DEFAULT_MESSAGE_DURATION);
-    }
-
-    if (!handled) {
-        for (let i = 0; i < passages.length; i++) {
-            if (passages[i].occupiesPoint(xWithinCanvas, yWithinCanvas))
-                passages[i].handleClick();
-        }
     }
 
     drawInventory(); // important not to call this in individual Things' implementations of handleClick()!

@@ -70,7 +70,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
 
         window.Aromatics = class Aromatics extends Thing {
             handleDblclick(e) {
-                if ((!this.word in inventory) || !('hotpot' in thingsHere || 'hotpots' in thingsHere))
+                if ((!this.getKey() in inventory) || !('hotpot' in thingsHere || 'hotpots' in thingsHere))
                     return super.handleDblclick(e);
 
                 if (this.movable === false) {
@@ -78,20 +78,11 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 }
 
                 this.soundToPlayAfterMovement = sounds['splash'];
-
                 let cauldron = ('hotpots' in thingsHere) ? thingsHere['hotpots'] : thingsHere['hotpot'];
-                thingsHere[this.word] = this;
+                this.removeFromInventoryForUseOnScreen();
                 this.deleteAfterMovement = true;
-                this.deleteCaptionIfAny();
-                this.removeFromInventory();
-                this.movable = false; // so player can't pick up again as it moves
                 this.movementType = MOVEMENT_TYPE_PARABOLIC;
-                this.beginMovementTime = Date.now();
-                this.movementDurationMS = 1000;
-                this.initialX = player.x;
-                this.initialY = player.y;
-                this.destX = cauldron.x;
-                this.destY = cauldron.y - cauldron.halfHeight;
+                this.setMovement(cauldron.x, cauldron.y - cauldron.halfHeight, 1000, player.x, player.y, true, true);
             }
             extraPostMovementBehavior() {
                 let cauldron = ('hotpots' in thingsHere) ? thingsHere['hotpots'] : thingsHere['hotpot'];
@@ -111,6 +102,9 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.x = x;
                 let y = (40 * yScaleFactor) + canvasOffsetY;
                 this.y = y;
+            }
+            getBaseY() {
+                return 10000; // make sure it's on top of Z-order stack so player can read it
             }
         }
 

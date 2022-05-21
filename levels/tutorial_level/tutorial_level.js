@@ -10,6 +10,11 @@ getLevelFunctions['tutorial level'] = function() {
     level.defineThingSubclasses = function() {
 
         window.Bear = class Bear extends Thing{
+            constructor(word,room,x,y) {
+                super(word, room, x, y);
+                this.wordDisplayOffsetX = -105;
+                this.wordDisplayOffsetY = -4;
+            }
             extraTransformFromBehavior() {
                 displaySequenceableMessage('Now you can change "cur" into "curb"!', 'tutorial_instruction', 'tutorial_instruction');
             }
@@ -26,6 +31,13 @@ getLevelFunctions['tutorial level'] = function() {
             }
             extraTransformFromBehavior() {
                 displaySequenceableMessage('... and now you can click on the arrow at right, to move to next room!', 'tutorial_instruction', 'tutorial_instruction');
+            }
+        }
+
+        window.Curb = class Curb extends Thing {
+            extraTransformIntoBehavior() {
+                this.x += 75;
+                this.y += 18;
             }
         }
 
@@ -93,6 +105,7 @@ getLevelFunctions['tutorial level'] = function() {
     level.getThing = function(word,room,x,y) {
         switch (word) {
             case 'cur' : return new Cur(word,room,x,y);
+            case 'curb' : return new Curb(word,room,x,y);
             case 'bear' : return new Bear(word,room,x,y);
             case 'gate' : return new Gate(word,room,x,y);
             case 'key' : return new Key(word,room,x,y);
@@ -153,7 +166,7 @@ getLevelFunctions['tutorial level'] = function() {
             filledPolygons: [ ['r',0,0,100,35], ['r',0,35,56,27], ['r',84,35,16,27], ['r',0,97,100,3], ],
             passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E', 95, 80, 'room3', 12, 80,
                 true, 30, 80, 'cur', PASSAGE_STATE_BLOCKED, 76, 80),
-                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 5, 80, 'room1', 88,50, true, 50, 50),
+                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 5, 80, 'room1', 88,80, true, 50, 80),
                 ],
             specificNewRoomBehavior: function() {
                 window.setTimeout(level.showRoom2Message,2200);

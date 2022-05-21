@@ -34,6 +34,12 @@ getLevelFunctions['goon-hut'] = function() {
             }
         }
 
+        window.Hole = class Hole extends Thing {
+            okayToDisplayWord() {
+                return false;
+            }
+        }
+
         window.Hut = class Hut extends Thing {
         }
 
@@ -76,24 +82,62 @@ getLevelFunctions['goon-hut'] = function() {
 
         window.Tool = class Tool extends Thing {
             handleDblclick(e) {
-                if ('portcullis' in thingsHere && 'tool' in inventory) {
-                    let portcullis = thingsHere['portcullis'];
-                    this.removeFromInventoryForUseOnScreen();
-                    this.setMovement(portcullis.x, portcullis.y, 1000, player.x, player.y, true);
-                    this.extraPostMovementBehavior = function() {
-                        level.sounds['unlock'].play();
-                        window.setTimeout(this.concludeUse.bind(this), 2000);
-                    };
-                    this.initiateMovement();
+                let correspondingHoleWord = this.numberOfSides.toString() + 'hole';
+                let correspondingHole = thingsHere[correspondingHoleWord];
+                if (typeof correspondingHole === 'undefined' || !(this.getKey() in inventory))
+                    return super.handleDblclick();
+
+                // start the sequence to use the tool and increment the wheels:
+                level.numberOfToolUses++;
+                this.removeFromInventoryForUseOnScreen();
+                this.incrementsCompletedInThisSequence = 0;
+                this.setMovement(correspondingHole.x - 16, correspondingHole.y + 13, 500, player.x - 16, player.y + 13, true, false);
+            }
+            extraPostMovementBehavior() {
+                if (this.incrementsCompletedInThisSequence < this.numberOfSides) {
+                    for (let key in thingsHere) {
+                        if (key.indexOf('wheel') >= 0) {
+                            thingsHere[key].increment(1);
+                        }
+                    }
+                    this.incrementsCompletedInThisSequence++;
+                    this.setMovement(this.x,this.y,100,undefined,undefined,true,false)
                 }
-                else {
-                    return super.handleDblclick(e);
+                else { // ... completed the 3 or 5 increments so wrap up:
+                    this.incrementsCompletedInThisSequence = 0;
+                    stopSuppressingPlayerInput();
+                    let puzzleSolved = true; // by default; if either wheel isn't put into correct state, will set to false.
+
+                    for (let key in thingsHere) {
+                        if (key.indexOf('wheel') >= 0) {
+                            if (thingsHere[key].pointer !== 0)
+                                puzzleSolved = false;
+                        }
+                    }
+                    if (puzzleSolved) {
+                        let p = thingsHere['portcullis'];
+                        p.unblockPassagesThisHadBeenBlocking();
+
+                        if (level.numberOfToolUses <= 13) {
+                            displayMessage('Bonus! You opened it in the smallest number of moves.', DEFAULT_MESSAGE_DURATION);
+                            modifyScore(10);
+                        }
+
+                    }
+                    this.returnToInventoryAfterUseOnScreen();
                 }
             }
-            concludeUse() {
-                thingsHere['portcullis'].unblockPassagesThisHadBeenBlocking();
-                this.returnToInventoryAfterUseOnScreen();
-                normalPlayerInputSuppressed = false;
+            extraTransformIntoBehavior() {
+                if (typeof this.isonymIndex !== 'undefined' && this.isonymIndex === 1) {
+                    this.numberOfSides = 5;
+                    this.useAnimationImages = true; // will use alternate image tool0.png
+                    this.image = this.images[0]; // use first (and only) animation image as main image too (used in inventory)
+                    this.frameDisplayTimeMS = 0; // tells update code never to switch frames.
+                }
+                else {
+                    this.numberOfSides = 3;
+                    this.useAnimationImages = false; // use regular image tool.img
+                }
             }
         }
 
@@ -108,6 +152,62 @@ getLevelFunctions['goon-hut'] = function() {
             extraDiscardBehavior() {
                 // need to change player images.
                 level.setOrUnsetSoireeObstacle();
+            }
+        }
+
+        window.Wheel = class Wheel extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.radius = 30;
+                this.numberOfTicks = parseInt(this.word.substr(0,2));
+                this.pointer = -1;
+                this.handLength = 34;
+                this.centerX = this.x;
+                this.centerY = this.y;
+                this.handTipX = this.getHandTipX();
+                this.handTipY = this.getHandTipY();
+
+                this.numberOfTimesMoved = 0;
+            }
+            getHandTipX() {
+                let angle = Math.PI * 2 * this.pointer / this.numberOfTicks;
+                return this.centerX + ( Math.sin(angle) * this.handLength);
+            }
+            getHandTipY() {
+                let angle = Math.PI * 2 * this.pointer / this.numberOfTicks;
+                return this.centerY - (Math.cos(angle) * this.handLength);
+            }
+            okayToDisplayWord() {
+                return false;
+            }
+            draw() {
+                super.draw();
+                ctx.strokeStyle = 'purple';
+                ctx.lineWidth = 5;
+                /*
+                for (let i=0; i<this.numberOfTicks; i++) {
+                    let angle = Math.PI * 2 * i / this.numberOfTicks;
+                    let x = this.centerX + ( Math.sin(angle) * this.radius);
+                    let y = this.centerY - (Math.cos(angle) * this.radius);
+                    ctx.beginPath();
+                    ctx.arc(x,y,3, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }*/
+
+                ctx.beginPath();
+                ctx.moveTo(this.centerX, this.centerY);
+                ctx.lineTo(this.handTipX, this.handTipY);
+                ctx.stroke();
+            }
+            increment(aNumber) {
+               // console.log('increment');
+                this.pointer = (this.pointer + aNumber) % this.numberOfTicks;
+                this.handTipX = this.getHandTipX();
+                this.handTipY = this.getHandTipY();
+                /* if (p.pointer === 0) {
+                    level.sounds['unlock'].play();
+                } */
+
             }
         }
 
@@ -132,25 +232,35 @@ getLevelFunctions['goon-hut'] = function() {
             case 'treasure' : return new Treasure(word,room,x,y);
             case 'tux' : return new Tux(word,room,x,y);
             case 'wool' : return new Wool(word,room,x,y);
+            case '10wheel' : return new Wheel(word,room,x,y);
+            case '12wheel' : return new Wheel(word,room,x,y);
+            case '3hole' : return new Hole(word,room,x,y);
+            case '5hole' : return new Hole(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
         }
     }
     level.initialRoom = 'room1';
-    level.initialX = 55; // expressed as % of way across x axis, i.e. value range is 0-100 
+    level.initialX = 35; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 75;
     level.initialSpells = [ 'reversal', 'change-letter' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
-    level.allWords = [ 'gang','gnat','goal','goat','gong','goon','gown','gut','hat','hut','loon','loot','lout','nut','oat','oven','oxen','portcullis','shifter','snifter','soiree','tang','tool','toon','town','treasure','tug','tun','tux','vat','wool' ];
+    level.allWords = [ 'gang','gnat','goal','goat','gong','goon','gown','gut','hat','hut','loon','loot','lout','nut','oat','oven','oxen','portcullis','shifter','snifter','soiree','tang','tool','tool0','toon','town','treasure','tug','tun','tux','vat','wool' ];
     level.bonusWords = [ 'gang','goal','gong','gut','hat','loon','lout','oat','toon','town','tug','vat','wool' ];
-    level.initialThings = [ ['hut','room1',40,81],['goon','room1',18,68],['portcullis','room1',81,68],['loot','room0',18,81],['oxen','room0',55,81],['tang','room2',40,81],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81] ];
+    level.initialThings = [ ['hut','room2',18,81],['goon','room1',18,68],['portcullis','room1',78,58],['10wheel','room1',94,50],['12wheel','room1',94,75],
+        ['3hole','room1',60,40], ['5hole','room1',60,60], ['loot','room0',18,88,0],['loot','room0',8,81,1], ['oxen','room0',55,81],['tang','room2',40,81],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81],
+
+    ];
     level.targetThing = 'treasure';
-    level.immovableObjects = [ 'gang','gnat','goal','goat','gong','goon','hut','lout','oven','oxen','portcullis','shifter','soiree','town','tug','tun','vat' ];
+    level.immovableObjects = [ 'gang','gnat','goal','goat','gong','goon','hut','lout','oven','oxen','portcullis','shifter',
+        'soiree','wheel','hole','3hole','5hole','10wheel','12wheel','town','tug','tun','vat' ];
     level.initialRunes = ['v','w'];
+    level.additionalImageNamesToPreload = ['tool_0','shifter_0','shifter_1','soiree_0','gown_0'];
     level.sounds = {
         'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),
     };
     level.initialMessage = 'Your goal: get the treasure!';
+    level.numberOfToolUses = 0;
 
     level.setOrUnsetSoireeObstacle = function() {
         if (currentRoom != 'room3' || !('soiree' in thingsHere) )
@@ -172,27 +282,27 @@ getLevelFunctions['goon-hut'] = function() {
             filledPolygons: [],
             passages: [ 
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room0', 90, 77, true, 80, 77, 'goon', PASSAGE_STATE_BLOCKED, 26, 63),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room2', 10, 77, true, 50, 77, 'portcullis', PASSAGE_STATE_BLOCKED, 73, 63)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',82, 77, 'room2', 10, 77, true, 50, 77, 'portcullis', PASSAGE_STATE_BLOCKED, 68, 75)],
         },
         'room0': {
             boundaries: [],
             filledPolygons: [],
             passages: [
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',37, 77, 'room0', 40, 77, true, -1, -1, 'oxen', PASSAGE_STATE_BLOCKED, 70, 75),
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room1', 10, 77, true, 65, 77)],
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room1', 10, 77, true, 35, 77)],
         },
         'room2': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room1', 90, 77, true, 50, 77),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room1', 90, 77, true, 35, 77),
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room3', 10, 77, true, 20, 77, 'shifter', PASSAGE_STATE_BLOCKED, 73, 63)],
         },
         'room3': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room2', 90, 77, true, 50, 77),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room2', 90, 77, true, 35, 77),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',75, 77, 'room3', 75, 77, true, -1, -1, 'soiree', PASSAGE_STATE_BLOCKED, 35, 75),
             ],
             specificNewRoomBehavior: function() {

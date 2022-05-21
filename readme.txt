@@ -4,26 +4,17 @@ https://github.com/yomboy222/spellbinder.git
 
 TODO:
 
-in new level, maybe multiple tools? design simple puzzle for multiple tools
-
 design loading message
 
-make hater say "i'm melting!"
+goon-hut:  image change when the door is opened
 
-easy soap-bowtie: make hammer look more like sledgehammer
+make hater say "i'm melting!". make beefeater block behavior say 'oi!'
 
-for tutorial: new cur image, key image; new curb image; make curb image fit into background image; 
-new strategy for loading images. in initialize, load 1st room images first, then signal to generate z-order, then load all other possible images
+tare-dicer: redo background
 
-pre-load all the non-level-specific images in initialize function (player, arrows, runes). then the background images too but don't make starting the game dependent on those.
+again, when starting level, say "loading" until first-room images and background are loaded. maybe wait 1.5 seconds to load and if not done, then put up the "loading" graphic. make optional level.additionalImagesToPreload
 
-again, when starting level, say "loading" until first-room images and background are loaded. maybe wait 1.5 seconds to load and if not done, then put up the "loading" graphic.
-
-i wonder if obstacle status is more important than "base Y" for z order. 
-
-i think it really is worth redoing the background graphics to fade them out more.
-
-have to recalculate z order only after all the halfheights are set!!
+worth redoing the background graphics to fade them out more.
 
 implement "bonus word" message as a GameElement so that you can put animation around it.
 
@@ -40,9 +31,6 @@ screen-resizing issues
 finish upgrading tutorial level -- including new images.
 
 possibly put messages into an invisible div & let them just fit in sequentially
-
-consider marking words not necessary for level-solving as "bonus words". this would be a way to make red-herring words come across as positive, rather than as annoyances. exact definition might be tricky. can't just be "there exists a solution that doesn't involve the word", because could be two equally good (to be precise, say equally long) solutions to the level. more likely -- "any solution that involves this word could be simplified to remove it," but might be annoying to program automatic way to detect this.
-
 
 look up promise architecture (for images loading) and async/await just to be aware of it.
 

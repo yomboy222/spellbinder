@@ -122,7 +122,7 @@ getLevelFunctions['cordon-joker'] = function() {
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.
                 }
-                if (this.word in inventory) {
+                if (this.getKey() in inventory) {
                     let cauldron = thingsHere['cauldron'];
                     if (cauldron.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
                         this.deleteAfterMovement = false;
@@ -167,7 +167,7 @@ getLevelFunctions['cordon-joker'] = function() {
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.
                 }
-                if (this.word in inventory) {
+                if (this.getKey() in inventory) {
                     let cauldron = thingsHere['cauldron'];
                     if (cauldron.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 20)) {
                         this.deleteAfterMovement = true;
