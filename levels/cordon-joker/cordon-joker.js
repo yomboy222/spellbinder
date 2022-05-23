@@ -208,7 +208,7 @@ getLevelFunctions['cordon-joker'] = function() {
     level.initialInventory = {};
     level.initialMessage = "To complete Gombrecht's potion, add a rock to the cauldron!";
     level.backgroundMusicFile = 'IMSLP111573-PMLP01846-M%C3%BAsica_Cl%C3%A1sica_-_Rondo_Alla_Turca._Wolfgang_Amadeus_Mozart.mp3'; // IMSLP76367-PMLP02397-onclassical_salvatori_debussy_suite_iv.mp3';
-    level.allWords = [ 'cauldron','codon','coke','condo','condor','cordon',
+    level.allWords = [ 'cauldron','coke','condo','condor','cordon',
         'core','cork','donor','jock','joke','joker','ore','roc','rock','roe','rondo' ];
     level.initialThings = [ ['cauldron','room1',15,76], ['cordon','room1',65,76],['joker','room2',60,72] ];
     // level.targetThing = 'rock';

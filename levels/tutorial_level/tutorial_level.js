@@ -139,7 +139,7 @@ getLevelFunctions['tutorial level'] = function() {
     level.initialSpells = ['remove-edge', 'add-edge'];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
-    level.allWords = [ 'hovel', 'shovel', 'hovels', 'bear', 'cur', 'ear', 'curb', 'curd', 'cure', 'key' ];
+    level.allWords = [ 'bear', 'cur', 'ear', 'curb', 'key' ];
     level.solidObjects  = [ 'bear', 'cur', 'gate', 'hovel', 'hovels', 'stand', ];
     level.immovableObjects = [ 'bear', 'gate', 'cur', 'curb', 'curd', 'hovel', 'hovels',  ];
     level.bridgelikeObjects = [ 'span', 'ladder' ];
@@ -175,7 +175,7 @@ getLevelFunctions['tutorial level'] = function() {
         'room3': {
             passages: [ new Passage(PassageTypes.INVISIBLE_VERTICAL,'W',5, 78, 'room2', 88, 80, true,64,80),
                 new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',76,78, 'room3', 78, 80, true,
-                    -1, -1,'gate', PASSAGE_STATE_BLOCKED, 57, 80, 'Now double-click the treasure to pick it up!'),
+                    -1, -1,'gate', PASSAGE_STATE_BLOCKED, 35, 80, 'Now double-click the treasure to pick it up!'),
             ],
             specificNewRoomBehavior: function() {
                 window.setTimeout(level.showRoom3Message, 1200);

@@ -1,6 +1,6 @@
 /* trash_lobster.js */
 
-levelList.push( { name:'trash-lobster puzzle', difficulty:4 });
+levelList.push( { name:'trash-lobster puzzle', difficulty:5 });
 
 getLevelFunctions['trash-lobster puzzle'] = function() {
 

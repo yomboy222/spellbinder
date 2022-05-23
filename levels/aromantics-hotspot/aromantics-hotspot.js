@@ -4,17 +4,7 @@
 
 /* manifesto should hint at aromatic vegetables */
 
-/*
-The true Path is not just Vegetarianism but Asceticism. The Elimination of Flavors such as Cheeses; Onion and other Aromatic Vegetables; Thyme and other Herbs,
-
-Ship's Manifest as of 6 April 1341:
-180 lbs Smoked Gouda
-90 lbs Onions
-30 lbs Dried Herbs
- */
-
-
-levelList.push( { name:'aromantics-hotspot', difficulty:0 } );
+levelList.push( { name:'aromantics-hotspot', difficulty:7 } );
 
 getLevelFunctions['aromantics-hotspot'] = function() {
 
@@ -155,8 +145,8 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 let path = getLevelPathFromFolderName(level.folderName) + '/audio/baaaa.m4a';
-                console.log(path);
                 this.shriek = new Audio(path);
+                this.reblocksPassageUponReturn = true;
             }
             passageBlockingBehavior() {
                 this.setMovement(this.x,this.y,1000);

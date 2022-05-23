@@ -59,7 +59,7 @@ let runeImages = []; let arrowImages = {};
 let defaultThingImage = undefined;
 let treasureImage = undefined;
 let imagesRequiredForAllLevels = []; // will be set in initialize()
-let imagesRequiredToPlayThisLevel = []; // will be set in loadLevel()
+let imagesRequiredToStartThisLevel = {}; // will be set in loadLevel()
 let additionalImagePathsToPreLoadForThisLevel = [];
 let additionalImagesToPreLoad = [];
 let runeAcquisitionTime = 0;
@@ -80,6 +80,7 @@ let timeMod2200 = 0;
 let arrowsAlpha = 0;
 let arrowsAlphaLookupTable = [];
 let sounds = {};
+let preLoadedBackgroundImages = {};
 let backgroundImage = new Image();
 const NUMBER_OF_DEFAULT_ROOM_BACKGROUNDS = 3;
 let backgroundMusic = undefined;
@@ -403,7 +404,7 @@ class Thing extends GameElement {
         if (this.getKey() in thingsHere)
             this.setCaptionPositionInThingsHere();
 
-        if (imagesRequiredToPlayThisLevel && !levelLaunched) {
+        if (imagesRequiredToStartThisLevel && !levelLaunched) {
             launchLevelIfAllRequiredImagesLoaded();
         }
         else if (this.getKey() in inventory) {
@@ -455,7 +456,7 @@ class Thing extends GameElement {
     }
 
     deleteCaptionIfAny() {
-        console.log('deleting captionDiv for ' + this.getKey());
+        // console.log('deleting captionDiv for ' + this.getKey());
         if (typeof this.captionDiv !== 'undefined') {
             this.captionDiv.remove(); // take div out of DOM hierarchy
             this.captionDiv = undefined; // ... and mark for garbage removal
@@ -672,13 +673,8 @@ class Thing extends GameElement {
 
     moveCaptionDivIfAnyToInventory() {
         if (typeof this.captionDiv !== 'undefined') {
-            console.log('here moving caption');
-
             this.captionLeftEdgeWithinCanvas = canvasOffsetX + this.x - 18;
             this.captionTopEdgeWithinCanvas = canvasOffsetY + PLAY_AREA_HEIGHT + 58;
-
-            console.log(this.captionLeftEdgeWithinCanvas);
-            console.log(this.captionTopEdgeWithinCanvas);
 
             this.captionDiv.classList.add('in-inventory');
             this.captionDiv.style.left = this.captionLeftEdgeWithinCanvas.toString() + 'px';
@@ -952,6 +948,20 @@ function getThing(word, room, x, y, treatXandYasPercentages = true, isonymIndex 
     return thing;
 }
 
+function instantiateThingFromObjectData(objectData) {
+    // objectData in <levelname>.js file is just an array [word,roomn,x,y,{optional isonymIndex}].
+    let word = objectData[0];
+    let initialRoom = objectData[1];
+    let initialX = objectData[2];
+    let initialY = objectData[3];
+
+    wordsFound.push(word); // so player doesn't get score credit for transforming something into one of these "given" words
+
+    let isonymIndex = (objectData.length > 4) ? objectData[4] : undefined;
+
+    return getThing(word, initialRoom, initialX, initialY, true, isonymIndex);
+}
+
 function getNewCaptionDiv(word, idKey = undefined) {
     if (typeof idKey === 'undefined')
         idKey = word;
@@ -994,6 +1004,9 @@ function stopDisplayingMsg(forceStopAll = false) {
 }
 
 function getImagePathForWord(word) {
+    if (word === 'treasure' || word === 'treasures') {
+        return 'imgs/treasure.png'; // treasure used in so many levels that we just put it in root imgs folder
+    }
     let baseImageName = word.replace(' ', '_'); // by default, unless...
     if (typeof level !== 'undefined' && level !== null && typeof level.pluralWords !== 'undefined' && word in level.pluralWords) {
         baseImageName = level.pluralWords[word].replace(' ', '_'); // e.g. arch.png rather than arches.png
@@ -1081,6 +1094,7 @@ function displaySequenceableMessage(msg, msgID, msgIDtoSupersede, durationMS = 0
             }
         }
     }
+    sounds['notification'].play();
     let messageObject = displayMessage(msg, durationMS, x, y, treatCoordinatesAsPercentages);
     messageObject.msgID = msgID;
 }
@@ -1236,6 +1250,7 @@ function registerWordForScoringPurposes(word) {
         modifyScore(word.length);
         if (typeof level.bonusWords !== 'undefined' && level.bonusWords.indexOf(word) >= 0) {
             displayMessage('Bonus word!', DEFAULT_MESSAGE_DURATION);
+            sounds['bonus'].play();
         }
     }
 }
@@ -1310,12 +1325,15 @@ function castSpell() {
 
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
         sounds['failure'].play();
-        displaySequenceableMessage('Sorry, this would require a rune:<br/> ' + getRuneImageTag(runeNeeded), 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
+            displaySequenceableMessage('Sorry, this would require a rune:<br/> ' + getRuneImageTag(runeNeeded), 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
             setTimeout(
                 function() { displaySequenceableMessage('To get a ' + getRuneImageTag('b') + ' rune, change "bear" into "ear".', 'tutorial_instruction', 'missing-rune-message'); },
                 1.5 * DEFAULT_MESSAGE_DURATION
             );
+        }
+        else {
+            displayMessage('Sorry, this would require a rune:<br/> ' + getRuneImageTag(runeNeeded), 1.5 * DEFAULT_MESSAGE_DURATION);
         }
         return;
     }
@@ -1510,8 +1528,8 @@ function regenerateZOrderStack() {
     }
     nonObstacles.sort((a,b) => a.getBaseY() - b.getBaseY() );
 
-    // console.log(obstacles);
-    // console.log(nonObstacles);
+    console.log(obstacles);
+    console.log(nonObstacles);
 
     zOrderStack = obstacles.concat(nonObstacles);
 }
@@ -1718,7 +1736,7 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     // note that in level data, x and y coordinates have values 0-100, to facilitate rescaling.
     // we convert to actual pixel values here.
 
-    if (typeof currentRoom != 'undefined') {
+    if (typeof currentRoom != 'undefined') { // currentRoom is undefined iff the level is just launching now.
         sounds['whoosh'].play();
     }
 
@@ -1760,11 +1778,11 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
 
     for (let [key, thing] of Object.entries(thingsElsewhere)) {
 
-        console.log('checking ' + key + '=' + thing.getKey());
-        console.log(thing.isonymIndex);
+        // console.log('checking ' + key + '=' + thing.getKey());
+        // console.log(thing.isonymIndex);
 
         if (thing.room === currentRoom) {
-            console.log('putting into things here');
+            // console.log('putting into things here');
             thing.putIntoThingsHere(false); // "false" so that it doesn't recalculate whole z-order stack for each thing; just do once at end of this loop
             // put up captions for all things in new word.
             if (thing.okayToDisplayWord()) {
@@ -1774,12 +1792,12 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
         }
     }
 
-    console.log(thingsHere);
+    // console.log(thingsHere);
 
     player.x = newPlayerXAsPercent * xScaleFactor;
     player.y = newPlayerYAsPercent * yScaleFactor;
 
-    console.log(zOrderStack);
+    // console.log(zOrderStack);
 
     let roomData = rooms[newRoomName];
     passages = [];
@@ -1886,7 +1904,22 @@ function launchLevel() {
         startMusic();
     }
 
-    /* todo: start pre-loading the remaining Thing images in this level, and background images. */
+    // now instantiate things OUTSIDE the initialRoom:
+    for (let i=0; i < level.initialThings.length; i++) {
+        let objectData = level.initialThings[i];
+        if (objectData[1] !== level.initialRoom) { // because if == then was already instantiated in loadLevel()!
+            let thing = instantiateThingFromObjectData(objectData);
+            let key = thing.getKey();
+            thingsElsewhere[key] = thing;
+        }
+    }
+
+    /* set and pre-load background images for the other rooms in level (room1's must already be set): */
+    for (let roomName in rooms) {
+        if (roomName !== level.initialRoom) {
+            setBackgroundImageForRoom(roomName, rooms[roomName]);
+        }
+    }
 
     drawTopBinderImage();
 
@@ -1901,16 +1934,17 @@ function launchLevelIfAllRequiredImagesLoaded() {
     if (levelLaunched)
         return; // just a failsafe, don't re-launch if already launched!
 
-    for (let i=0; i<imagesRequiredToPlayThisLevel.length; i++) {
-        let im = imagesRequiredToPlayThisLevel[i];
+    for (let key in imagesRequiredToStartThisLevel) {
+        let im = imagesRequiredToStartThisLevel[key];
         if (typeof im !== 'object' || im == null || im.complete !== true || im.naturalWidth === 0) {
             console.log('at least one required image still not loaded, not launching yet.');
-            console.log('missing: ' + im.src);
+            console.log('missing: ' + key);
+            console.log(im.src);
             return; // at least one image not ready so don't do anything, just return
         }
     }
 
-    // ... all required images were loaded so launch level and start pre-loading additional images for level
+    // ... all required images *were* loaded, so launch level and start pre-loading additional images for level
     launchLevel();
     for (let i=0; i<additionalImagePathsToPreLoadForThisLevel.length; i++) {
         let img = new Image();
@@ -1939,7 +1973,48 @@ function removeLoadingImagesMessage() {
         div.remove();
 }
 
-function loadLevel(lName = 'intro level') {
+function setBackgroundImageForRoom(roomName, roomData, forceUseOfReusableBackground = false) {
+    let hasWestExit = false;
+    let hasEastExit = false;
+    let passages = roomData.passages;
+    for (let i=0; i<passages.length; i++) {
+        if (passages[i].direction === 'W')
+            hasWestExit = true;
+        if (passages[i].direction === 'E')
+            hasEastExit = true;
+    }
+
+    if (forceUseOfReusableBackground) {
+        if (hasWestExit)
+            roomData.backgroundImage = preLoadedBackgroundImages['room1'];
+        else
+            roomData.backgroundImage = preLoadedBackgroundImages['RoomExitE_1'];
+        if (roomName === level.initialRoom)
+            roomData.backgroundImage.onload = launchLevelIfAllRequiredImagesLoaded;
+
+        return;
+    }
+
+    // otherwise (if not forcing use of reusable image) the ususal strategy is try to load level-specific image by room name,
+    // and set it to a reusable image on error.
+
+    roomData.backgroundImage = new Image(PLAY_AREA_WIDTH,PLAY_AREA_HEIGHT);
+    if (roomName === 'room1')
+        roomData.backgroundImage.onload = launchLevelIfAllRequiredImagesLoaded;
+
+    if (hasWestExit && hasEastExit)
+        roomData.backgroundImage.onerror = handleMissingRoomBackgroundBothDirections.bind(roomData.backgroundImage);
+    else if (hasWestExit)
+        roomData.backgroundImage.onerror = handleMissingRoomBackgroundWestExit.bind(roomData.backgroundImage);
+    else if (hasEastExit)
+        roomData.backgroundImage.onerror = handleMissingRoomBackgroundEastExit.bind(roomData.backgroundImage);
+    else
+        roomData.backgroundImage.onerror = handleMissingRoomBackgroundBothDirections.bind(roomData.backgroundImage); // by default; now check other cases...
+
+    roomData.backgroundImage.src = levelPath + '/rooms/' + roomName.replace(' ','_') + '.png';
+}
+
+function loadLevel(lName) {
     console.log('loading level ' + lName);
     levelName = lName;
     levelComplete = false;
@@ -1969,41 +2044,40 @@ function loadLevel(lName = 'intro level') {
 
     thingsElsewhere = {};
     wordsFound = [];
-    imagesRequiredToPlayThisLevel = [];
+    imagesRequiredToStartThisLevel = {};
     additionalImagePathsToPreLoadForThisLevel = [];
     additionalImagesToPreLoad = [];
-    let namesOfRequiredImages = [];
     let objectData = level.initialThings;
+
+    // have to do two separate loops through objectData:
+    // the first finds & records things in the initial room so they will be pre-loaded prior to level launch.
+    // the second actually instantiates all the objects, which also
+
+    imagesRequiredToStartThisLevel['backgroundImage'] = 'pending';
+
     for (let i=0; i < objectData.length; i++) {
-        let word = objectData[i][0];
-        let initialRoom = objectData[i][1];
-        let initialX = objectData[i][2];
-        let initialY = objectData[i][3];
-        let key = word; // the isonym index will be appended to this, if supplied
-        let isonymIndex = undefined;
-        wordsFound.push(word); // so player doesn't get score credit for transforming something into one of these "given" words
-        if (objectData[i].length > 4) {
-            isonymIndex = objectData[i][4];
-            key = key + isonymIndex.toString();
-        }
-        console.log(key);
-        thingsElsewhere[key] = getThing(word, initialRoom, initialX, initialY, true, isonymIndex);
-        console.log(thingsElsewhere[key].isonymIndex);
-        console.log(thingsElsewhere[key].getKey());
-        // register things in first room as necessary to launch the level:
-        if (initialRoom === level.initialRoom && key !== 'treasure') { // treasure is used in a bunch of levels so putting its image in main /imgs folder.
-            imagesRequiredToPlayThisLevel.push(thingsElsewhere[key].image); // should probably handle case where an image in initial room is animated right off the bat ... let its subclass of thing define explicitly how many animation images it has
-            namesOfRequiredImages.push(key);
+        if (objectData[i][1] === level.initialRoom) { // treasure occurs in so many levels, it will be loaded from root images directory, in initialize() function.
+            console.log(' yo ' + objectData[i][0]);
+            imagesRequiredToStartThisLevel[objectData[i][0]] = 'pending';
         }
     }
-    // console.log(thingsElsewhere);
 
-    console.log(imagesRequiredToPlayThisLevel);
+    // now instantiate things in the initialRoom:
+    for (let i=0; i < objectData.length; i++) {
+        if (objectData[i][1] === level.initialRoom) {
+            let thing = instantiateThingFromObjectData(objectData[i]);
+            let key = thing.getKey();
+            thingsElsewhere[key] = thing;
+            imagesRequiredToStartThisLevel[objectData[i][0]] = thing.image; // todo: should probably handle case where an image in initial room is animated right off the bat ... let its subclass of thing define explicitly how many animation images it has
+        }
+    }
+     console.log(thingsElsewhere);
+     console.log(imagesRequiredToStartThisLevel);
 
-    // register paths for all OTHER attainable thing images in this level, to be pre-loaded after imagesRequiredToPlayThisLevel:
+    // register paths for all OTHER attainable thing images in this level, to be pre-loaded after imagesRequiredToStartThisLevel:
     for (let i=0; i<level.allWords.length; i++) {
         let word = allWords[i];
-        if (word !== 'treasure' && namesOfRequiredImages.indexOf(word) < 0) {
+        if (word !== 'treasure' && !(word in imagesRequiredToStartThisLevel)) {
             additionalImagePathsToPreLoadForThisLevel.push(getImagePathForWord(word));
         }
     }
@@ -2013,33 +2087,21 @@ function loadLevel(lName = 'intro level') {
         }
     }
 
-    console.log(additionalImagePathsToPreLoadForThisLevel);
+    // console.log(additionalImagePathsToPreLoadForThisLevel);
 
-    /* TODO: change this so that only background of 1st room loads now. once that loads, trigger load of other backgrounds used. */
-
-    for (roomName in rooms) {
-        let hasWestExit = false;
-        let hasEastExit = false;
-        let passages = rooms[roomName].passages;
-        for (let i=0; i<passages.length; i++) {
-            if (passages[i].direction === 'W')
-                hasWestExit = true;
-            if (passages[i].direction === 'E')
-                hasEastExit = true;
-        }
-
-        rooms[roomName].backgroundImage = new Image(PLAY_AREA_WIDTH,PLAY_AREA_HEIGHT);
-        if (hasWestExit && hasEastExit)
-            rooms[roomName].backgroundImage.onerror = handleMissingRoomBackgroundBothDirections.bind(rooms[roomName].backgroundImage);
-        else if (hasWestExit)
-            rooms[roomName].backgroundImage.onerror = handleMissingRoomBackgroundWestExit.bind(rooms[roomName].backgroundImage);
-        else if (hasEastExit)
-            rooms[roomName].backgroundImage.onerror = handleMissingRoomBackgroundEastExit.bind(rooms[roomName].backgroundImage);
-        else
-            rooms[roomName].backgroundImage.onerror = handleMissingRoomBackgroundBothDirections.bind(rooms[roomName].backgroundImage); // by default; now check other cases...
-
-        rooms[roomName].backgroundImage.src = levelPath + '/rooms/' + roomName.replace(' ','_') + '.png';
+    /* only background of 1st room loads initially.
+     the "launchLevel" function should kick off the loading of remaining backgrounds to use. */
+    let initialRoom = rooms[level.initialRoom];
+    if (typeof initialRoom === 'undefined') {
+        console.log('error: initial room must have name "room1"');
+        alert('fatal error: initial room must have name "room1"');
     }
+
+    let forceUseOfReusableImage = (typeof initialRoom['hasOwnBackgroundImage'] === 'undefined'
+        || initialRoom['hasOwnBackgroundImage'] === false);
+    setBackgroundImageForRoom('room1', initialRoom, forceUseOfReusableImage);
+    // it's important that setBackgroundImageForRoom also set image's onload to "launchLevelIfAllRequiredImagesLoaded"
+    imagesRequiredToStartThisLevel['backgroundImage'] = initialRoom.backgroundImage;
 
     let spellListHtml = 'Spells in Binder:<br/>';
     for (i=0; i< spellsAvailable.length; i++) {
@@ -2050,12 +2112,7 @@ function loadLevel(lName = 'intro level') {
     document.getElementById('inner-score-div').innerHTML = 'score: <span id="score-span">0</span>';
 
     // launchLevel() will usually be called by onload handler of last required image, when it loads, but handle edge case of no required images:
-    if (imagesRequiredToPlayThisLevel.length === 0) {
-        launchLevel();
-    }
-    else {
-        window.setTimeout(showLoadingImagesMessage, 1);
-    }
+    launchLevelIfAllRequiredImagesLoaded();
 }
 
 function closeBinder() {
@@ -2351,6 +2408,8 @@ function initialize() {
     sounds['page turn'] = new Audio('audio/63318__flag2__page-turn-please-turn-over-pto-paper-turn-over.wav');
     sounds['fanfare'] = new Audio('audio/524849__mc5__short-brass-fanfare-1.wav');
     sounds['splash'] = new Audio( 'audio/416710__inspectorj__splash-small-a.wav');
+    sounds['harp'] = new Audio('audio/563310__davince21__harp-motif3.ogg');
+    sounds['bonus'] = new Audio('audio/403008__inspectorj__ui-confirmation-alert-a1.wav');
 
     document.addEventListener('click', handleClick);
     document.addEventListener('keydown', handleKeydown);
@@ -2382,6 +2441,15 @@ function initialize() {
     arrowsAlphaLookupTable = [];
     for (let i=0; i< NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE; i++) {
         arrowsAlphaLookupTable.push(0.3 * Math.sin(i * 2.0 * Math.PI / NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE) + 0.4);
+    }
+
+    // pre-load most used room backgrounds:
+    preLoadedBackgroundImages = {
+        'room1':new Image(PLAY_AREA_WIDTH,PLAY_AREA_HEIGHT),
+        'RoomExitE_1':new Image(PLAY_AREA_WIDTH,PLAY_AREA_HEIGHT)
+    };
+    for (let key in preLoadedBackgroundImages) {
+        preLoadedBackgroundImages[key].src = 'imgs/reusable_backgrounds/' + key + '.png';
     }
 
     // load binder page images

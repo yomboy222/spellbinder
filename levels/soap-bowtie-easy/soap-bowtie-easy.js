@@ -4,7 +4,7 @@
 
 /* todo: make hater block the saw if you try to use it on him */
 
-levelList.push( { name:'easy soap-bowtie level', difficulty:0 } );
+levelList.push( { name:'easy soap-bowtie level', difficulty:3 } );
 
 getLevelFunctions['easy soap-bowtie level'] = function() {
 
@@ -144,7 +144,7 @@ getLevelFunctions['easy soap-bowtie level'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 75, 'room2', 10, 75, true, 68, 75, 'hater', PASSAGE_STATE_BLOCKED, 66, 75),
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 75, 'room2', 10, 75, true, 68, 72, 'hater', PASSAGE_STATE_BLOCKED, 66, 75),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 75, 'room0', 90, 75, true, 50, 75)],
         },
         'room0': {

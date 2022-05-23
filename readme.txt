@@ -6,7 +6,39 @@ TODO:
 
 design loading message
 
-goon-hut:  image change when the door is opened
+===============================
+strategy for loading images:
+
+imagesRequiredToStartThisLevel = {}
+
+separate objectData into dataForThingsInInitialRoom, dataForThingsElsewhere
+
+loop through dataForThingsInInitialRoom, add each one's *name* to imagesRequiredToStartThisLevel. add "initialBackground => 'pending'" to imagesRequiredToStartThisLevel.
+
+add anything else marked in the level as necessary to launch level, additionalImagePathsToPreLoadForThisLevel = [];
+    additionalImagesToPreLoad
+
+create initialRoom.backgroundImage, set its onload to launchLevelIf..., and add it to imagesRequiredToStartThisLevel, as initialBackground => (image object). 
+
+loop through dataForThingsInInitialRoom, instantiating everything, and after each instantiation setting key => (actual image object)
+
+finally call launchLevelIf..... just in case 
+==============================
+
+
+images to do or redo:
+  easy soap-bowtie: bowtie hater
+  cordon-joker: donor jock
+  goon0=-hut: lots
+  soap-bowtie, have to decide on aster eater ester hoe sea spa
+
+
+
+in hemp-icon: if you recreate bruin in another room, things go haywire. should an obstacle automatically go back to its initialX, initialY when you drop it?
+
+make script to automatically pull in & rate transforms in puzzle_ideas.txt
+
+goon-hut:  click noises for increment. maybe change to make fewer uses needed.
 
 make hater say "i'm melting!". make beefeater block behavior say 'oi!'
 
@@ -16,19 +48,11 @@ again, when starting level, say "loading" until first-room images and background
 
 worth redoing the background graphics to fade them out more.
 
-implement "bonus word" message as a GameElement so that you can put animation around it.
-
-think how you can use css to draw attention to new messages (also get a good notification sound)
+think how you can use css to draw attention to new messages
 
 investigate ways of dragging/dropping objects. takes place of double-click. same distinction between movable/immovable objects. one big advantage is you have a more intuitive procedure for "using one thing on/against/with another thing". tools become more appealing for puzzles.
 
 redraw runes
-
-different sounds for different spells?
-
-screen-resizing issues
-
-finish upgrading tutorial level -- including new images.
 
 possibly put messages into an invisible div & let them just fit in sequentially
 
@@ -67,6 +91,8 @@ https://freesound.org/s/420506/ (UpRising1)
 fanfare -- https://freesound.org/s/524849/
 splash -- https://freesound.org/people/InspectorJ/sounds/416710/ An example of how you might credit is by putting this in the description/credits:
           "Splash, Small, A.wav" by InspectorJ (www.jshaw.co.uk) of Freesound.org
+"UI Confirmation Alert, A1.wav" by InspectorJ (www.jshaw.co.uk) of Freesound.org
+click https://freesound.org/s/192277/
 
 
 ================
