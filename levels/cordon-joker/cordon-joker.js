@@ -213,7 +213,7 @@ getLevelFunctions['cordon-joker'] = function() {
     level.initialThings = [ ['cauldron','room1',15,76], ['cordon','room1',65,76],['joker','room2',60,72] ];
     // level.targetThing = 'rock';
     level.immovableObjects = ['condor','condo','cordon','cauldron','donor','jock','roc'];
-    level.bonusWords = ['codon', 'donor', 'jock', 'ore', 'roe']
+    level.bonusWords = ['donor', 'jock', 'ore', 'roe']
     level.initialRunes = [];
     level.sounds = { 'condor' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/362426__tec-studio__brd-hawk.wav') };
 

@@ -55,23 +55,24 @@ getLevelFunctions['jerk-whiskey'] = function() {
         }
     }
     level.initialRoom = 'room1';
-    level.initialX = 55; // expressed as % of way across x axis, i.e. value range is 0-100 
+    level.initialX = 35; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 75;
     level.initialSpells = [ 'add-letter-nfs', 'remove-letter-nfs', 'change-letter-nfs' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
     level.allWords = [ 'brake','coquette','croquette','dollhouse','drake','dyes','eyes','jerk','jerky','leopard','leotard','perk','rake','rubes','rubies','rues','ruts','ryes','swami','swamp','tollhouse','tubers','tubes','tubs','whisk','whisker','whiskey','whisky','whist' ];
-    level.initialThings = [ ['whiskey','room1',40,81],['jerk','room1',50,18],['croquette','room1',60,81],['drake','room2',40,81],['tollhouse','room3',18,68],['swami','room4',40,81],['leopard','room5',81,68],['rubes','room6',40,81] ];
+    level.initialThings = [ ['whiskey','room1',55,85],['jerk','room1',62,72],['croquette','room1',82,81],['drake','room2',40,81],['tollhouse','room3',18,68],['swami','room4',40,81],['leopard','room5',81,68],['rubes','room6',40,81] ];
     level.targetThing = 'rubies';
-    level.immovableObjects = [];
+    level.immovableObjects = [ 'brake','coquette','croquette','dollhouse','drake','dyes','eyes','jerk','jerky','leopard','leotard','perk','rake','rubes','rues','ruts','ryes','swami','swamp','tollhouse','tubers','tubes','tubs','whisk','whisker','whiskey','whisky','whist' ];
     level.initialRunes = [];
+    level.initialMessage = 'Your goal: obtain one portion of the crown jewels!';
 
     level.rooms = {
         'room1': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_VERTICAL, 'N',50, 3, 'room2', 50, 90, true, 50, 77, 'jerk', PASSAGE_STATE_BLOCKED, 50, 26)],
+               new Passage(PassageTypes.INVISIBLE_VERTICAL, 'N',74, 58, 'room2', 50, 90, true, 50, 77, 'jerk', PASSAGE_STATE_BLOCKED, 50, 70)],
         },
         'room2': {
             boundaries: [],
@@ -79,7 +80,7 @@ getLevelFunctions['jerk-whiskey'] = function() {
             passages: [ 
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room3', 90, 77, true, 50, 77),
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room5', 10, 77, true, 50, 77),
-               new Passage(PassageTypes.INVISIBLE_VERTICAL, 'S',50, 97, 'room1', 50, 10, true, 50, 77)],
+               new Passage(PassageTypes.INVISIBLE_VERTICAL, 'S',50, 97, 'room1', 74, 58, true, 35, 77)],
         },
         'room3': {
             boundaries: [],

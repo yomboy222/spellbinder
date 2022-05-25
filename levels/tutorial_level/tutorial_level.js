@@ -39,6 +39,9 @@ getLevelFunctions['tutorial level'] = function() {
                 this.x += 75;
                 this.y += 18;
             }
+            getBaseY() {
+                return 1; // force into background, behind player
+            }
         }
 
         window.Gate = class Gate extends Thing {

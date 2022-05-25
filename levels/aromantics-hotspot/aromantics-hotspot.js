@@ -85,6 +85,16 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             }
         }
 
+        window.Booth = class Booth extends Thing {
+            extraTransformIntoBehavior() {
+                this.x -= 90; // so not overlapping godzilloid
+            }
+
+            getBaseY() {
+                return -1; // force into background, behind player
+            }
+        }
+
         window.Hint = class Hint extends Thing {
             extraTransformIntoBehavior() {
                 console.log('xScaleFactor is ' + xScaleFactor.toString());
@@ -203,13 +213,14 @@ getLevelFunctions['aromantics-hotspot'] = function() {
 
         }
 
-
-
         window.Tit = class Tit extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 this.useAnimationImages = false;
                 this.startFlight();
+            }
+            getBaseY() {
+                return 1000; // force to draw in front of armoire
             }
 
             startFlight() {
@@ -243,6 +254,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             case 'armoire' : return new Armoire(word,room,x,y);
             case 'aromantics' : return new Aromantics(word,room,x,y);
             case 'aromatics' : return new Aromatics(word,room,x,y);
+            case 'booth' : return new Booth(word,room,x,y);
             case 'hint' : return new Hint(word,room,x,y);
             case 'hotpot' : return new Hotpot(word,room,x,y);
             case 'hotpots' : return new Hotpot(word,room,x,y);

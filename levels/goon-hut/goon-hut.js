@@ -14,7 +14,19 @@ getLevelFunctions['goon-hut'] = function() {
         window.Goal = class Goal extends Thing {
         }
 
-        window.Goat = class Goat extends Thing {
+        window.Gnat = class Gnat extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.frameDisplayTimeMS = 240;
+                this.startAnimating();
+            }
+            update() {
+                super.update();
+                let t1 = Math.round((Date.now() % 1000) * NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE / 1000);
+                let t2 = Math.round((Date.now() % 380) * NUMBER_OF_FRAMES_IN_PASSAGE_ARROW_CYCLE / 380);
+                this.x = this.initialX + (80 * arrowsAlphaLookupTable[t2]) - 40;
+                this.y = this.initialY + (200 * arrowsAlphaLookupTable[t1]) - 150;
+            }
         }
 
         window.Goon = class Goon extends Thing {
@@ -50,9 +62,44 @@ getLevelFunctions['goon-hut'] = function() {
         }
 
         window.Portcullis = class Portcullis extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.doorstate = 'c'; // closed
+            }
             okayToDisplayWord() {
                 return false;
             }
+
+            draw() {
+                super.draw();
+                if (this.doorstate === 'o') // open
+                    return;
+                let topX = this.x-61;
+                let topY = this.y - 120;
+                let bottomX = this.x - 65;
+                let bottomY = this.y + 154;
+                if (this.beginMovementTime > 0) { // opening...
+                    let deltaT = Date.now() - this.beginMovementTime;
+                    topX += Math.round(deltaT * 110 / 1500);
+                    topY += Math.round(deltaT * 17/ 1500);
+                    bottomX += Math.round(deltaT * 110 / 1500);
+                    bottomY += Math.round(deltaT * 36/ 1500);
+                }
+                ctx.fillStyle = '#505';
+                ctx.beginPath();
+                ctx.moveTo(topX, topY);
+                ctx.lineTo(this.x + 49,this.y - 103);
+                ctx.lineTo(this.x + 45,this.y + 190);
+                ctx.lineTo(bottomX,bottomY);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+
+            extraPostMovementBehavior() {
+                this.doorstate = 'o'; // open
+            }
+
         }
 
         window.Shifter = class Shifter extends Thing {
@@ -117,9 +164,10 @@ getLevelFunctions['goon-hut'] = function() {
                     if (puzzleSolved) {
                         let p = thingsHere['portcullis'];
                         p.unblockPassagesThisHadBeenBlocking();
+                        p.setMovement(p.x,p.y,1500); // for door opening animation
                         level.sounds['unlock'].play();
 
-                        if (level.numberOfToolUses <= 5) {
+                        if (level.numberOfToolUses <= 4) {
                             displayMessage('Bonus! You opened it in the smallest number of moves.', DEFAULT_MESSAGE_DURATION);
                             modifyScore(10);
                         }
@@ -161,7 +209,7 @@ getLevelFunctions['goon-hut'] = function() {
                 super(word,room,x,y);
                 this.radius = 30;
                 this.numberOfTicks = parseInt(this.word.substr(0,2));
-                this.pointer = (this.numberOfTicks === 10) ? 1 : 5;
+                this.pointer = (this.numberOfTicks === 10) ? 6 : 10;
                 this.handLength = 34;
                 this.centerX = this.x;
                 this.centerY = this.y;
@@ -217,7 +265,7 @@ getLevelFunctions['goon-hut'] = function() {
     level.getThing = function(word,room,x,y) {
         switch (word) {
             case 'goal' : return new Goal(word,room,x,y);
-            case 'goat' : return new Goat(word,room,x,y);
+            case 'gnat' : return new Gnat(word,room,x,y);
             case 'goon' : return new Goon(word,room,x,y);
             case 'gown' : return new Gown(word,room,x,y);
             case 'hut' : return new Hut(word,room,x,y);
@@ -247,7 +295,6 @@ getLevelFunctions['goon-hut'] = function() {
     level.bonusWords = [ 'gang','goal','gong','gut','hat','loon','lout','oat','toon','town','tug','vat','wool' ];
     level.initialThings = [ ['hut','room2',18,81],['goon','room1',18,68],['portcullis','room1',78,58],['10wheel','room1',94,50],['12wheel','room1',94,75],
         ['3hole','room1',60,40], ['5hole','room1',60,60], ['loot','room0',18,88,0],['loot','room0',8,81,1], ['oxen','room0',55,81],['tang','room2',51,81],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81],
-
     ];
     level.targetThing = 'treasure';
     level.immovableObjects = [ 'gang','gnat','goal','goat','gong','goon','hut','lout','oven','oxen','portcullis','shifter',
@@ -255,7 +302,7 @@ getLevelFunctions['goon-hut'] = function() {
     level.initialRunes = ['v','w'];
     level.additionalImageNamesToPreload = ['tool_0','shifter_0','shifter_1','soiree_0','gown_0'];
     level.sounds = {
-        'click' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/192277__lebaston100__click.wav')),
+        'click' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/click3.wav')),
         'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),
     };
     level.initialMessage = 'Your goal: get the treasure!';
@@ -295,7 +342,7 @@ getLevelFunctions['goon-hut'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room1', 90, 77, true, 35, 77),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room1', 74, 77, true, 35, 77),
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room3', 10, 77, true, 20, 77, 'shifter', PASSAGE_STATE_BLOCKED, 73, 63)],
         },
         'room3': {

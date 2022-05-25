@@ -27,18 +27,16 @@ finally call launchLevelIf..... just in case
 
 
 images to do or redo:
-  easy soap-bowtie: bowtie hater
-  cordon-joker: donor jock
-  goon0=-hut: lots
+  easy soap-bowtie: bowtie --- also say why saw doesn't work here.
+  cordon-joker: donor
+  goon0=-hut: lots, tux wearing
   soap-bowtie, have to decide on aster eater ester hoe sea spa
-
+  aromantics: tit boot bot soot
 
 
 in hemp-icon: if you recreate bruin in another room, things go haywire. should an obstacle automatically go back to its initialX, initialY when you drop it?
 
 make script to automatically pull in & rate transforms in puzzle_ideas.txt
-
-goon-hut:  click noises for increment. maybe change to make fewer uses needed.
 
 make hater say "i'm melting!". make beefeater block behavior say 'oi!'
 

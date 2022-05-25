@@ -2057,7 +2057,7 @@ function loadLevel(lName) {
 
     for (let i=0; i < objectData.length; i++) {
         if (objectData[i][1] === level.initialRoom) { // treasure occurs in so many levels, it will be loaded from root images directory, in initialize() function.
-            console.log(' yo ' + objectData[i][0]);
+            // console.log(' yo ' + objectData[i][0]);
             imagesRequiredToStartThisLevel[objectData[i][0]] = 'pending';
         }
     }
