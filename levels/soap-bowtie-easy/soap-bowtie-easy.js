@@ -4,9 +4,9 @@
 
 /* todo: make hater block the saw if you try to use it on him */
 
-levelList.push( { name:'easy soap-bowtie level', difficulty:3 } );
+levelList.push( { name:'easy soap-bowtie', difficulty:3 } );
 
-getLevelFunctions['easy soap-bowtie level'] = function() {
+getLevelFunctions['easy soap-bowtie'] = function() {
 
     let level = new Level('soap-bowtie-easy');
     level.folderName = 'soap-bowtie-easy';

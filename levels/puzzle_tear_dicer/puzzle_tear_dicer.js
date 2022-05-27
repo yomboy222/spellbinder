@@ -1,8 +1,8 @@
 /* puzzle_tear_dicer.js */
 
-levelList.push( { name:'tear-dicer puzzle', difficulty:5 } );
+levelList.push( { name:'tear-dicer', difficulty:5 } );
 
-getLevelFunctions['tear-dicer puzzle'] = function() {
+getLevelFunctions['tear-dicer'] = function() {
 
     let level = new Level('tear/dicer puzzle');
     level.folderName = 'puzzle_tear_dicer';

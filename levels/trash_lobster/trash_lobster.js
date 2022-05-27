@@ -1,8 +1,8 @@
 /* trash_lobster.js */
 
-levelList.push( { name:'trash-lobster puzzle', difficulty:5 });
+levelList.push( { name:'trash-lobster', difficulty:5 });
 
-getLevelFunctions['trash-lobster puzzle'] = function() {
+getLevelFunctions['trash-lobster'] = function() {
 
     let level = new Level('trash/lobster level');
     level.folderName = 'trash_lobster';

@@ -13,10 +13,14 @@ getLevelFunctions['hemp-icon'] = function() {
 
         window.Bruin = class Bruin extends Thing {
             extraTransformIntoBehavior() {
+                displaySequenceableMessage('Good job! The final transformation you have to make is into something somewhat obscure, an engraving tool. Double-click on the bruin for the answer.','invitationToClick');
                 if (currentRoom === 'room3') {
-                    passages[1].obstacle = 'bruin';
-                    passages[1].state = PASSAGE_STATE_BLOCKED;
+                    passages[1].setObstacle('bruin');
                 }
+            }
+
+            handleDblclick(e) {
+                displaySequenceableMessage('"Burin." There is no reason you should know this word -- unless you played the 1980s Infocom game "Spellbreaker" -- which is one of the inspirations for Spell-Binder!', 'hint', 'invitationToClick');
             }
 
             passageBlockingBehavior() {

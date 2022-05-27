@@ -4,7 +4,7 @@
 
 /* manifesto should hint at aromatic vegetables */
 
-levelList.push( { name:'aromantics-hotspot', difficulty:7 } );
+levelList.push( { name:'aromantics-hotspot', difficulty:8 } );
 
 getLevelFunctions['aromantics-hotspot'] = function() {
 

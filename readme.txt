@@ -2,6 +2,17 @@ readme.txt file for the Spell-Binder game prototype
 Doug McLellan, created 2/4/2022
 https://github.com/yomboy222/spellbinder.git
 
+
+PROTOTYPE 2 LAUNCH CHECKLIST:
+
+ensure immovable objects set
+make returned obstacles go to originalX, originalY
+ensure all images made
+make sure backgrounds are part of necessary images (test by clearing cache and playing off remote)
+make sure every level has initial instructions
+put all animation image names into level.additionalImageNamesToPreload
+
+CANNOT STORE ORIGINAL X Y ROOM IN THE OBJECT BECAUSE IT'S RECREATED!!!
 TODO:
 
 design loading message
@@ -27,18 +38,19 @@ finally call launchLevelIf..... just in case
 
 
 images to do or redo:
-  easy soap-bowtie: bowtie --- also say why saw doesn't work here.
+  tear-dice: make separate background with street
+  easy soap-bowtie: bowtie
   cordon-joker: donor
-  goon0=-hut: lots, tux wearing
+  goon-hut: lots, tux wearing
   soap-bowtie, have to decide on aster eater ester hoe sea spa
   aromantics: tit boot bot soot
-
-
-in hemp-icon: if you recreate bruin in another room, things go haywire. should an obstacle automatically go back to its initialX, initialY when you drop it?
-
-make script to automatically pull in & rate transforms in puzzle_ideas.txt
+  slime-blazer: X and dug-up hole
 
 make hater say "i'm melting!". make beefeater block behavior say 'oi!'
+
+in hemp-icon: if you recreate bruin in another room, things go haywire. similarly with shifter / snifter in the goon-hut level.  should an obstacle automatically go back to its initialX, initialY when you drop it?
+
+make script to automatically pull in & rate transforms in puzzle_ideas.txt
 
 tare-dicer: redo background
 

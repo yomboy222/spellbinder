@@ -6,10 +6,7 @@
 .level-menu-item {
     margin:3px;
     padding:2px;
-
 }
-
-
 
 #game-container-div{
     position: relative;
@@ -38,9 +35,9 @@
     position:absolute;
     height:auto;
     width:700px;
-    top:50%;
+    /* top:50%;
     left:50%;
-    transform:translate(-50%,-50%); /* trick for centering, from v. krokhmansky */
+    transform:translate(-50%,-50%);  trick for centering, from v. krokhmansky */
 }
 
 #spell-input-div{

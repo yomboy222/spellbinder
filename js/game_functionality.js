@@ -109,6 +109,7 @@ let allWords = []; // individual level-data files will fill this array.
 let solidObjects = [];
 let immovableObjects = [];
 let ellipticalObjects = [];
+let originalObstacleLocations = {};
 let lastClickTime = 0;
 let initialClickEvent = undefined; // used in a more-or-less-necessary hack to distinguish short click from long click
 let MAX_DOUBLE_CLICK_TIME_SEPARATION = 375; // MS
@@ -894,9 +895,24 @@ class Passage extends GameElement {
         this.activated = true;
         this.state = PASSAGE_STATE_ACTIVE;
     }
+    setObstacle(key) {
+        this.obstacle = key;
+        this.block();
+        if (key in thingsHere) {
+            noteOriginalObstacleLocation(key);
+        }
+    }
 }
 
 /* end class definitions; begin global functions */
+
+function noteOriginalObstacleLocation(key) {
+    if (key in thingsHere && !(key in originalObstacleLocations)) {
+        let obstacle = thingsHere[key];
+        // this will be used if player recreates an obstacle Thing in its initial room (it will go back here):
+        originalObstacleLocations[key] = { 'room':currentRoom, 'x':obstacle.x, 'y':obstacle.y};
+    }
+}
 
 // this will be bound to player object using "player.extraPostMovementBehavior = arriveAtPassage":
 function arriveAtPassage() {
@@ -1429,6 +1445,7 @@ function executeTransformation() {
         newObject.putIntoThingsHere();
     }
 
+    // if player transforms something they're carrying into something that can't be carried ...
     if (inInventory && !newObject.movable) {
         newObject.discard();
         inInventory = false;
@@ -1448,8 +1465,13 @@ function executeTransformation() {
         }
     }
 
-    if (newObject.reblocksPassageUponReturn)
+    // if player is recreating an obstacle Thing in the room where it was originally an obstacle, put back in original spot:
+    if (newObject.reblocksPassageUponReturn && newObject.getKey() in originalObstacleLocations && currentRoom === originalObstacleLocations[newObject.getKey()]) {
+        let originalObstacleData = originalObstacleLocations[newObject.getKey()];
+        newObject.x = originalObstacleData['x'];
+        newObject.y = originalObstacleData['y'];
         newObject.activateOrDeactivateObstacle(true);
+    }
 
     newObject.extraTransformIntoBehavior();
 
@@ -1804,6 +1826,9 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
     for (let i = 0; i < roomData.passages.length; i++){
         let p = roomData.passages[i];
         passages.push(p);
+        if (typeof p.obstacle === 'string' && p.obstacle in thingsHere) {
+            noteOriginalObstacleLocation(p.obstacle);
+        }
     }
 
     backgroundImage = roomData.backgroundImage;
@@ -2041,6 +2066,7 @@ function loadLevel(lName) {
     immovableObjects = level.immovableObjects;
     ellipticalObjects = level.ellipticalObjects;
     otherData = level.otherGameData;
+    originalObstacleLocations = {};
 
     thingsElsewhere = {};
     wordsFound = [];

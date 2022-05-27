@@ -1,6 +1,6 @@
 /* tutorial_level.js */
 
-levelList.push( { name:'tutorial level', difficulty:1 });
+levelList.push( { name:'tutorial level', difficulty:0 });
 
 getLevelFunctions['tutorial level'] = function() {
 

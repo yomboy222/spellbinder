@@ -4,7 +4,7 @@
 
 /* todo: make ore give you bonus points! */
 
-levelList.push( { name:'cordon-joker', difficulty:0 } );
+levelList.push( { name:'cordon-joker', difficulty:7 } );
 
 getLevelFunctions['cordon-joker'] = function() {
 

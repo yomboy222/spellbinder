@@ -6,14 +6,16 @@ function generateMenuOfLevels () {
     for (let i=0; i<levelList.length; i++) {
         let menuItemDiv = document.createElement('div');
         menuItemDiv.classList.add('level-menu-item');
-        let button = document.createElement('button');
+        menuItemDiv.innerHTML = '<a href="#" id="level' + i.toString() + '"><img src="imgs/play-button.png"> ' + levelList[i].name + ' (' + levelList[i].difficulty.toString() + ')</a>';
+       /*  let button = document.createElement('button');
         button.classList.add('loadLevelButton');
         button.value = levelList[i].name;
         button.innerText = levelList[i].name;
         button.onclick = function() { loadLevel(levelList[i].name); }
-
-        menuItemDiv.appendChild(button);
+        menuItemDiv.appendChild(button); */
         menuDiv.appendChild(menuItemDiv);
+        let link = document.getElementById('level' + i.toString());
+        link.onclick = function() { loadLevel(levelList[i].name); };
     }
 }
 
