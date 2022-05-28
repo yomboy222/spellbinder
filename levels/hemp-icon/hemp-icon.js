@@ -184,7 +184,7 @@ getLevelFunctions['hemp-icon'] = function() {
     level.initialY = 75;
     level.initialSpells = [ 'anagram', 'add-edge', 'remove-edge', 'change-edge' ];
     level.initialInventory = {};
-    level.backgroundMusicFile = undefined;
+    level.backgroundMusicFile = 'FoamRubber-320bit.mp3';
     level.allWords = [ 'beefeater','beefeaters','bike','blouse','boule','boules','bruin','burin',
         'cascara','coin','coins',
         'hem','hemp','hems','icon','icons','kepi','kepis','louse','maraca','maracas','mascara','mesh',

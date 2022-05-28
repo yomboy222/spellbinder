@@ -217,7 +217,7 @@ getLevelFunctions['slime-blaze'] = function() {
     level.initialY = 75;
     level.initialSpells = [ 'add-edge', 'remove-edge' ];
     level.initialInventory = {};
-    level.backgroundMusicFile = undefined;
+    level.backgroundMusicFile = 'Sneaky Snitch.mp3';
     level.allWords = [ 'blaze','blazer','blazers','blazes','brook','brooks','hovel','hovels','lime','limes','rook','rooks','rudder','rudders','shovel','slime','treasure','treasures','udder','udders' ];
     level.initialThings = [['digging_location','room0',40,83], ['slime','room1',18,82],['rudder','room1',40,81],['blaze','room1',81,77],['brook','room2',83,98],['hovel','room3',72,76] ];
 

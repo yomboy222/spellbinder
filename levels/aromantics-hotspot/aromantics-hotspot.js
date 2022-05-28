@@ -278,7 +278,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     level.initialY = 68;
     level.initialSpells = [ 'add-letter-nfs', 'remove-letter-nfs', 'change-letter-nfs' ];
     level.initialInventory = {};
-    level.backgroundMusicFile = undefined;
+    level.backgroundMusicFile = 'Sneaky Snitch.mp3';
     level.giveRoomsRandomBackgroundsUnlessSpecified = true;
     level.allWords = ['treasure', 'aromantics', 'aromatics', 'hotpot', 'hotspot', 'manifest', 'manifesto', 'romantics',
         'boor', 'boot', 'booth', 'bot', 'broth', 'robot', 'roost', 'root', 'rot', 'shoot', 'shot', 'soot',

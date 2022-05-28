@@ -1976,7 +1976,17 @@ function launchLevel() {
     showingIntroPage = false;
 
     if (okayToPlayMusic && typeof level.backgroundMusicFile !== 'undefined') {
-        let path = (level.backgroundMusicFile === 'Sneaky Snitch.mp3') ? 'audio/Sneaky Snitch.mp3' : levelPath + '/audio/' + level.backgroundMusicFile;
+        let path = '';
+
+        // some music used in several levels so put in root audio folder:
+        let reusedFiles = ['FoamRubber-320bit.mp3', 'Sneaky Snitch.mp3', 'LurkingSloth-320bit.mp3' ]
+        if (reusedFiles.indexOf(level.backgroundMusicFile) >= 0) {
+            path = 'audio/' + level.backgroundMusicFile
+        }
+        else {
+            path = levelPath + '/audio/' + level.backgroundMusicFile;
+        }
+        console.log(path);
         backgroundMusic = new Audio(path);
         document.getElementById('music-toggle-div').style.display = 'block';
         startMusic();

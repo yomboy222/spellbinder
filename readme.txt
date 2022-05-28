@@ -79,7 +79,12 @@ Creative Commons — Attribution 3.0 Unported — CC BY 3.0
 Free Download / Stream: http://bit.ly/sneaky-snitch
 Music promoted by Audio Library https://youtu.be/7-rXQALDv-4
 ––––––––––––––––––––––––––––––
+Lurking Sloth by Alexander Nakarada | https://www.serpentsoundstudios.com
+Music promoted on https://www.chosic.com/free-music/all/
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
 
+------------------------------
 sound from freesound.org, ...
 
 
