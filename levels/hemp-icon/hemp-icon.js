@@ -178,6 +178,8 @@ getLevelFunctions['hemp-icon'] = function() {
         }
     }
     level.initialRoom = 'room1';
+    level.initialRunes = []; // ['b'];
+
     level.initialX = 53; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 75;
     level.initialSpells = [ 'anagram', 'add-edge', 'remove-edge', 'change-edge' ];
@@ -197,7 +199,6 @@ getLevelFunctions['hemp-icon'] = function() {
         ['treasure','room4',66,80] ];
     level.bonusWords = ['bike','mesh','spike'];
     level.targetThing = 'treasure';
-    level.initialRunes = [];
     level.sounds = { 'growl' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/345733__noahpardo__deep-growl-1.wav') };
     level.initialMessage = 'Your goal: get the treasure!';
     level.muffinInVendingMachine = true;

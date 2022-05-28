@@ -9,7 +9,16 @@ getLevelFunctions['thorn-divan'] = function() {
     let level = new Level('thorn-divan');
     level.folderName = 'thorn-divan';
 
-    level.defineThingSubclasses = function() { 
+    level.defineThingSubclasses = function() {
+
+        window.Diva = class Diva extends Thing {
+            extraTransformIntoBehavior() {
+                this.setMovement(this.x - 100, this.y - 90, 1000);
+            }
+            extraPostMovementBehavior() {
+                level.sounds['opera'].play();
+            }
+        }
 
         window.Divan = class Divan extends Thing {
             passageBlockingBehavior() {
@@ -19,13 +28,20 @@ getLevelFunctions['thorn-divan'] = function() {
 
         window.Horn = class Horn extends Thing {
             extraTransformIntoBehavior() {
-                sounds['fanfare'].play();
+                level.sounds['horn'].play();
             }
         }
 
         window.Pigmen = class Pigmen extends Thing {
             extraTransformIntoBehavior() {
                 // level.sounds['oink'].play();
+            }
+        }
+
+        window.Pigment = class Pigment extends Thing {
+            extraTransformIntoBehavior() {
+                this.y = 420;
+                this.wordDisplayOffsetX += 25;
             }
         }
 
@@ -42,9 +58,11 @@ getLevelFunctions['thorn-divan'] = function() {
 
     level.getThing = function(word,room,x,y) {
         switch (word) {
+            case 'diva' : return new Diva(word,room,x,y);
             case 'divan' : return new Divan(word,room,x,y);
             case 'horn' : return new Horn(word,room,x,y);
             case 'pigmen' : return new Pigmen(word,room,x,y);
+            case 'pigment' : return new Pigment(word,room,x,y);
             case 'thorn' : return new Thorn(word,room,x,y);
             case 'treasure' : return new Treasure(word,room,x,y);
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
@@ -62,7 +80,9 @@ getLevelFunctions['thorn-divan'] = function() {
     level.immovableObjects = ['diva','divan','pigmen','thorn'];
     level.initialRunes = [];
     level.sounds = {
-        'oink' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/oink.m4a')
+        'horn' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/413203__joepayne__clean-and-pompous-fanfare-trumpet.mp3'),
+        'oink' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/oink.m4a'),
+        'opera' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/216502__tweedledee3__soprano-riff-three.mp3')
     }
 
     level.rooms = {

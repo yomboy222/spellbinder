@@ -12,7 +12,6 @@ make sure backgrounds are part of necessary images (test by clearing cache and p
 make sure every level has initial instructions
 put all animation image names into level.additionalImageNamesToPreload
 
-CANNOT STORE ORIGINAL X Y ROOM IN THE OBJECT BECAUSE IT'S RECREATED!!!
 TODO:
 
 design loading message
@@ -40,15 +39,13 @@ finally call launchLevelIf..... just in case
 images to do or redo:
   tear-dice: make separate background with street
   easy soap-bowtie: bowtie
-  cordon-joker: donor
-  goon-hut: lots, tux wearing
-  soap-bowtie, have to decide on aster eater ester hoe sea spa
-  aromantics: tit boot bot soot
+  cordon-joker: new cordon image, donor
+  goon-hut: several images
+  aromantics: tit boot bot soot -- also change hint image to say knock "slowly"
   slime-blazer: X and dug-up hole
+  thorn-divan: bring over diva image, make door in that room,  make oink noise
 
 make hater say "i'm melting!". make beefeater block behavior say 'oi!'
-
-in hemp-icon: if you recreate bruin in another room, things go haywire. similarly with shifter / snifter in the goon-hut level.  should an obstacle automatically go back to its initialX, initialY when you drop it?
 
 make script to automatically pull in & rate transforms in puzzle_ideas.txt
 
@@ -103,7 +100,10 @@ splash -- https://freesound.org/people/InspectorJ/sounds/416710/ An example of h
           "Splash, Small, A.wav" by InspectorJ (www.jshaw.co.uk) of Freesound.org
 "UI Confirmation Alert, A1.wav" by InspectorJ (www.jshaw.co.uk) of Freesound.org
 click https://freesound.org/s/192277/
-
+opera in thorn/divan , https://freesound.org/s/216502/
+horn in thorn/divan https://freesound.org/s/413203/
+collapse in easy soap bowtie -- https://freesound.org/s/434897/
+collapse there -- https://freesound.org/s/77074/
 
 ================
 

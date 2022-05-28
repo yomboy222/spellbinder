@@ -193,13 +193,13 @@ getLevelFunctions['goon-hut'] = function() {
         window.Treasure = class Treasure extends Thing {
         }
 
-        window.Tux = class Tux extends Thing {
+        window.Tux = class Tux extends Clothing {
             extraPickUpBehavior() {
                 // need to change player images.
                 level.setOrUnsetSoireeObstacle();
             }
             extraDiscardBehavior() {
-                // need to change player images.
+                super.extraDiscardBehavior(); // this removes clothes from player image
                 level.setOrUnsetSoireeObstacle();
             }
         }
@@ -349,7 +349,7 @@ getLevelFunctions['goon-hut'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room2', 90, 77, true, 35, 77),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room2', 90, 77, true, 50, 77),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',75, 77, 'room3', 75, 77, true, -1, -1, 'soiree', PASSAGE_STATE_BLOCKED, 35, 75),
             ],
             specificNewRoomBehavior: function() {

@@ -62,9 +62,6 @@ getLevelFunctions['ghost-peak'] = function() {
                 super(word,room,x,y);
                 this.wordDisplayOffsetY = 22;
             }
-            extraTransformIntoBehavior() {
-                this.y += 80;
-            }
         }
 
         window.Peak = class Peak extends Thing {
@@ -96,7 +93,7 @@ getLevelFunctions['ghost-peak'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
     level.allWords = [ 'ghost','grail','host','pea','peak','rail' ];
-    level.initialThings = [ ['ghost','room1',81,68],['peak','room2',60,68],['rail','room3',60,81] ];
+    level.initialThings = [ ['ghost','room1',75,72],['peak','room2',60,76],['rail','room3',60,81] ];
     level.targetThing = 'grail';
     level.immovableObjects = [ 'ghost','host','peak','rail'];
     level.initialRunes = [];
@@ -110,13 +107,13 @@ getLevelFunctions['ghost-peak'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room2', 10, 77, true, 30, 77, 'ghost', PASSAGE_STATE_BLOCKED, 73, 77)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room2', 10, 85, true, 30, 85, 'ghost', PASSAGE_STATE_BLOCKED, 73, 77)],
         },
         'room2': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room3', 10, 77, true, 38, 77, 'peak', PASSAGE_STATE_BLOCKED, 43, 65),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room3', 10, 77, true, 38, 77, 'peak', PASSAGE_STATE_BLOCKED, 43, 73),
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room1', 90, 77, true, 64, 77)],
         },
         'room3': {

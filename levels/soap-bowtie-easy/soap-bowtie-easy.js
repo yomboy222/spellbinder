@@ -4,9 +4,9 @@
 
 /* todo: make hater block the saw if you try to use it on him */
 
-levelList.push( { name:'easy soap-bowtie', difficulty:3 } );
+levelList.push( { name:'soap-bowtie', difficulty:3 } );
 
-getLevelFunctions['easy soap-bowtie'] = function() {
+getLevelFunctions['soap-bowtie'] = function() {
 
     let level = new Level('soap-bowtie-easy');
     level.folderName = 'soap-bowtie-easy';
@@ -14,6 +14,10 @@ getLevelFunctions['easy soap-bowtie'] = function() {
     level.defineThingSubclasses = function() {
 
         window.Hammer = class Hammer extends Thing {
+            extraTransformIntoBehavior() {
+                displayMessage('Remember that to use an item, you double-click on it when it is in your inventory!');
+            }
+
             handleDblclick(e) {
                 if (!(this.getKey() in inventory) || !(('partition' in thingsHere) || ('ravelin' in thingsHere)))
                     return super.handleDblclick(e);
@@ -36,6 +40,7 @@ getLevelFunctions['easy soap-bowtie'] = function() {
                     destX = this.x ; // + 70;
                     destY = this.y ; // + 13;
                     time = 600;
+                    level.sounds['hit'].play();
                 }
                 this.setMovement(destX, destY, time);
                 if (this.strokeNumber < 8) {
@@ -43,9 +48,6 @@ getLevelFunctions['easy soap-bowtie'] = function() {
                 }
                 else if ('partition' in thingsHere) {
                     this.extraPostMovementBehavior = this.removePartition.bind(this);
-                }
-                else { // trying to remove ravelin but too strong.
-                    this.extraPostMovementBehavior = this.failToRemoveRavelin.bind(this);
                 }
             }
 
@@ -80,15 +82,14 @@ getLevelFunctions['easy soap-bowtie'] = function() {
             removePartition() {
                 this.stopStriking();
                 thingsHere['partition'].dispose();
-            }
-
-            failToRemoveRavelin() {
-                this.stopStriking();
-                displayMessage('The ravelin is too strong!');
+                level.sounds['collapse'].play();
             }
         }
 
         window.Hater = class Hater extends Thing {
+            extraTransformIntoBehavior() {
+                this.y = 375;
+            }
         }
 
         window.Java = class Java extends Thing {
@@ -104,6 +105,9 @@ getLevelFunctions['easy soap-bowtie'] = function() {
         }
 
         window.Water = class Water extends Thing {
+            extraTransformIntoBehavior() {
+                this.y = 430;
+            }
         }
 
     }
@@ -138,13 +142,17 @@ getLevelFunctions['easy soap-bowtie'] = function() {
     level.targetThing = 'treasure';
     level.initialRunes = [];
     level.initialMessage = 'You goal: find and take the treasure!';
+    level.sounds = {
+        'hit' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/434897__thebuilder15__collapse.wav')),
+        'collapse' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/77074__benboncan__bricks-falling.wav'))
+    }
 
     level.rooms = {
         'room1': {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 75, 'room2', 10, 75, true, 68, 72, 'hater', PASSAGE_STATE_BLOCKED, 66, 75),
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 75, 'room2', 10, 75, true, 65, 72, 'hater', PASSAGE_STATE_BLOCKED, 66, 75),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 75, 'room0', 90, 75, true, 50, 75)],
         },
         'room0': {

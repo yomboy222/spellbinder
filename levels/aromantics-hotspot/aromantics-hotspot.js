@@ -270,7 +270,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     }
 
     level.showHintMessage = function() {
-        displayMessage('You may need a hint to pass through this room!', 2 * DEFAULT_MESSAGE_DURATION);
+        displayMessage('You may need a hint to pass through this room!');
     }
 
     level.initialRoom = 'room1';

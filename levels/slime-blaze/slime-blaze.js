@@ -22,7 +22,7 @@ getLevelFunctions['slime-blaze'] = function() {
             }
             extraTransformIntoBehavior() {
                 if (currentRoom === 'room1') {
-                    passages[0].obstacle = 'blaze';
+                    passages[0].obstacle = this.getKey(); // could be "blaze" or "blazes"
                     passages[0].state = PASSAGE_STATE_BLOCKED;
                 }
             }
@@ -34,15 +34,6 @@ getLevelFunctions['slime-blaze'] = function() {
         window.Blazers = class Blazers extends Thing {
         }
 
-        window.Blazes = class Blazes extends Thing {
-            extraTransformIntoBehavior() {
-                if (currentRoom === 'room1') {
-                    passages[0].obstacle = 'blazes';
-                    passages[0].state = PASSAGE_STATE_BLOCKED;
-                }
-            }
-
-        }
 
         window.Brook = class Brook extends Thing {
             constructor(word,room,x,y) {
@@ -101,7 +92,8 @@ getLevelFunctions['slime-blaze'] = function() {
 
         window.Rook = class Rook extends Thing {
             extraTransformIntoBehavior() {
-                this.y -= 120;
+                if (!(this.getKey() in inventory))
+                    this.y = 400;
             }
         }
 
@@ -203,7 +195,7 @@ getLevelFunctions['slime-blaze'] = function() {
             case 'blaze' : return new Blaze(word,room,x,y);
             case 'blazer' : return new Blazer(word,room,x,y);
             case 'blazers' : return new Blazers(word,room,x,y);
-            case 'blazes' : return new Blazes(word,room,x,y);
+            case 'blazes' : return new Blaze(word,room,x,y);
             case 'brook' : return new Brook(word,room,x,y);
             case 'brooks' : return new Brooks(word,room,x,y);
             case 'digging_location' : return new DiggingLocation(word,room,x,y);
@@ -220,18 +212,25 @@ getLevelFunctions['slime-blaze'] = function() {
             default : return undefined; // this will cause instantiation of plain-vanilla Thing.
         }
     }
-    level.initialRoom = 'room0';
+    level.initialRoom = 'room1';
     level.initialX = 55; // expressed as % of way across x axis, i.e. value range is 0-100 
     level.initialY = 75;
     level.initialSpells = [ 'add-edge', 'remove-edge' ];
     level.initialInventory = {};
     level.backgroundMusicFile = undefined;
     level.allWords = [ 'blaze','blazer','blazers','blazes','brook','brooks','hovel','hovels','lime','limes','rook','rooks','rudder','rudders','shovel','slime','treasure','treasures','udder','udders' ];
-    level.initialThings = [ ['shovel','room0',60,60],['digging_location','room0',40,83], ['slime','room1',18,82],['rudder','room1',40,81],['blaze','room1',81,77],['brook','room2',83,98],['hovel','room3',72,76] ];
+    level.initialThings = [['digging_location','room0',40,83], ['slime','room1',18,82],['rudder','room1',40,81],['blaze','room1',81,77],['brook','room2',83,98],['hovel','room3',72,76] ];
+
+
+    //['shovel','room0',60,60]
+
+
     level.targetThing = 'treasure';
     level.immovableObjects = [ 'blaze','blazes','brook','brooks','digging_location','hovel','hovels','slime' ];
     level.initialRunes = [];
     level.pluralWords = { 'blazes':'blaze', 'blazers':'blazer', 'brooks':'brook', 'hovels':'hovel', 'limes':'lime', 'rooks':'rook', 'rudders':'rudder', 'udders':'udder', 'treasures':'treasure' }
+    level.additionalImageNamesToPreload = ['blaze_0', 'blaze_1', 'blaze_2'];
+
     level.treasureFound = false;
 
     level.rooms = {

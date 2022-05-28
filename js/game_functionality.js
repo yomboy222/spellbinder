@@ -328,6 +328,18 @@ class Player extends GameElement {
          this.images[Directions.RIGHT].src = 'imgs/player-right.png';
          this.images[Directions.DOWN].src = 'imgs/player-front.png';
          this.images[Directions.LEFT].src = 'imgs/player-left.png';
+
+         // we retain the "basic" images of players so they can be reset if the images change to reflect new clothing, armor etc.
+         this.basicImages = new Array(4);
+         for (let i=0; i<this.basicImages.length; i++) {
+             this.basicImages[i] = this.images[i];
+         }
+     }
+     removeClothes() {
+         console.log('removing clothes');
+         for (let i=0; i<this.images.length; i++) {
+             this.images[i] = this.basicImages[i];
+         }
      }
 
      draw() {
@@ -630,6 +642,7 @@ class Thing extends GameElement {
     discard(suppressSound = false, xDistFromPlayer = undefined, yDistFromPlayer = undefined) {
         this.removeFromInventory();
 
+        console.log('in discard');
         if (typeof xDistFromPlayer !== 'undefined') {
             this.x = player.x + xDistFromPlayer;
             this.y = player.y + yDistFromPlayer;
@@ -777,7 +790,7 @@ class Thing extends GameElement {
 
     activateOrDeactivateObstacle(activateRatherThanDeactivate = false) {
         for (let i=0; i<passages.length; i++) {
-            if (passages[i].obstacle === this.word) {
+            if (passages[i].obstacle === this.getKey()) {
                 if (activateRatherThanDeactivate)
                     passages[i].block();
                 else
@@ -787,6 +800,43 @@ class Thing extends GameElement {
     }
     deactivateObstacle() {
         this.activateOrDeactivateObstacle();
+    }
+}
+
+class Clothing extends Thing {
+    constructor(word,room,x,y) {
+        super(word,room,x,y);
+        this.playerImages = [];
+        for (let i=0; i< player.images.length; i++) {
+            this.playerImages.push(new Image());
+            this.playerImages[i].src = levelPath + '/things/' + this.baseImageName + '_' + i.toString() + '.png';
+        }
+    }
+    tryToPickUp(suppressSound = false, tryToReturnToSamePlaceInInventory = false) {
+        let pickedUp = super.tryToPickUp(suppressSound, tryToReturnToSamePlaceInInventory);
+        if (typeof pickedUp != "boolean" || pickedUp !== true) {
+            return pickedUp;
+        }
+        // actually was picked up, so change the player's clothes accordingly:
+        this.wearClothes();
+        return true;
+    }
+    extraTransformIntoBehavior() {
+        if (this.getKey() in inventory)
+            this.wearClothes();
+    }
+    extraTransformFromBehavior() {
+        if (this.getKey() in inventory) {
+            player.removeClothes();
+        }
+    }
+    extraDiscardBehavior() {
+        player.removeClothes();
+    }
+    wearClothes() {
+        for (let i=0; i<this.playerImages.length; i++) {
+            player.images[i] = this.playerImages[i];
+        }
     }
 }
 
@@ -1466,7 +1516,7 @@ function executeTransformation() {
     }
 
     // if player is recreating an obstacle Thing in the room where it was originally an obstacle, put back in original spot:
-    if (newObject.reblocksPassageUponReturn && newObject.getKey() in originalObstacleLocations && currentRoom === originalObstacleLocations[newObject.getKey()]) {
+    if (newObject.reblocksPassageUponReturn && newObject.getKey() in originalObstacleLocations && currentRoom === originalObstacleLocations[newObject.getKey()]['room']) {
         let originalObstacleData = originalObstacleLocations[newObject.getKey()];
         newObject.x = originalObstacleData['x'];
         newObject.y = originalObstacleData['y'];
@@ -1833,6 +1883,7 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
 
     backgroundImage = roomData.backgroundImage;
 
+    /*
     filledPolygons = [];
     if (typeof roomData.filledPolygons !== 'undefined') {
         for (let i = 0; i < roomData.filledPolygons.length; i++) {
@@ -1865,6 +1916,8 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
                 b[3] * xScaleFactor, b[4] * yScaleFactor, orientation]);
         }
     }
+
+     */
 
     regenerateZOrderStack(); // the game elements on screen (player + things), in the order they should be drawn at each frame
 
@@ -1951,6 +2004,10 @@ function launchLevel() {
     newRoom(level.initialRoom, level.initialX, level.initialY, level.initialMessage);
 
     level.initializationFunction();
+
+    window.setTimeout(function(){
+        displayMessage('Note which spells are in the binder!',DEFAULT_MESSAGE_DURATION,17,32,true);
+    },1000);
 
     animate();
 }
