@@ -2201,6 +2201,12 @@ function loadLevel(lName) {
     document.getElementById('horizontal-spell-list').innerHTML = spellListHtml;
     document.getElementById('inner-score-div').innerHTML = 'score: <span id="score-span">0</span>';
 
+    // make sure player is using "regular" images not wearing special clothing:
+    player.images = new Array(4);
+    for (let i=0; i<4; i++) {
+        player.images[i] = player.basicImages[i];
+    }
+
     // launchLevel() will usually be called by onload handler of last required image, when it loads, but handle edge case of no required images:
     launchLevelIfAllRequiredImagesLoaded();
 }

@@ -68,13 +68,13 @@ getLevelFunctions['slime-blaze'] = function() {
 
                 if ('shovel' in inventory) {
                     inventory['shovel'].digUpTreasure();
-                    // change image to show dug up hole.
-                    this.frameDisplayTimeMS = 0; // to indicate no need to cycle through frames
-                    this.startAnimating();
                 }
                 else {
                     displayMessage('Could be something here, but you are not carrying anything to dig with!');
                 }
+            }
+            getBaseY() {
+                return 1; // back of z order stack
             }
         }
 
@@ -120,6 +120,10 @@ getLevelFunctions['slime-blaze'] = function() {
             }
 
             digUpTreasure() {
+                // change image to show dug up hole.
+                let hole = thingsHere['digging_location'];
+                hole.frameDisplayTimeMS = 0; // to indicate no need to cycle through frames
+                hole.startAnimating();
                 this.strokeNumber = 0;
                 this.removeFromInventoryForUseOnScreen();
                 let target = thingsHere['digging_location']; // obviously need to have checked beforehand that this is here.
@@ -170,7 +174,7 @@ getLevelFunctions['slime-blaze'] = function() {
 
             finishDiggingUpTreasure() {
                 this.returnToInventoryAfterUseOnScreen();
-                thingsHere['treasure'] = getThing('treasure',currentRoom,50,75);
+                thingsHere['treasure'] = getThing('treasure',currentRoom,28,75);
                 regenerateZOrderStack(); // otherwise won't be drawn.
                 level.treasureFound = true;
             }
@@ -183,6 +187,9 @@ getLevelFunctions['slime-blaze'] = function() {
         }
 
         window.Treasure = class Treasure extends Thing {
+            getBaseY() {
+                return 9999; // should push to top of z-order
+            }
         }
 
         window.Treasures = class Treasures extends Thing {
@@ -219,7 +226,7 @@ getLevelFunctions['slime-blaze'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
     level.allWords = [ 'blaze','blazer','blazers','blazes','brook','brooks','hovel','hovels','lime','limes','rook','rooks','rudder','rudders','shovel','slime','treasure','treasures','udder','udders' ];
-    level.initialThings = [['digging_location','room0',40,83], ['slime','room1',18,82],['rudder','room1',40,81],['blaze','room1',81,77],['brook','room2',83,98],['hovel','room3',72,76] ];
+    level.initialThings = [ ['digging_location','room0',40,88], ['slime','room1',18,82],['rudder','room1',40,81],['blaze','room1',81,77],['brook','room2',83,98],['hovel','room3',72,76] ];
 
 
     //['shovel','room0',60,60]

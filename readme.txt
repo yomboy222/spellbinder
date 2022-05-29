@@ -11,6 +11,7 @@ ensure all images made
 make sure backgrounds are part of necessary images (test by clearing cache and playing off remote)
 make sure every level has initial instructions
 put all animation image names into level.additionalImageNamesToPreload
+check that walking back thru rooms works
 
 TODO:
 
@@ -38,14 +39,10 @@ finally call launchLevelIf..... just in case
 
 images to do or redo:
   tear-dice: make separate background with street
-  easy soap-bowtie: bowtie
-  cordon-joker: new cordon image, donor
-  goon-hut: several images
-  aromantics: tit boot bot soot -- also change hint image to say knock "slowly"
-  slime-blazer: X and dug-up hole
-  thorn-divan: bring over diva image, make door in that room,  make oink noise
-
-make hater say "i'm melting!". make beefeater block behavior say 'oi!'
+  cordon-joker: donor
+  goon-hut: ???
+  aromantics: boot bot soot -- also change hint image to say knock "slowly"
+  thorn-divan: make door in that room,  make oink noise
 
 make script to automatically pull in & rate transforms in puzzle_ideas.txt
 

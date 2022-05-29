@@ -119,8 +119,8 @@ getLevelFunctions['goon-hut'] = function() {
             }
             passageBlockingBehavior() {
                 displayMessageWithSound('Black tie only!',sounds['failure'], DEFAULT_MESSAGE_DURATION);
-                this.useAnimationImages = true;
-                window.setTimeout(this.stopAnimating.bind(this), DEFAULT_MESSAGE_DURATION);
+                // this.useAnimationImages = true;
+                // window.setTimeout(this.stopAnimating.bind(this), DEFAULT_MESSAGE_DURATION);
             }
             okayToDisplayWord() {
                 return false;
@@ -294,7 +294,7 @@ getLevelFunctions['goon-hut'] = function() {
     level.allWords = [ 'gang','gnat','goal','goat','gong','goon','gown','gut','hat','hut','loon','loot','lout','nut','oat','oven','oxen','portcullis','shifter','snifter','soiree','tang','tool','tool0','toon','treasure','tug','tun','tux','vat' ];
     level.bonusWords = [ 'gang','goal','gong','gut','hat','loon','lout','oat','toon','town','tug','vat','wool' ];
     level.initialThings = [ ['hut','room2',18,81],['goon','room1',18,68],['portcullis','room1',78,58],['10wheel','room1',94,50],['12wheel','room1',94,75],
-        ['3hole','room1',60,40], ['5hole','room1',60,60], ['loot','room0',18,88,0],['loot','room0',8,81,1], ['oxen','room0',55,81],['tang','room2',57,85],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81],
+        ['3hole','room1',60,40], ['5hole','room1',60,60], ['loot','room0',18,88,0],['loot','room0',8,81,1], ['oxen','room0',55,81],['tang','room2',57,85],['shifter','room2',81,68],['soiree','room3',47,66],['treasure','room3',91,81],
     ];
     level.targetThing = 'treasure';
     level.immovableObjects = [ 'gang','gnat','goal','goat','gong','goon','hut','lout','oven','oxen','portcullis','shifter',
@@ -343,7 +343,7 @@ getLevelFunctions['goon-hut'] = function() {
             filledPolygons: [],
             passages: [ 
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room1', 74, 77, true, 35, 77),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room3', 10, 77, true, 20, 77, 'shifter', PASSAGE_STATE_BLOCKED, 73, 63)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room3', 10, 77, true, 18, 77, 'shifter', PASSAGE_STATE_BLOCKED, 73, 63)],
         },
         'room3': {
             boundaries: [],

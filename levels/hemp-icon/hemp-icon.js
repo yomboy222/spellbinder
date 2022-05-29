@@ -9,7 +9,16 @@ getLevelFunctions['hemp-icon'] = function() {
     let level = new Level('hemp-icon');
     level.folderName = 'hemp-icon';
 
-    level.defineThingSubclasses = function() { 
+    level.defineThingSubclasses = function() {
+
+        window.Beefeater = class Beefeater extends Thing {
+            passageBlockingBehavior() {
+                level.sounds['oi'].play();
+                displayMessage('Blocked!');
+                this.movementType = MOVEMENT_TYPE_PARABOLIC;
+                this.setMovement(this.x,this.y,1000);
+            }
+        }
 
         window.Bruin = class Bruin extends Thing {
             extraTransformIntoBehavior() {
@@ -130,10 +139,11 @@ getLevelFunctions['hemp-icon'] = function() {
             }
             finishUse() {
                 let beefeater = thingsHere['beefeater'];
-                beefeater.dispose();
+                beefeater.movementType = MOVEMENT_TYPE_LINEAR;
+                beefeater.deleteAfterMovement = true;
+                beefeater.setMovement(-60,beefeater.y,1000);
                 this.returnToInventoryAfterUseOnScreen();
             }
-
         }
 
         window.Ruin = class Ruin extends Thing {
@@ -162,6 +172,7 @@ getLevelFunctions['hemp-icon'] = function() {
 
     level.getThing = function(word,room,x,y) {
         switch (word) {
+            case 'beefeater' : return new Beefeater(word,room,x,y);
             case 'bruin' : return new Bruin(word,room,x,y);
             case 'coin' : return new Coin(word,room,x,y);
             case 'coins' : return new Coins(word,room,x,y);
@@ -199,7 +210,10 @@ getLevelFunctions['hemp-icon'] = function() {
         ['treasure','room4',66,80] ];
     level.bonusWords = ['bike','mesh','spike'];
     level.targetThing = 'treasure';
-    level.sounds = { 'growl' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/345733__noahpardo__deep-growl-1.wav') };
+    level.sounds = {
+        'growl' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/345733__noahpardo__deep-growl-1.wav') ,
+        'oi' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/beefeater_oi.m4a') ,
+    };
     level.initialMessage = 'Your goal: get the treasure!';
     level.muffinInVendingMachine = true;
 
