@@ -38,13 +38,15 @@ getLevelFunctions['thorn-divan'] = function() {
         }
 
         window.Pigmen = class Pigmen extends Thing {
-            extraTransformIntoBehavior() {
-                // level.sounds['oink'].play();
+            passageBlockingBehavior() {
+                level.sounds['oink'].play();
+                displayMessage('Blocked!', DEFAULT_MESSAGE_DURATION);
             }
         }
 
         window.Pigment = class Pigment extends Thing {
             extraTransformIntoBehavior() {
+                level.sounds['oink'].play();
                 this.y = 420;
                 this.wordDisplayOffsetX += 25;
             }
@@ -86,7 +88,7 @@ getLevelFunctions['thorn-divan'] = function() {
     level.initialRunes = [];
     level.sounds = {
         'horn' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/413203__joepayne__clean-and-pompous-fanfare-trumpet.mp3'),
-        'oink' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/oink.m4a'),
+        'oink' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/pigmen.m4a'),
         'opera' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/216502__tweedledee3__soprano-riff-three.mp3')
     }
     level.initialMessage = 'Your goal: find the treasure!';
