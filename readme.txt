@@ -34,7 +34,29 @@ create initialRoom.backgroundImage, set its onload to launchLevelIf..., and add 
 loop through dataForThingsInInitialRoom, instantiating everything, and after each instantiation setting key => (actual image object)
 
 finally call launchLevelIf..... just in case 
+
+
+
 ==============================
+
+NEW SURVEY MONKEY
+
+what's frustrating
+
+what's unintuitive that could easily be fixed to make more intuitive
+
+any seem too long or too short
+
+do my estimates of difficulty seem reasonable
+
+level of frustration about arbitrariness of what counts as a word
+
+would you like to read explanations of why some words don't count (divan > ivan etc.)
+
+feelings on capitalized versions of word ... coke and tang? spam?
+
+do people want more text prompts / hints?
+
 
 
 images to do or redo:
