@@ -16,7 +16,7 @@ getLevelFunctions['tutorial level'] = function() {
                 this.wordDisplayOffsetY = -4;
             }
             extraTransformFromBehavior() {
-                displaySequenceableMessage('Now you can change "cur" into "curb"!', 'tutorial_instruction', 'tutorial_instruction');
+                displaySequenceableMessage('Now you can change "cur" into "curb"!', 'tutorial_instruction', 'tutorial_instruction', 0, 74,48,true);
             }
         }
 
@@ -89,11 +89,11 @@ getLevelFunctions['tutorial level'] = function() {
 
         window.Rutabaga = class Rutabaga extends Thing {
             extraPickUpBehavior() {
-                displaySequenceableMessage("The rutabaga is in your inventory now. You can double click it to drop it (you won't need it)", 'tutorial_instruction', 'tutorial_instruction');
+                displaySequenceableMessage("The rutabaga is in your inventory now. You can double click it to drop it (you won't need it)", 'tutorial_instruction', 'tutorial_instruction', 0, 15, 73, true);
             }
 
             extraDiscardBehavior() {
-                displaySequenceableMessage("Now click on the arrow at right to go to the next room.", "tutorial_instruction", "tutorial_instruction");
+                displaySequenceableMessage("Now click on the arrow at right to go to the next room.", "tutorial_instruction", "tutorial_instruction", 0, 74, 50, true);
             }
 
         }
@@ -119,14 +119,14 @@ getLevelFunctions['tutorial level'] = function() {
 
     level.showInitialTutorialMsg = function() {
         window.setTimeout( function() {
-                displaySequenceableMessage("Double-click the rutabaga: this is how you pick things up.", "tutorial_instruction", "", 0, 50, 5, true);
+                displaySequenceableMessage("Double-click the rutabaga: this is how you pick things up.", "tutorial_instruction", "", 0, 70, 50, true);
              },
-            1000);
+            6000);
     }
 
     level.showRoom2Message = function () {
         if ('bear' in thingsHere) {
-            displaySequenceableMessage('Try to get past the cur by clicking on it and changing "cur" into "curb".', 'tutorial_instruction');
+            displaySequenceableMessage('Try to get past the cur by clicking on it and changing "cur" into "curb".', 'tutorial_instruction', 'none', 0, 75, 41, true);
         }
     }
 
@@ -134,6 +134,20 @@ getLevelFunctions['tutorial level'] = function() {
         if ('key' in thingsHere) {
             displaySequenceableMessage('Pick up the key by double-clicking it.', 'pick-up-key-message');
         }
+    }
+
+    level.showSpecialTutorialMessageAboutRunes = function() {
+        displaySequenceableMessage('Sorry, this requires a rune:<br/> ' + getRuneImageTag('b') + '...', 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
+        setTimeout(
+            function() { displaySequenceableMessage('... To get a ' + getRuneImageTag('b') + ' rune, change "bear" into "ear".', 'tutorial_instruction', 'missing-rune-message', 0, 40, 28, true); },
+            1.5 * DEFAULT_MESSAGE_DURATION
+        );
+    }
+
+    level.setLookAtBinderReminder = function() {
+        window.setTimeout(function () {
+            displayMessage('&uarr; Always start by looking at which spells are in the binder; they will differ from level to level!', 0, 15, 27, true);
+        }, 1000);
     }
 
     level.initialRoom = 'room1';
@@ -153,7 +167,7 @@ getLevelFunctions['tutorial level'] = function() {
     level.initialThings = [
         ['rutabaga','room1', 65, 80],
         ['cur','room2',79,80],
-        ['bear','room2',69,51],
+        ['bear','room2',40,65],
         ['gate','room3',40,80],
         ['key','room3',17,80],
         ['treasure','room3',93,80],

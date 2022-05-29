@@ -240,7 +240,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
                 this.destX = Math.round( midpoint + (range * Math.random()) - (range / 2) );
                 // console.log(this.destX);
                 this.movementType = MOVEMENT_TYPE_PARABOLIC;
-                this.movementDurationMS = 500 + Math.round(Math.abs(this.x - this.destX) * 2);
+                this.movementDurationMS = 750 + Math.round(Math.abs(this.x - this.destX) * 2);
                 this.beginMovementTime = Date.now();
                 this.extraPostMovementBehavior = this.stopAnimating;
                 let nextTakeoffTime = this.movementDurationMS + 500 + Math.round(Math.random() * 1200);
@@ -287,7 +287,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     ];
     level.initialThings = [ ['aromantics','room1',42,87],['hotspot','room1',64,76],['lambkin','room1',18,80],['godzilloid','room1',81,80],
         ['manifesto','room3',48,65],
-        ['armoire','room2',75,62], ['tapestry','room2',25,40], ['tit','room2',65,25],
+        ['armoire','room2',75,62], ['tapestry','room2',25,40], ['tit','room2',70,26],
         ['treasure','secret room',40,70]
     ];
     level.immovableObjects = ['aromantics', 'hotpot', 'hotpot', 'hotspot', 'hotspot','manifest','manifesto','romantics',

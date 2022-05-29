@@ -106,6 +106,7 @@ getLevelFunctions['soap-bowtie'] = function() {
 
         window.Water = class Water extends Thing {
             extraTransformIntoBehavior() {
+                level.sounds['melting'].play();
                 this.y = 430;
             }
         }
@@ -143,6 +144,7 @@ getLevelFunctions['soap-bowtie'] = function() {
     level.initialRunes = [];
     level.initialMessage = 'You goal: find and take the treasure!';
     level.sounds = {
+        'melting' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/melting.m4a')),
         'hit' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/434897__thebuilder15__collapse.wav')),
         'collapse' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/77074__benboncan__bricks-falling.wav'))
     }

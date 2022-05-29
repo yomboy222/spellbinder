@@ -156,10 +156,13 @@ class Level {
            this.displayLevelIntroMessage();
         };
         this.animateLoopFunction = function() {};
-        this.keydownFunction = function(e) {
-            return false; // false indicates keydown event not handled here
-        };
+
         this.levelCompleteMessage = 'Congratulations, you completed the level, earning <SCORE> points! Close this message to return to home screen.';
+    }
+    setLookAtBinderReminder() {
+        window.setTimeout(function () {
+            displayMessage('Note which spells are in the binder!', DEFAULT_MESSAGE_DURATION, 17, 32, true);
+        }, 2200);
     }
 }
 
@@ -1392,11 +1395,7 @@ function castSpell() {
     if (typeof runeNeeded != 'undefined' && runes.indexOf(runeNeeded) < 0) {
         sounds['failure'].play();
         if (levelName.indexOf('utorial') > 0 && fromWord == 'cur') {
-            displaySequenceableMessage('Sorry, this would require a rune:<br/> ' + getRuneImageTag(runeNeeded), 'missing-rune-message', 'tutorial_instruction', 1.5 * DEFAULT_MESSAGE_DURATION);
-            setTimeout(
-                function() { displaySequenceableMessage('To get a ' + getRuneImageTag('b') + ' rune, change "bear" into "ear".', 'tutorial_instruction', 'missing-rune-message'); },
-                1.5 * DEFAULT_MESSAGE_DURATION
-            );
+            level.showSpecialTutorialMessageAboutRunes();
         }
         else {
             displayMessage('Sorry, this would require a rune:<br/> ' + getRuneImageTag(runeNeeded), 1.5 * DEFAULT_MESSAGE_DURATION);
@@ -2015,9 +2014,7 @@ function launchLevel() {
 
     level.initializationFunction();
 
-    window.setTimeout(function(){
-        displayMessage('Note which spells are in the binder!',DEFAULT_MESSAGE_DURATION,17,32,true);
-    },1000);
+    level.setLookAtBinderReminder();
 
     animate();
 }
@@ -2237,53 +2234,7 @@ function handleKeydown(e) {
     if (e.code === 'Escape') {
         toggleSpellInputWindow(true);
     }
-    /*
-    if (showingIntroPage || showingSpellInput)
-        return;
-    if (pageBeingShownInBinder !== '') {
-        handleKeyInBinderViewMode(e);
-        return;
-    }
-    else if (e.code === 'KeyR' && levelComplete === true) {
-        confirmQuit();
-    }
-    else if (normalPlayerInputSuppressed === false && levelComplete === false) {
-        switch (e.code) {
-            case 'ArrowRight' :
-            case 'KeyD' :
-                player.goingRight = true;
-                player.direction = Directions.RIGHT;
-                break;
-            case 'ArrowLeft' :
-            case 'KeyA' :
-                player.goingLeft = true;
-                player.direction = Directions.LEFT;
-                break;
-            case 'ArrowUp' :
-            case 'KeyW' :
-                player.goingUp = true;
-                player.direction = Directions.UP;
-                break;
-            case 'ArrowDown' :
-            case 'KeyS' :
-                player.goingDown = true;
-                player.direction = Directions.DOWN;
-                break;
-
-            case 'Space' : pickUpNearbyThings(); break;
-            case 'KeyB' : showBinder(); break;
-            case 'KeyC' : toggleSpellInputWindow(); break;
-            case 'KeyI' : drawInventory(); break;
-            case 'KeyT' : teleport(); break;
-            case 'KeyX' : cheating = !cheating; break; // use to toggle cheating on and off.
-            case 'KeyQ' : confirmQuit(); break;
-
-        }
-    }
-
-     */
 }
-
 
 function showOrHideBinderPageDiv() {
     let rightPageDiv = document.getElementById('binder-page-right');

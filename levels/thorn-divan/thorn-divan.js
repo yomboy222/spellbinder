@@ -21,6 +21,11 @@ getLevelFunctions['thorn-divan'] = function() {
         }
 
         window.Divan = class Divan extends Thing {
+            constructor(word,room,x,y) {
+                super(word,room,x,y);
+                this.reblocksPassageUponReturn = true;
+                this.cannotPickUpMessage = 'The divan is too heavy to move away from the door!';
+            }
             passageBlockingBehavior() {
                 displayMessage('The divan is too heavy to move away from the door!');
             }
@@ -84,6 +89,7 @@ getLevelFunctions['thorn-divan'] = function() {
         'oink' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/oink.m4a'),
         'opera' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/216502__tweedledee3__soprano-riff-three.mp3')
     }
+    level.initialMessage = 'Your goal: find the treasure!';
 
     level.rooms = {
         'room1': {

@@ -291,7 +291,7 @@ getLevelFunctions['goon-hut'] = function() {
     level.initialSpells = [ 'reversal', 'change-letter' ];
     level.initialInventory = {};
     level.backgroundMusicFile = 'LurkingSloth-320bit.mp3';
-    level.allWords = [ 'gang','gnat','goal','goat','gong','goon','gown','gut','hat','hut','loon','loot','lout','nut','oat','oven','oxen','portcullis','shifter','snifter','soiree','tang','tool','tool0','toon','town','treasure','tug','tun','tux','vat','wool' ];
+    level.allWords = [ 'gang','gnat','goal','goat','gong','goon','gown','gut','hat','hut','loon','loot','lout','nut','oat','oven','oxen','portcullis','shifter','snifter','soiree','tang','tool','tool0','toon','treasure','tug','tun','tux','vat' ];
     level.bonusWords = [ 'gang','goal','gong','gut','hat','loon','lout','oat','toon','town','tug','vat','wool' ];
     level.initialThings = [ ['hut','room2',18,81],['goon','room1',18,68],['portcullis','room1',78,58],['10wheel','room1',94,50],['12wheel','room1',94,75],
         ['3hole','room1',60,40], ['5hole','room1',60,60], ['loot','room0',18,88,0],['loot','room0',8,81,1], ['oxen','room0',55,81],['tang','room2',57,85],['shifter','room2',81,68],['soiree','room3',47,81],['treasure','room3',91,81],

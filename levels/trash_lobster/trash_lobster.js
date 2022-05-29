@@ -15,18 +15,13 @@ getLevelFunctions['trash-lobster'] = function() {
                 if (this.movable === false) {
                     return; // if it's not movable it's because it's on its way to cauldron, so ignore any further clicks.
                 }
+                let cauldron = thingsHere['cauldron'];
                 if (this.getKey() in inventory) {
-                    let cauldron = thingsHere['cauldron'];
-                    if (cauldron.inRangeOfPlayer(EXTRA_SPELL_RADIUS + 60)) {
-                        this.removeFromInventoryForUseOnScreen();
-                        this.deleteAfterMovement = true;
-                        this.movementType = MOVEMENT_TYPE_PARABOLIC;
-                        this.setMovement(cauldron.x, cauldron.y - cauldron.halfHeight, 1000, undefined, undefined, true, false);
-                    }
+                    this.removeFromInventoryForUseOnScreen();
                 }
-                else {
-                    super.handleDblclick();
-                }
+                this.deleteAfterMovement = true;
+                this.movementType = MOVEMENT_TYPE_PARABOLIC;
+                this.setMovement(cauldron.x, cauldron.y - cauldron.halfHeight, 1000, undefined, undefined, true, false);
             }
             extraPostMovementBehavior() {
                 window.setTimeout(completeLevel, 2000);
@@ -71,6 +66,7 @@ getLevelFunctions['trash-lobster'] = function() {
             draw() {
                 super.draw();
                 ctx.strokeStyle = 'purple';
+                ctx.lineWidth = 2;
                 for  (let i = 0; i < 10; i++) {
                     ctx.beginPath();
                     ctx.arc(this.bubbles[i].x, this.bubbles[i].y, this.bubbles[i].radius, 0, 2 * Math.PI);
