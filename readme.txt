@@ -41,30 +41,13 @@ finally call launchLevelIf..... just in case
 
 NEW SURVEY MONKEY
 
-what's frustrating
-
-what's unintuitive that could easily be fixed to make more intuitive
-
-any seem too long or too short
-
-do my estimates of difficulty seem reasonable
-
-level of frustration about arbitrariness of what counts as a word
-
-would you like to read explanations of why some words don't count (divan > ivan etc.)
-
-feelings on capitalized versions of word ... coke and tang? spam?
-
-do people want more text prompts / hints?
-
-
 
 images to do or redo:
   tear-dice: make separate background with street
   cordon-joker: donor
   goon-hut: ???
   aromantics: boot bot soot -- also change hint image to say knock "slowly"
-  thorn-divan: make door in that room,  make oink noise
+  thorn-divan: make door in that room, 
 
 make script to automatically pull in & rate transforms in puzzle_ideas.txt
 
@@ -132,16 +115,16 @@ collapse there -- https://freesound.org/s/77074/
 ================
 
 people to send to --
-john g
-carl v
-andrew, sophie
-jason s
-jason z
+x john g
+x carl v
+x andrew, sophie
+x jason s
+x jason z
 twitter
 tree
 jac
-david l
-sarah b / johnnie
++ david l
++ sarah b / johnnie
 
 
 

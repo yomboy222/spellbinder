@@ -38,6 +38,7 @@ getLevelFunctions['slime-blaze'] = function() {
         window.Brook = class Brook extends Thing {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
+                this.reblocksPassageUponReturn = true;
                 this.frameDisplayTimeMS = 200;
                 this.startAnimating();
             }
