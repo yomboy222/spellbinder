@@ -30,7 +30,7 @@ getLevelFunctions['tutorial level'] = function() {
                 displayMessage('yikes!', DEFAULT_MESSAGE_DURATION);
             }
             extraTransformFromBehavior() {
-                displaySequenceableMessage('... and now you can click on the arrow at right, to move to next room!', 'tutorial_instruction', 'tutorial_instruction');
+                displaySequenceableMessage('... and now you can click on the arrow at right, to move to the next room!', 'tutorial_instruction', 'tutorial_instruction');
             }
         }
 
@@ -153,7 +153,7 @@ getLevelFunctions['tutorial level'] = function() {
     level.initialRoom = 'room1';
     level.initialX = 50; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 80;
-    level.initialSpells = ['remove-edge', 'add-edge'];
+    level.initialSpells = ['add-edge', 'remove-edge'];
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
     level.allWords = [ 'bear', 'cur', 'ear', 'curb', 'key' ];

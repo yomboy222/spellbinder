@@ -47,8 +47,11 @@ getLevelFunctions['tear-dicer'] = function() {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 this.frameCtr = 0;
-                this.cannotPickUpMessage = '';
             }
+            getCannotPickUpMessage() {
+                return '';
+            }
+
             update() {
                 this.y = this.initialY - 190 + (Math.round(Date.now() / 5 ) % 356);
             }

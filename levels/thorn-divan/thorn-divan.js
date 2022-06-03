@@ -24,8 +24,11 @@ getLevelFunctions['thorn-divan'] = function() {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 this.reblocksPassageUponReturn = true;
-                this.cannotPickUpMessage = 'The divan is too heavy to move away from the door!';
             }
+            getCannotPickUpMessage() {
+                return 'The divan is too heavy to move away from the door!';
+            }
+
             passageBlockingBehavior() {
                 displayMessage('The divan is too heavy to move away from the door!');
             }

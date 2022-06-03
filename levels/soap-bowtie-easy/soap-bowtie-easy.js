@@ -142,7 +142,7 @@ getLevelFunctions['soap-bowtie'] = function() {
 
     level.targetThing = 'treasure';
     level.initialRunes = [];
-    level.initialMessage = 'You goal: find and take the treasure!';
+    level.initialMessage = 'Your goal: find and take the treasure!';
     level.sounds = {
         'melting' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/melting.m4a')),
         'hit' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/434897__thebuilder15__collapse.wav')),

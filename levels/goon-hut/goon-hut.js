@@ -11,7 +11,11 @@ getLevelFunctions['goon-hut'] = function() {
 
     level.defineThingSubclasses = function() { 
 
-        window.Goal = class Goal extends Thing {
+        window.Goat = class Goat extends Thing {
+            extraTransformIntoBehavior() {
+                this.x = 57 * xScaleFactor + canvasOffsetX;
+                this.y = 85 * yScaleFactor + canvasOffsetY; // because gnat could be at various heights
+            }
         }
 
         window.Gnat = class Gnat extends Thing {
@@ -264,7 +268,7 @@ getLevelFunctions['goon-hut'] = function() {
 
     level.getThing = function(word,room,x,y) {
         switch (word) {
-            case 'goal' : return new Goal(word,room,x,y);
+            case 'goat' : return new Goat(word,room,x,y);
             case 'gnat' : return new Gnat(word,room,x,y);
             case 'goon' : return new Goon(word,room,x,y);
             case 'gown' : return new Gown(word,room,x,y);
@@ -300,7 +304,7 @@ getLevelFunctions['goon-hut'] = function() {
     level.immovableObjects = [ 'gang','gnat','goal','goat','gong','goon','hut','lout','oven','oxen','portcullis','shifter',
         'soiree','wheel','hole','3hole','5hole','10wheel','12wheel','town','tug','tun','vat' ];
     level.initialRunes = ['v','w'];
-    level.additionalImageNamesToPreload = ['tool_0','shifter_0','shifter_1','soiree_0','gown_0'];
+    level.additionalImageNamesToPreload = ['tool_0','shifter_0','shifter_1','shifter_2','soiree_0','gown_0'];
     level.sounds = {
         'click' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/click3.wav')),
         'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),

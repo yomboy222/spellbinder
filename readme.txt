@@ -15,7 +15,14 @@ check that walking back thru rooms works
 
 TODO:
 
+When dropping things on Lobster puzzle couldn’t move so dropped on top of each other. Eventually figured to case spells from inventory.
+
 design loading message
+
+put into a cookie, whether certain reminder messages have been shown so as to show them exactly once:
+  -- to pick up an object, double-click
+  -- to use an object, double-click while it's in your inventory (maybe mark tool objects as such)
+  -- on first bonus word, "bonus word! (a word not necessary to solve the level, but still worth points ... careful, though, you might have to change them back in order to solve the level!")
 
 ===============================
 strategy for loading images:
@@ -39,19 +46,17 @@ finally call launchLevelIf..... just in case
 
 ==============================
 
-NEW SURVEY MONKEY
-
 
 images to do or redo:
   tear-dice: make separate background with street
   cordon-joker: donor
-  goon-hut: ???
-  aromantics: boot bot soot -- also change hint image to say knock "slowly"
+  goon-hut: SEPARATE IMAGE FOR SECOND LOOT
+  aromantics: boot bot soot
   thorn-divan: make door in that room, 
+  jerk-whiskeys: background with door; detritus, swamp, bonus word images
+
 
 make script to automatically pull in & rate transforms in puzzle_ideas.txt
-
-tare-dicer: redo background
 
 again, when starting level, say "loading" until first-room images and background are loaded. maybe wait 1.5 seconds to load and if not done, then put up the "loading" graphic. make optional level.additionalImagesToPreload
 

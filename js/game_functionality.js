@@ -389,7 +389,6 @@ class Thing extends GameElement {
         this.movable = (immovableObjects.indexOf(word) < 0 && solidObjects.indexOf(word) < 0);
         this.solid = (solidObjects.indexOf(word) >= 0);
         this.collisionProfile = (ellipticalObjects.indexOf(word) >= 0) ? CollisionProfile.ELLIPTICAL : CollisionProfile.RECTANGULAR;
-        this.cannotPickUpMessage = 'This object cannot be picked up.';
         this.captionDiv = undefined;
         this.captionLeftEdgeWithinCanvas = undefined;
         this.captionTopEdgeWithinCanvas = undefined;
@@ -399,7 +398,7 @@ class Thing extends GameElement {
         this.sound = undefined; // used for thing's primary sound. will be stopped if/when player leaves room where it is.
         this.wordDisplayOffsetX = -18 - (4 * this.word.length); // where to set "left" property of captionDev rel. to this.x. subclasses may redefine.
         this.wordDisplayOffsetY = 0;// where to set "top" property of captionDev rel. to this.y. subclasses may redefine.
-        this.reblocksPassageUponReturn = false;
+        this.reblocksPassageUponReturn = false; // if it's an obstacle, and is changed then changed back, it will become obstacle again.
     }
 
     getKey() { // the key used for this thing in thingsHere, thingsElsewhere, inventory:
@@ -746,7 +745,9 @@ class Thing extends GameElement {
         if (this.okayToDisplayWord()) { // i.e. only open spell-input window if the word is being shown
             thingBeingTransformed = this;
             toggleSpellInputWindow(false, this.word);
+            return true;
         }
+        return false; // meaning the click was not actually handled by this Thing.
     }
 
     handleDblclick(e) {
@@ -759,7 +760,9 @@ class Thing extends GameElement {
             return true; // meaning that this object handled the dblclick.
         }
         if (!this.movable) {
-            return this.cannotPickUpMessage; // the overall click-handling function will display this msg if no *other* object handles the dblclick successfully.
+            let msg = this.getCannotPickUpMessage();
+            console.log ('message was ' + msg);
+            return msg; // the overall click-handling function will display this msg if no *other* object handles the dblclick successfully.
         }
         if (!this.inRangeOfPlayer(EXTRA_PICKUP_RADIUS)) {
             return ("You must be closer to pick this up.");
@@ -772,6 +775,10 @@ class Thing extends GameElement {
     }
 
     // placeholder methods that subclasses needing specific behavior can override:
+
+    getCannotPickUpMessage() {
+        return "This object cannot be picked up.";
+    }
 
     okayToDisplayWord() {
         return true;
@@ -2236,8 +2243,54 @@ function startSuppressingPlayerInput(time = 0) {
         window.setTimeout(stopSuppressingPlayerInput, time);
 }
 
+function handleArrowKey(direction, e) {
+
+    // interpreting arrow keys as "click on correctly-oriented, active passage that's closest to and not behind player"
+    let passageToClick = undefined;
+    let closestDistanceFound = 999999;
+    for (let i=0; i<passages.length; i++) {
+        let p = passages[i];
+        if (p.activated && p.direction === direction) {
+            // disregard this passage if it's behind user (rel. to given direction)
+            if ( (direction === 'N' && player.y < p.y) ||
+                (direction === 'S' && player.y > p.y) ||
+                (direction === 'E' && player.x > p.x) ||
+                (direction === 'W' && player.x < p.x) ) {
+
+                continue;
+            }
+
+            let dist = (direction === 'E' || direction === 'W') ? Math.abs(player.x - p.x) : Math.abs(player.y - p.y);
+            if (dist < closestDistanceFound) {
+                closestDistanceFound = dist;
+                passageToClick = p;
+            }
+        }
+    }
+    if (typeof passageToClick !== 'undefined')
+        passageToClick.handleClick(e);
+}
+
 function handleKeydown(e) {
-    if (e.code === 'Escape') {
+    if (typeof pageBeingShownInBinder === 'string' && pageBeingShownInBinder !== '') {
+        handleKeyInBinderViewMode(e);
+        return;
+    }
+    if (normalPlayerInputSuppressed)
+        return;
+    if (e.code === 'ArrowRight') {
+        handleArrowKey('E', e);
+    }
+    else if (e.code === 'ArrowLeft') {
+        handleArrowKey('W', e);
+    }
+    else if (e.code === 'ArrowUp') {
+        handleArrowKey('N', e);
+    }
+    else if (e.code === 'ArrowDown') {
+        handleArrowKey('S', e);
+    }
+    else if (e.code === 'Escape') {
         toggleSpellInputWindow(true);
     }
 }
@@ -2390,6 +2443,8 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
                 let result = thing.handleClick();
                 if (typeof result === 'boolean' && result === true) {
                     handled = true;
+                    console.log('click was handled by ' + word);
+                    break;
                 }
                 // at most one thing should handle click
             }
@@ -2521,7 +2576,7 @@ function initialize() {
 
     binderPageHtml = {};
     binderPageHtml[allSpells.BINDER_COVER] = '<div class="binder-cover-title"><span style="font-size:24px;">The</span><br/>Spell-<br/>Binder</div>';
-    binderPageHtml['binder-intro-left-page'] = '<div class="spell-description">To cast a spell, press C; then type what you wish to transform and the word to transform it into. For example, you might change <span class="monospace">ox</span> into <span class="monospace">fox</span>. For this to work, you need three things: a nearby ox, a spell for putting a letter in front of a word, and a rune of the letter F: <img class="inline-rune" src="imgs/runes/Rune-F.png"> </div>';
+    binderPageHtml['binder-intro-left-page'] = '<div class="spell-description">To cast a spell, click on the object you wish to transform, then enter the word to transform it into. For example, you might change <span class="monospace">ox</span> into <span class="monospace">fox</span>. For this to work, you need three things: a nearby ox, a spell for putting a letter in front of a word, and a rune of the letter F: <img class="inline-rune" src="imgs/runes/Rune-F.png"> </div>';
     binderPageHtml[allSpells.BINDER_INTRO] = '<div class="spell-description">Each spell is written on a page in this binder; you may find more pages with new spells!</div>';
     binderPageHtml[allSpells.ADD_EDGE] = '<div class="spell-title">Add Edge</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word:</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fans</span></div> <div class="spell-example">change <span class="monospace">ink</span> into <span class="monospace">mink</span></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
     binderPageHtml[allSpells.ADD_EDGE_NFS] = '<div class="spell-title">Add Edge but Not Final S</div> <div class="spell-description">This spell lets you add a letter at the beginning or end of a word, but not a final S:</div>  <div class="spell-example">change <span class="monospace">fan</span> into <span class="monospace">fang</span></div> <div class="spell-example">change <span class="monospace">ink</span> into <span class="monospace">mink</span></div> <div class="spell-example"><del>change <span class="monospace">fan</span> into <span class="monospace">fans</span></del></div> <div class="spell-description">Keep in mind you must have a rune of the letter you are adding.</div>';
@@ -2565,7 +2620,8 @@ function initialize() {
 }
 
 function showIntroScreen() {
-    stopDisplayingMsg(true);
+    stopDisplayingMsg(true); // "true" to force stop all
+    toggleSpellInputWindow(true); // "true" forces close
     deleteCaptions(true); // "true" here forces deletion of captions in inventory too
     document.getElementById('binder-icon-holder').style.display = 'none';
     document.getElementById('music-toggle-div').style.display = 'none';
