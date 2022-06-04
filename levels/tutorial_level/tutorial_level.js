@@ -146,7 +146,7 @@ getLevelFunctions['tutorial level'] = function() {
 
     level.setLookAtBinderReminder = function() {
         window.setTimeout(function () {
-            displayMessage('&uarr; Always start by looking at which spells are in the binder; they will differ from level to level!', 0, 15, 27, true);
+            displayMessage('<span style="color:darkred">&uarr;</span> Always start by looking at which spells are in the binder; they will differ from level to level!', 0, 15, 27, true);
         }, 1000);
     }
 
@@ -173,6 +173,8 @@ getLevelFunctions['tutorial level'] = function() {
         ['treasure','room3',93,80],
     ];
     level.initialRunes = [];
+    level.goalDescription = 'Get the treasure!';
+
     level.rooms = {
         'room1': {
             passages: [new Passage(PassageTypes.INVISIBLE_VERTICAL, 'E',95, 75, 'room2', 12, 75,

@@ -2,7 +2,6 @@ readme.txt file for the Spell-Binder game prototype
 Doug McLellan, created 2/4/2022
 https://github.com/yomboy222/spellbinder.git
 
-
 PROTOTYPE 2 LAUNCH CHECKLIST:
 
 ensure immovable objects set
@@ -48,12 +47,12 @@ finally call launchLevelIf..... just in case
 
 
 images to do or redo:
-  tear-dice: make separate background with street
   cordon-joker: donor
   goon-hut: SEPARATE IMAGE FOR SECOND LOOT
   aromantics: boot bot soot
   thorn-divan: make door in that room, 
-  jerk-whiskeys: background with door; detritus, swamp, bonus word images
+  jerk-whiskeys: background with door; rues, ruts, brake, dyes, ryes, tubers, tubes, tubs
+
 
 
 make script to automatically pull in & rate transforms in puzzle_ideas.txt
@@ -77,8 +76,7 @@ look up promise architecture (for images loading) and async/await just to be awa
 PHASE 2 STUFF:
 use flip-a-clip to get walking player images
 
-difficulty rating feedback at end of each level
-
+graphics: light shaft from windows through dust effect
 
 ––––––––––––––––––––––––––––––
 Sneaky Snitch by Kevin MacLeod http://incompetech.com

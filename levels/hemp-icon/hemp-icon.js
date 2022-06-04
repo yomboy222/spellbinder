@@ -214,8 +214,9 @@ getLevelFunctions['hemp-icon'] = function() {
         'growl' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/345733__noahpardo__deep-growl-1.wav') ,
         'oi' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/beefeater_oi.m4a') ,
     };
-    level.initialMessage = 'Your goal: get the treasure!';
+
     level.muffinInVendingMachine = true;
+    level.goalDescription = 'Get the treasure!';
 
     level.rooms = {
         'room1': {

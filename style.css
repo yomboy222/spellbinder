@@ -98,7 +98,23 @@
     z-index: 1;
 }
 
-#score-div, #music-toggle-div{
+.window-expansion-toggler {
+    float:right;
+    padding: 2px;
+    border: solid 2px blue;
+    height:15px;
+    line-height:15px;
+    border-radius: 9px;
+}
+
+.window-expansion-toggler > a {
+    text-decoration: none;
+    font-family: sans-serif;
+    font-weight: bold;
+    color:blue;
+}
+
+#score-div, #music-toggle-div, #goal-div {
     display:none;
     border: 3px solid lightgray;
     border-radius: 8px;
@@ -123,6 +139,16 @@
 
 #inner-score-div{
     float:right;
+}
+
+#goal-div.expanded {
+    width:230px;
+    height:auto;
+}
+
+#goal-div.collapsed {
+    width:72px;
+    height:auto;
 }
 
 .word-bubble{

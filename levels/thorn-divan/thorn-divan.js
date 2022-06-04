@@ -94,7 +94,7 @@ getLevelFunctions['thorn-divan'] = function() {
         'oink' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/pigmen.m4a'),
         'opera' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/216502__tweedledee3__soprano-riff-three.mp3')
     }
-    level.initialMessage = 'Your goal: find the treasure!';
+    level.goalDescription = 'Get the treasure!';
 
     level.rooms = {
         'room1': {

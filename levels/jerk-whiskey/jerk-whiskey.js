@@ -185,14 +185,18 @@ getLevelFunctions['jerk-whiskeys [new, missing some artwork]'] = function() {
     level.initialSpells = [ 'add-letter-nfs', 'remove-letter-nfs', 'change-letter-nfs' ];
     level.initialInventory = {};
     level.backgroundMusicFile = 'LurkingSloth-320bit.mp3';
+
+    // NOTE LEAVING OUT "RUES"
     level.allWords = ['brake', 'coquette', 'croquette', 'detritus', 'dollhouse', 'drake', 'dyes', 'jerk', 'jerky', 'leopard', 'leotard',
-        'rake', 'rubes', 'rubies', 'rues', 'ruts', 'ryes', 'swami', 'swamp', 'tollhouse', 'tubers', 'tubes', 'tubs', 'whiskers', 'whiskeys']
+        'rake', 'rubes', 'rubies', 'ruts', 'ryes', 'swami', 'swamp', 'tollhouse', 'tubers', 'tubes', 'tubs', 'whiskers', 'whiskeys']
     level.initialThings = [ ['whiskeys','room1',50,47],['jerk','room1',57,72],['croquette','room1',83,81],['drake','room2',25,81],['tollhouse','room3',22,55],['swami','room4',40,81],['leopard','room2',81,75],['detritus','room5',81,83],['rubes','room6',60,81] ];
     level.bonusWords = ['brake', 'dyes', 'rues', 'ruts', 'ryes', 'tubers', 'tubes', 'tubs'];
     level.targetThing = 'rubies';
     level.immovableObjects = ['brake', 'coquette', 'croquette', 'detritus', 'dollhouse', 'drake', 'jerk', 'leopard', 'rubes', 'ruts', 'ryes', 'swami', 'swamp', 'tollhouse', 'whiskers', 'whiskeys']
     level.initialRunes = [];
-    level.initialMessage = 'Your goal: get some precious stones!';
+
+    level.goalDescription = 'Get some precious stones!';
+
     level.additionalImageNamesToPreload = ['coquette_0','coquette_1','coquette_2','coquette_3','coquette_4','jerk_0','jerk_1','jerk_2'];
     level.sounds = {
         'hey_baby' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/hey_baby.m4a'),

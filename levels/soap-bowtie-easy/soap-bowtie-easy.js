@@ -133,7 +133,7 @@ getLevelFunctions['soap-bowtie'] = function() {
     level.backgroundMusicFile = 'LurkingSloth-320bit.mp3';
     level.giveRoomsRandomBackgroundsUnlessSpecified = true;
     level.allWords = [ 'bootie','bowtie','hammer','hater','jammer','java','lava','law','partition','paw','sap','saw','soap','treasure','water' ];
-    level.bonusWords = ['paw','law'];
+    level.bonusWords = ['paw','law','saw'];
     level.initialThings = [ ['bowtie','room1',24,82],['soap','room1',50,82],['hater','room1',72,75],
         ['jammer','room0',40,80],
         ['partition','room2',75,76],
@@ -142,7 +142,8 @@ getLevelFunctions['soap-bowtie'] = function() {
 
     level.targetThing = 'treasure';
     level.initialRunes = [];
-    level.initialMessage = 'Your goal: find and take the treasure!';
+
+    level.goalDescription = 'Get the treasure!';
     level.sounds = {
         'melting' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/melting.m4a')),
         'hit' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/434897__thebuilder15__collapse.wav')),

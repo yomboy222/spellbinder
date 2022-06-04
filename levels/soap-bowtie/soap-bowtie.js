@@ -115,7 +115,8 @@ getLevelFunctions['harder soap-bowtie [requires undoing transformations!]'] = fu
     level.bonusWords = [ 'aster','eater','ester','hoe','pea','sea','spa', ];
     level.targetThing = 'treasure';
     level.initialRunes = [];
-    level.initialMessage = 'Your goal: get the treasure!';
+
+    level.goalDescription = 'Get the treasure!';
     level.sounds = {
         'melting': new Audio(getLevelPathFromFolderName(level.folderName + '/audio/melting.m4a')),
     }

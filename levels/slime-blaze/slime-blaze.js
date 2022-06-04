@@ -239,6 +239,8 @@ getLevelFunctions['slime-blaze'] = function() {
     level.pluralWords = { 'blazes':'blaze', 'blazers':'blazer', 'brooks':'brook', 'hovels':'hovel', 'limes':'lime', 'rooks':'rook', 'rudders':'rudder', 'udders':'udder', 'treasures':'treasure' }
     level.additionalImageNamesToPreload = ['blaze_0', 'blaze_1', 'blaze_2'];
 
+    level.goalDescription = 'Get the treasure!';
+
     level.treasureFound = false;
 
     level.rooms = {

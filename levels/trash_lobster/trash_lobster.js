@@ -109,16 +109,14 @@ getLevelFunctions['trash-lobster'] = function() {
     ];
     level.initialRunes = [];
 
+    level.goalDescription = 'Add some kind of sausage to the cauldron!';
+
     level.rooms = {
         'room1': {
             boundaries: [['n', 10, 10, 90, 10], ['n', 90, 10, 90, 90], ['n', 90, 90, 10, 90], ['d', 10, 90, 10, 10], ],
             filledPolygons: [['r', 0, 0, 100, 10], ['r', 0, 10, 10, 90], ['r', 10, 90, 90, 10], ['r', 90, 10, 10, 90], ],
             passages: [],
         },
-    };
-
-    level.initializationFunction = function() {
-        displayMessage('You need to add some kind of sausage to the cauldron!', DEFAULT_MESSAGE_DURATION * 200);
     };
 
     return level;

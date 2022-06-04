@@ -100,7 +100,8 @@ getLevelFunctions['ghost-peak'] = function() {
     level.sounds = {
         'host-speech' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/host-speech.m4a')
     };
-    level.initialMessage = 'Your goal: to find and pick up a holy artifact!';
+
+    level.goalDescription = 'Get a holy artifact!';
 
     level.rooms = {
         'room1': {

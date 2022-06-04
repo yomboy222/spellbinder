@@ -296,6 +296,8 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     level.bonusWords = ['romantics', 'boor', 'bot', 'roost', 'rot', 'shoot', 'shot', 'soot', 'nit'];
     level.targetThing = 'treasure';
     level.initialRunes = []; // ['h','t','n'];
+    level.goalDescription = 'Get the treasure!';
+
     level.initialMessage = 'You need something to battle the Godzilloid!';
 
     level.tapestryClickCount = 0;

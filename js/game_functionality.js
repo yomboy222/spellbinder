@@ -147,6 +147,7 @@ class Level {
         this.rooms = {};
         this.sounds = {};
         this.completionBonus = 10;
+        this.goalDescription = '[undefined]';
         this.defineThingSubclasses = function() {};
         this.getThing = function(word,room,x,y) {
             return undefined; // undefined indicates no special Thing subclass for this word
@@ -161,7 +162,7 @@ class Level {
     }
     setLookAtBinderReminder() {
         window.setTimeout(function () {
-            displayMessage('Note which spells are in the binder!', DEFAULT_MESSAGE_DURATION, 17, 32, true);
+            displayMessage('&uarr; Note which spells are in the binder!', DEFAULT_MESSAGE_DURATION, 17, 32, true);
         }, 2200);
     }
 }
@@ -1818,21 +1819,17 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
         sounds['whoosh'].play();
     }
 
-    toggleSpellInputWindow(true); // closes spell input
+    toggleSpellInputWindow(true); // force-closes spell input window
 
+    // move things that were in old room from thingsHere to thingsElsewhere:
     for (let [word, thing] of Object.entries(thingsHere)) {
-
         if (!thing.deleteAfterMovement) {
-            // console.log('putting into thingsElsewhere ' + thing.getKey() + " = " + word);
             thingsElsewhere[thing.getKey()] = thing;
         }
         if (typeof thing.sound === 'object') {
             thing.sound.pause();
         }
         thing.deleteFromThingsHere(true, false); // true,false means delete caption but don't recalculate z order now
-
-        // todo: if a thing is in movement and some method is supposed to called at end of movement,
-        // but the movement won't end because room was exited, should call that method now before deleting thingsHere[word].
     }
 
     // delete any messages that don't have timeout set:
@@ -1889,49 +1886,13 @@ function newRoom(newRoomName, newPlayerXAsPercent, newPlayerYAsPercent, initialM
 
     backgroundImage = roomData.backgroundImage;
 
-    /*
-    filledPolygons = [];
-    if (typeof roomData.filledPolygons !== 'undefined') {
-        for (let i = 0; i < roomData.filledPolygons.length; i++) {
-            const p = roomData.filledPolygons[i];
-            let scaledPolygon = [p[0]];
-            for (let j = 1; j < p.length; j += 2) {
-                scaledPolygon.push(p[j] * xScaleFactor);
-                scaledPolygon.push(p[j + 1] * yScaleFactor);
-            }
-            filledPolygons.push(scaledPolygon);
-        }
-    }
-
-    boundaries = [];
-    if (typeof roomData.boundaries !== 'undefined') {
-        for (let i = 0; i < roomData.boundaries.length; i++) {
-            let b = roomData.boundaries[i];
-            let orientation = (b[1] === b[3]) ? 'v' : 'd'; // v for vertical, d for diagonal (or horiz.)
-            // going to use b[0] for "type" of boundary. if starts with 'i', consider it invisible.
-            // to simplify collision detection, ensure that top point comes first (for vertical), and left pt for diag./horiz.
-            if ((orientation === 'v' && b[2] > b[4]) || (orientation != 'v' && b[1] > b[3])) {
-                let temp1 = b[1];
-                let temp2 = b[2];
-                b[1] = b[3];
-                b[2] = b[4];
-                b[3] = temp1;
-                b[4] = temp2;
-            }
-            boundaries.push([b[0], b[1] * xScaleFactor, b[2] * yScaleFactor,
-                b[3] * xScaleFactor, b[4] * yScaleFactor, orientation]);
-        }
-    }
-
-     */
-
     regenerateZOrderStack(); // the game elements on screen (player + things), in the order they should be drawn at each frame
 
     if (typeof roomData.specificNewRoomBehavior === 'function')
         roomData.specificNewRoomBehavior();
 
     if (typeof initialMessage === 'string') {
-        displayMessage(initialMessage);
+        displayMessage(initialMessage,0,50,28,true);
     }
 }
 
@@ -1976,7 +1937,8 @@ function launchLevel() {
     console.log('launching level');
     removeLoadingImagesMessage();
     canvas.style.display = 'block';
-    // document.getElementById('game-area').style.display = 'block';
+    document.getElementById('game-container-div').style.display = 'block';
+
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'none';
     showingIntroPage = false;
@@ -2207,6 +2169,8 @@ function loadLevel(lName) {
     // document.getElementById('spell-list').innerHTML = spellListHtml;
     document.getElementById('horizontal-spell-list').innerHTML = spellListHtml;
     document.getElementById('inner-score-div').innerHTML = 'score: <span id="score-span">0</span>';
+
+    toggleGoalDiv(false,true); // if no level.goalDescription provided, this will hide the "goal" div.
 
     // make sure player is using "regular" images not wearing special clothing:
     player.images = new Array(4);
@@ -2456,19 +2420,46 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
     drawInventory(); // important not to call this in individual Things' implementations of handleClick()!
 }
 
+function toggleGoalDiv(forceCollapse = false, forceExpand = false) {
+    let goalDiv = document.getElementById('goal-div');
+
+    console.log(level.goalDescription);
+
+    // if no goal description is supplied in level, hide this div completely:
+    if (typeof level.goalDescription === 'undefined' || level.goalDescription === '[undefined]' || level.goalDescription === '') {
+        goalDiv.style.display = 'none';
+        return;
+    }
+
+    goalDiv.style.display = 'block';
+    let expandRatherThanContract = forceExpand || (goalDiv.classList.contains('collapsed') && !forceCollapse);
+    goalDiv.classList.add(expandRatherThanContract ? 'expanded' : 'collapsed');
+    goalDiv.classList.remove(expandRatherThanContract ? 'collapsed' : 'expanded');
+    let innerHtml = '<div class="window-expansion-toggler"><a href="javascript:toggleGoalDiv()">';
+    innerHtml += expandRatherThanContract ? '&nbsp;-&nbsp;' : '+';
+    innerHtml += '</a></div> Goal: ';
+    if (expandRatherThanContract)
+        innerHtml += '<span style="color:red">' + level.goalDescription + '</span>';
+    goalDiv.innerHTML = innerHtml;
+}
+
 function resizePage() {
     let bounds = canvas.getBoundingClientRect();
     canvasOffsetX = bounds.left; // + window.scrollX;
     canvasOffsetY = bounds.top; // + window.scrollY;
+    let divTop =  (canvasOffsetY + 10).toString() + 'px';
 
-    scoreDiv = document.getElementById('score-div');
+    let scoreDiv = document.getElementById('score-div');
     scoreDiv.style.left = (canvasOffsetX + CANVAS_WIDTH - 155).toString() + 'px';
-    scoreDiv.style.top = (canvasOffsetY + 10).toString() + 'px';
+    scoreDiv.style.top = divTop;
 
     let musicDiv = document.getElementById('music-toggle-div');
     musicDiv.style.left = (canvasOffsetX + CANVAS_WIDTH - 255).toString() + 'px';
-    musicDiv.style.top = (canvasOffsetY + 10).toString() + 'px';
+    musicDiv.style.top = divTop;
 
+    let goalDiv = document.getElementById('goal-div');
+    goalDiv.style.left = (canvasOffsetX + 180).toString() + 'px';
+    goalDiv.style.top = divTop;
 
     standardMessagePositions = [];
     const messageYoffset = 20; // canvasOffsetY + Math.round(CANVAS_HEIGHT / 8);
@@ -2623,23 +2614,15 @@ function showIntroScreen() {
     stopDisplayingMsg(true); // "true" to force stop all
     toggleSpellInputWindow(true); // "true" forces close
     deleteCaptions(true); // "true" here forces deletion of captions in inventory too
-    document.getElementById('binder-icon-holder').style.display = 'none';
-    document.getElementById('music-toggle-div').style.display = 'none';
-    document.getElementById('horizontal-spell-list').style.display = 'none';
-    document.getElementById('score-div').style.display = 'none';
-
-    canvas.style.display = 'none';
-
+    document.getElementById('game-container-div').style.display = 'none';
     let introDiv = document.getElementById('intro_screen_div');
     introDiv.style.display = 'block';
     showingIntroPage = true;
-    levelLaunched = false;
+    levelLaunched = false; //  the animate loop uses this as a signal to terminate.
     if (typeof backgroundMusic === 'object' && musicPlaying === true) {
         musicPlaying = false;
         backgroundMusic.pause();
     }
-
-    // document.getElementById('loadLevelButton').addEventListener('click',loadLevel);
 }
 
 initialize();

@@ -309,7 +309,8 @@ getLevelFunctions['goon-hut'] = function() {
         'click' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/click3.wav')),
         'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),
     };
-    level.initialMessage = 'Your goal: get the treasure!';
+
+    level.goalDescription = 'Get the treasure!';
     level.numberOfToolUses = 0;
 
     level.setOrUnsetSoireeObstacle = function() {
