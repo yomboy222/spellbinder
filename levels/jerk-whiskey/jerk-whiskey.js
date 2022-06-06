@@ -189,7 +189,7 @@ getLevelFunctions['jerk-whiskeys [new, missing some artwork]'] = function() {
     // NOTE LEAVING OUT "RUES"
     level.allWords = ['brake', 'coquette', 'croquette', 'detritus', 'dollhouse', 'drake', 'dyes', 'jerk', 'jerky', 'leopard', 'leotard',
         'rake', 'rubes', 'rubies', 'ruts', 'ryes', 'swami', 'swamp', 'tollhouse', 'tubers', 'tubes', 'tubs', 'whiskers', 'whiskeys']
-    level.initialThings = [ ['whiskeys','room1',50,47],['jerk','room1',57,72],['croquette','room1',83,81],['drake','room2',25,81],['tollhouse','room3',22,55],['swami','room4',40,81],['leopard','room2',81,75],['detritus','room5',81,83],['rubes','room6',60,81] ];
+    level.initialThings = [ ['whiskeys','room1',45,47],['jerk','room1',52,72],['croquette','room1',82,81],['drake','room2',25,81],['tollhouse','room3',22,55],['swami','room4',40,81],['leopard','room2',81,75],['detritus','room5',81,83],['rubes','room6',60,81] ];
     level.bonusWords = ['brake', 'dyes', 'rues', 'ruts', 'ryes', 'tubers', 'tubes', 'tubs'];
     level.targetThing = 'rubies';
     level.immovableObjects = ['brake', 'coquette', 'croquette', 'detritus', 'dollhouse', 'drake', 'jerk', 'leopard', 'rubes', 'ruts', 'ryes', 'swami', 'swamp', 'tollhouse', 'whiskers', 'whiskeys']
@@ -208,8 +208,9 @@ getLevelFunctions['jerk-whiskeys [new, missing some artwork]'] = function() {
         'room1': {
             boundaries: [],
             filledPolygons: [],
+            hasOwnBackgroundImage: true,
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_VERTICAL, 'N',76, 58, 'room2', 50, 90, true, 50, 77, 'jerk', PASSAGE_STATE_BLOCKED, 50, 70)],
+               new Passage(PassageTypes.INVISIBLE_VERTICAL, 'N',68, 58, 'room2', 50, 90, true, 50, 77, 'jerk', PASSAGE_STATE_BLOCKED, 50, 70)],
         },
         'room2': {
             boundaries: [],

@@ -30,8 +30,7 @@ let EXTRA_SPELL_RADIUS = 260; // currently don't want to make distance an issue.
 const EXTRA_PICKUP_RADIUS = 60;
 const MIN_HALFWIDTH = 20;
 const MIN_HALFHEIGHT = 20;
-const MOVEMENT_TYPE_LINEAR = 0;
-const MOVEMENT_TYPE_PARABOLIC = 1;
+const MOVEMENT_TYPE_LINEAR = 0; const MOVEMENT_TYPE_PARABOLIC = 1;
 const allSpells = { ADD_EDGE:'add-edge', ADD_EDGE_NFS:'add-edge-nfs', REMOVE_EDGE:'remove-edge', REMOVE_EDGE_NFS:'remove-edge-nfs',
     REVERSAL : 'reversal', ANAGRAM : 'anagram', SYNONYM : 'synonym', ADD : 'add-letter', ADD_NFS : 'add-letter-nfs', REMOVE : 'remove-letter',
     REMOVE_NFS : 'remove-letter-nfs', CHANGE_EDGE : 'change-edge', CHANGE_EDGE_NFS : 'change-edge-nfs', CHANGE : 'change-letter',
@@ -435,11 +434,6 @@ class Thing extends GameElement {
         }
         else {
             this.image = defaultThingImage;
-            /* this.image.src = 'imgs/thing_placeholder.png';
-            this.height = 100;
-            this.width = 100;
-            this.halfHeight = 50;
-            this.halfWidth = 50; */
         }
         this.setDimensionsFromImage();
     }
@@ -1947,7 +1941,7 @@ function launchLevel() {
         let path = '';
 
         // some music used in several levels so put in root audio folder:
-        let reusedFiles = ['FoamRubber-320bit.mp3', 'Sneaky Snitch.mp3', 'LurkingSloth-320bit.mp3' ]
+        let reusedFiles = ['FoamRubber-320bit.mp3', 'Sneaky Snitch.mp3', 'LurkingSloth-320bit.mp3', 'Investigations Kevin MacLeod Gaming Background Music HD.mp3' ]
         if (reusedFiles.indexOf(level.backgroundMusicFile) >= 0) {
             path = 'audio/' + level.backgroundMusicFile
         }
@@ -2423,8 +2417,6 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
 function toggleGoalDiv(forceCollapse = false, forceExpand = false) {
     let goalDiv = document.getElementById('goal-div');
 
-    console.log(level.goalDescription);
-
     // if no goal description is supplied in level, hide this div completely:
     if (typeof level.goalDescription === 'undefined' || level.goalDescription === '[undefined]' || level.goalDescription === '') {
         goalDiv.style.display = 'none';
@@ -2584,15 +2576,6 @@ function initialize() {
     binderPageHtml[allSpells.REVERSAL] = '<div class="spell-title">Reversal</div> <div class="spell-description">Simply reverses a word:</div>  <div class="spell-example">change <span class="monospace">auks</span> into <span class="monospace">skua</span></div>';
     binderPageHtml[allSpells.ANAGRAM] = '<div class="spell-title">Anagram</div> <div class="spell-description">This spell lets you rearrange the letters in a word:</div>  <div class="spell-example">change <span class="monospace">flea</span> into <span class="monospace">leaf</span></div>';
 
-    /*
-    let binderIconHolder = document.getElementById('binder-icon-holder');
-    binderIconLeft = canvasOffsetX + CANVAS_WIDTH - BINDER_ICON_WIDTH;
-    binderIconHolder.style.top = canvasOffsetY.toString() + 'px';
-    binderIconHolder.style.left = binderIconLeft.toString() + 'px';
-    binderIconHolder.addEventListener( 'mouseover', handleBinderIconMouseover );
-    binderIconHolder.addEventListener('mouseout', handleBinderIconMouseout);
-    */
-
     let leftPage = document.getElementById('binder-page-left');
     let rightPage = document.getElementById('binder-page-right');
     let instructionDiv = document.getElementById('binder-instructions');
@@ -2615,8 +2598,8 @@ function showIntroScreen() {
     toggleSpellInputWindow(true); // "true" forces close
     deleteCaptions(true); // "true" here forces deletion of captions in inventory too
     document.getElementById('game-container-div').style.display = 'none';
-    let introDiv = document.getElementById('intro_screen_div');
-    introDiv.style.display = 'block';
+    document.getElementById('intro_screen_div').style.display = 'block';;
+
     showingIntroPage = true;
     levelLaunched = false; //  the animate loop uses this as a signal to terminate.
     if (typeof backgroundMusic === 'object' && musicPlaying === true) {
