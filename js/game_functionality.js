@@ -641,22 +641,25 @@ class Thing extends GameElement {
 
         console.log('in discard');
         if (typeof xDistFromPlayer !== 'undefined') {
-            this.x = player.x + xDistFromPlayer;
-            this.y = player.y + yDistFromPlayer;
+            this.initialX = player.x + xDistFromPlayer;
+            this.initialY = player.y + yDistFromPlayer;
         }
         else {
-            this.x = player.x;
-            this.y = player.y;
+            this.initialX = player.x;
+            this.initialY = player.y;
             let distanceToToss = player.halfWidth + this.halfWidth;
             if (player.direction === Directions.UP)
-                this.y -= distanceToToss;
+                this.initialY -= distanceToToss;
             else if (player.direction === Directions.DOWN)
-                this.y += distanceToToss;
+                this.initialY += distanceToToss;
             else if (player.direction === Directions.LEFT)
-                this.x -= distanceToToss;
+                this.initialX -= distanceToToss;
             else if (player.direction === Directions.RIGHT)
-                this.x += distanceToToss;
+                this.initialX += distanceToToss;
         }
+
+        this.x = this.initialX;
+        this.y = this.initialY;
 
         this.putIntoThingsHere();
 
@@ -964,6 +967,8 @@ class Passage extends GameElement {
 function noteOriginalObstacleLocation(key) {
     if (key in thingsHere && !(key in originalObstacleLocations)) {
         let obstacle = thingsHere[key];
+        console.log('noteOriginalObstacleLocation for ' + key + ':');
+        console.log(obstacle);
         // this will be used if player recreates an obstacle Thing in its initial room (it will go back here):
         originalObstacleLocations[key] = { 'room':currentRoom, 'x':obstacle.x, 'y':obstacle.y};
     }
@@ -1480,8 +1485,7 @@ function executeTransformation() {
     if (sourceThing.playAudioWhenTransformed === true)
         sounds['spell'].play();
 
-    // note that as of this comment, getThingButPossiblySubclass is in word_data.js,
-    // also note "false" here means treat x and y as actual coordinates rather than percentages:
+    // note "false" here means treat x and y as actual coordinates rather than percentages:
     let newObject = getThing(toWord, currentRoom, sourceThing.x, sourceThing.y, false);
 
     if (typeof sourceThing.isonymIndex !== 'undefined') {
@@ -1519,8 +1523,11 @@ function executeTransformation() {
     // if player is recreating an obstacle Thing in the room where it was originally an obstacle, put back in original spot:
     if (newObject.reblocksPassageUponReturn && newObject.getKey() in originalObstacleLocations && currentRoom === originalObstacleLocations[newObject.getKey()]['room']) {
         let originalObstacleData = originalObstacleLocations[newObject.getKey()];
-        newObject.x = originalObstacleData['x'];
-        newObject.y = originalObstacleData['y'];
+        newObject.initialX = originalObstacleData['x'];
+        newObject.x = newObject.initialX;
+        newObject.initialY = originalObstacleData['y'];
+        newObject.y = newObject.initialY;
+        console.log('re-activating ' + newObject.getKey() + ' at ' + newObject.x.toString() + ',' + newObject.y.toString());
         newObject.activateOrDeactivateObstacle(true);
     }
 
