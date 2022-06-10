@@ -183,7 +183,7 @@ getLevelFunctions['slime-blaze'] = function() {
 
         window.Slime = class Slime extends Thing {
             passageBlockingBehavior() {
-                displayMessage('Gross!');
+                displayMessage('Gross!',DEFAULT_MESSAGE_DURATION);
             }
         }
 

@@ -69,6 +69,9 @@ getLevelFunctions['asp-lamia'] = function() {
                 if (currentRoom === 'room1')
                     passages[1].setObstacle(this.getKey());
             }
+            extraTransformFromBehavior() {
+                // level.sounds['indignity'].play();
+            }
         }
 
         window.Ode = class Ode extends Thing {
@@ -101,14 +104,16 @@ getLevelFunctions['asp-lamia'] = function() {
         window.Stair = class Stair extends Thing {
             appearInRoom0() {
                 if (currentRoom === 'room0') {
-                    this.x = 58 * xScaleFactor;
-                    this.y = 65 * yScaleFactor;
+                    this.x = 56 * xScaleFactor;
+                    this.y = 69 * yScaleFactor;
                     passages[1].activated = true;
-                    passages[2].activated = true;
+                    /* passages[2].activated = true;
                     if (passages[1].state === PASSAGE_STATE_OCCUPIED)
                         passages[2].state = PASSAGE_STATE_ACTIVE;
                     else
                         passages[2].state = PASSAGE_STATE_OCCUPIED;
+
+                     */
                 }
             }
             disappearFromRoom0() {
@@ -133,6 +138,16 @@ getLevelFunctions['asp-lamia'] = function() {
                 }
                 else {
                     return super.handleClick();
+                }
+            }
+            handleDblclick(e) {
+                if (currentRoom !== 'room0'){
+                    displayMessage('Sorry, the stairs do not lead anywhere here!', 2 * DEFAULT_MESSAGE_DURATION);
+
+                    return true;
+                }
+                else {
+                    return super.handleDblclick(e);
                 }
             }
         }
@@ -194,12 +209,12 @@ getLevelFunctions['asp-lamia'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = 'Investigations Kevin MacLeod Gaming Background Music HD.mp3';
     level.allWords = [ 'asp','cod','code','codes','crook','crooks','cub','cube','cubes','cubs','doe','does','dose','lamia','lamias','ode','odes','paw','paws','rapper','rappers','rook','rooks','salami','sap','sitar','sitars','spa','stair','stairs','treasure','treasures','wasp','wrapper' ];
-    level.initialThings = [  ['asp','room1',80,86],['lamia','room1',56,70],['wrapper','room0',58,81],['ode','room0',32,30],['crook','room2',50,77],['sitar','room2',85,81],['cub','room3',81,80],['treasure','room4',75,81] ];
+    level.initialThings = [  ['asp','room1',80,86],['lamia','room1',56,70],['wrapper','room0',58,81],['ode','room0',32,32],['crook','room2',50,77],['sitar','room2',85,81],['cub','room3',81,80],['treasure','room4',75,81] ];
     level.targetThing = 'treasure';
-    level.immovableObjects = [ 'asp','crook','crooks','cub','cube','cubes','cubs','doe','does','lamia','lamias','rapper','rappers','spa','stair','stairs' ];
+    level.immovableObjects = [ 'asp','crook','crooks','cub','cube','cubes','cubs','doe','does','lamia','lamias','rapper','rappers','spa','stair','stairs','wasp' ];
     level.bonusWords = ['doe','does','dose','sap','spa'];
     level.initialRunes = [];
-    level.sounds = {};
+    level.sounds = { 'indignity': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/indignity.m4a') };
     level.additionalImageNamesToPreload = ['wasp_0','wasp_1'];
     level.pluralWords = { 'codes':'code', 'crooks':'crook', 'cubs':'cub', 'does':'doe', 'lamias':'lamia', 'odes':'ode', 'paws':'paw', 'rappers':'rapper', 'rooks':'rook', 'sitars':'sitar', 'treasures':'treasure' }; // note don't list stairs here because don't want to double the image.
 
@@ -208,9 +223,9 @@ getLevelFunctions['asp-lamia'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room0', 90, 77, true, 80, 77),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room0', 90, 77, true, 84, 77),
                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'N',68, 55, 'room2', 5, 77, true, 30, 77, 'lamia', PASSAGE_STATE_BLOCKED, 50, 68),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 89, 'room3', 10, 77, true, 50, 77, 'asp', PASSAGE_STATE_BLOCKED, 73, 85)
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 87, 'room3', 10, 77, true, 50, 77, 'asp', PASSAGE_STATE_BLOCKED, 73, 85)
             ],
             hasOwnBackgroundImage: true,
         },

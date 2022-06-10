@@ -31,6 +31,7 @@ getLevelFunctions['jerk-whiskeys [new, missing some artwork]'] = function() {
                 level.sounds['get_lost'].play()
             }
             extraTransformFromBehavior() {
+                level.sounds['hands'].play();
                 if ('whiskers' in thingsHere)
                     thingsHere['whiskers'].dispose();
             }
@@ -203,6 +204,7 @@ getLevelFunctions['jerk-whiskeys [new, missing some artwork]'] = function() {
         'whiskeys' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/whiskeys.m4a'),
         'get_lost' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/get_lost.m4a'),
         'what_the' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/what_the.m4a'),
+        'hands' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/hands.m4a'),
     }
     level.rooms = {
         'room1': {

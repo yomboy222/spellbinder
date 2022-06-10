@@ -11,6 +11,17 @@ getLevelFunctions['fjord-widow'] = function() {
 
     level.defineThingSubclasses = function() { 
 
+        window.Awn = class Awn extends Thing {
+            handleClick() {
+                if (currentRoom === 'room0' && 'awn' in thingsHere && passages[0].state !== PASSAGE_STATE_OCCUPIED) {
+                    displayMessage('Too far away to transform!', DEFAULT_MESSAGE_DURATION);
+                    return true;
+                }
+                else {
+                    return super.handleClick();
+                }
+            }
+        }
         window.Axe = class Axe extends Thing {
             handleDblclick(e) {
                 if ('foes' in thingsHere && this.word in inventory) {
@@ -55,6 +66,7 @@ getLevelFunctions['fjord-widow'] = function() {
             constructor(word,room,x,y,isonymIndex) {
                 super(word,room,x,y,isonymIndex);
                 this.reblocksPassageUponReturn = true;
+                this.wordDisplayOffsetY = -40;
             }
             passageBlockingBehavior() {
                 displayMessage('The fjord is too deep!', DEFAULT_MESSAGE_DURATION);
@@ -103,6 +115,7 @@ getLevelFunctions['fjord-widow'] = function() {
 
     level.getThing = function(word,room,x,y) {
         switch (word) {
+            case 'awn' : return new Awn(word,room,x,y);
             case 'ax' : return new Axe(word,room,x,y);
             case 'axe' : return new Axe(word,room,x,y);
             case 'fjord' : return new Fjord(word,room,x,y);
@@ -123,7 +136,7 @@ getLevelFunctions['fjord-widow'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = 'Sneaky Snitch.mp3';
     level.allWords = [ 'ad','ade','ale','awn','ax','axe','axle','fjord','floes','foes','ford','foxes','jade','lad','law','lawn','lead','widow','window' ];
-    level.initialThings = [ ['fjord','room1',18,55],['ale','room1',60,81],['widow','room1',87,63],['awn','room0',14,81],['foxes','room0',52,81],['ade','room2',50,81] ];
+    level.initialThings = [ ['fjord','room1',19,67],['ale','room1',60,81],['widow','room1',87,63],['awn','room0',14,81],['foxes','room0',52,81],['ade','room2',50,81] ];
     level.targetThing = 'jade';
     level.immovableObjects = [ 'fjord','floes','foes','ford','foxes','lad','lawn','widow','window' ];
     level.bonusWords = [ 'ad','ax','floes','lad','lead' ];

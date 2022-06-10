@@ -16,7 +16,7 @@ TODO:
 
 for wasp > paws, need general solution to placement of newThing ... like method getCoordinatesForReplacement() which by default gives x,y but can be overridden to give initialX, initialY
 
-
+logic for where to discard something: why isn't wrapper > rapper working? change vectors to try.
 
 refactor "reblocks when re-emerges" so just add a method
 
@@ -63,8 +63,8 @@ images to do or redo:
   thorn-divan:
   jerk-whiskeys: ??  brake, dyes, ryes, tubers, tubes, tubs
   fjord-widow: lots
-  spook-gel: new leg drawing, check for rest
-  asp-lamia: everything but also background with high perch for ode
+  spook-gel:check for rest
+  asp-lamia: ???
 
 make script to automatically pull in & rate transforms in puzzle_ideas.txt
 
