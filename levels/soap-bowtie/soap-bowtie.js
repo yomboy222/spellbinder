@@ -104,15 +104,15 @@ getLevelFunctions['harder soap-bowtie [requires undoing transformations!]'] = fu
     level.initialY = 75;
     level.initialSpells = [ 'remove-letter', 'change-letter' ];
     level.initialInventory = {};
-    level.backgroundMusicFile = undefined;
+    level.backgroundMusicFile = 'Investigations Kevin MacLeod Gaming Background Music HD.mp3';
     level.giveRoomsRandomBackgroundsUnlessSpecified = true;
-    level.allWords = [ 'aster','bacon','beacon','bootie','bowtie','eater','ester','fence','hammock','hater','hoe','hummock','paw','pea','pew','sap','saw','sea','soap','spa','treasure','water' ];
-    level.initialThings = [ ['bowtie','room1',19,67],['soap','room1',30,82],['fence','room1',72,75],
+    level.allWords = [ 'aster','bacon','beacon','bootie','bowtie','eater','ester','fence','hammock','hater','hoe','hummock','paw','pea','pew','sap','saw','soap','spa','treasure','water' ];
+    level.initialThings = [ ['bowtie','room1',17,72],['soap','room1',32,85],['fence','room1',72,75],
         ['hater','room2',50,80],
         ['beacon','room3',45,55],['hummock','room3',71,82],
-        ['treasure','room4',40,69] ];
+        ['treasure','room4',75,80] ];
     level.immovableObjects = [ 'beacon','fence','hammock','hater','hummock','pew','spa','sea','water'  ];
-    level.bonusWords = [ 'aster','eater','ester','hoe','pea','sea','spa', ];
+    level.bonusWords = [ 'aster','eater','ester','hoe','pea','spa', ];
     level.targetThing = 'treasure';
     level.initialRunes = [];
 

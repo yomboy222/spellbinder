@@ -76,7 +76,7 @@ getLevelFunctions['soap-bowtie'] = function() {
                 }
                 this.beginMovementTime = 0;
                 this.movementDurationMS = 0;
-                this.tryToPickUp(true);
+                this.returnToInventoryAfterUseOnScreen();
             }
 
             removePartition() {

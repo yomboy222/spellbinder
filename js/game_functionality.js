@@ -15,7 +15,6 @@ const xScaleFactor = PLAY_AREA_WIDTH / 100; const yScaleFactor = PLAY_AREA_HEIGH
 const INVENTORY_WIDTH = 700; const INVENTORY_HEIGHT = 100; const INVENTORY_LEFT = 0; const INVENTORY_TOP = 500;
 const RUNE_X_SPACING = 44; const RUNE_Y_SPACING = 42;
 const INVENTORY_TOP_MARGIN = 42; const INVENTORY_LEFT_MARGIN = 65; const INVENTORY_SPACING = 95;
-const BINDER_ICON_WIDTH = 132;
 const MAX_ITEMS_IN_INVENTORY = 6;
 const RUNE_IMAGE_WIDTH = 65; const RUNE_IMAGE_HEIGHT = 92; const RUNE_DISPLAY_WIDTH = 32; const RUNE_DISPLAY_HEIGHT = 46;
 const PASSAGE_WIDTH = 55;
@@ -23,7 +22,6 @@ const PASSAGE_LENGTH = 150;
 const PASSAGE_STATE_INACTIVE = 0; const PASSAGE_STATE_BLOCKED = 1; const PASSAGE_STATE_ACTIVE = 2; const PASSAGE_STATE_OCCUPIED = 3;
 let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
-let binderIconLeft = 0;
 const PLAYER_HEIGHT = 160;
 const PLAYER_WIDTH = 56;
 let EXTRA_SPELL_RADIUS = 260; // currently don't want to make distance an issue. in the future might need to reduce this though.
@@ -39,7 +37,6 @@ let binderImages = {};
 let binderPageHtml = {};
 let timeOfLastBinderOpening = 0;
 let CollisionProfile = { RECTANGULAR : 'RECTANGULAR', ELLIPTICAL : 'ELLIPTICAL'};
-let BoundaryType = { VERTICAL : 'v', HORIZONTAL : 'h', DIAGONAL : 'd'};
 let levelList = [];
 let getLevelFunctions = {};
 let level = undefined;
@@ -75,7 +72,6 @@ let otherData = {};
 let currentRoom = '';
 let player = {};
 let destinationPassage = undefined;
-let timeMod2200 = 0;
 let arrowsAlpha = 0;
 let arrowsAlphaLookupTable = [];
 let sounds = {};
@@ -112,6 +108,7 @@ let originalObstacleLocations = {};
 let lastClickTime = 0;
 let initialClickEvent = undefined; // used in a more-or-less-necessary hack to distinguish short click from long click
 let MAX_DOUBLE_CLICK_TIME_SEPARATION = 375; // MS
+let logOfInstructionsDisplayed = [];
 
 let cheating = false; // turn on to allow teleporting etc for debugging purposes
 
@@ -262,6 +259,34 @@ class GameElement {
         let baseY = this.y + this.halfHeight;
         // console.log(baseY);
         return baseY;
+    }
+    // specific things can override, e.g. if image has thing surrounded by (unclickable) aura:
+    getHalfHeightOfClickableArea() {
+        return this.halfHeight;
+    }
+    getHalfWidthOfClickableArea() {
+        return this.halfWidth;
+    }
+    getClickableArea() {
+        return (this.getHalfWidthOfClickableArea() * this.getHalfHeightOfClickableArea());
+    }
+    getHypotheticalOverlappingClickableArea(element2, proposedX, proposedY) {
+        let top1 = proposedY - this.getHalfHeightOfClickableArea();
+        let top2 = element2.y - element2.getHalfHeightOfClickableArea();
+        let left1 = proposedX - this.getHalfWidthOfClickableArea();
+        let left2 = element2.x - element2.getHalfWidthOfClickableArea();
+        let bottom1 = proposedY + this.getHalfHeightOfClickableArea();
+        let bottom2 = element2.y + element2.getHalfHeightOfClickableArea();
+        let right1 = proposedX + this.getHalfWidthOfClickableArea();
+        let right2 = element2.x + element2.getHalfWidthOfClickableArea();
+        let topOfOverlap = Math.max(top1,top2);
+        let leftOfOverlap = Math.max(left1,left2);
+        let bottomOfOverlap = Math.min(bottom1,bottom2);
+        let rightOfOverlap = Math.min(right1,right2);
+        if ((bottomOfOverlap <= topOfOverlap) || (rightOfOverlap <= leftOfOverlap))
+            return 0;
+        else
+            return ((rightOfOverlap - leftOfOverlap) * (bottomOfOverlap - topOfOverlap));
     }
     setMovement(destX, destY, duration, initialX = undefined, initialY = undefined, suppressInputDuringMovement = false, enableInputAfterMovement = false) {
         this.destX = destX;
@@ -645,17 +670,29 @@ class Thing extends GameElement {
             this.initialY = player.y + yDistFromPlayer;
         }
         else {
-            this.initialX = player.x;
+            this.initialX = player.x; // by default unless better suitable location found, as follows
             this.initialY = player.y;
-            let distanceToToss = player.halfWidth + this.halfWidth;
-            if (player.direction === Directions.UP)
-                this.initialY -= distanceToToss;
-            else if (player.direction === Directions.DOWN)
-                this.initialY += distanceToToss;
-            else if (player.direction === Directions.LEFT)
-                this.initialX -= distanceToToss;
-            else if (player.direction === Directions.RIGHT)
-                this.initialX += distanceToToss;
+            let distanceToToss = player.width + this.getHalfWidthOfClickableArea();
+            let potentialCoordinates = [
+                [player.x + distanceToToss, player.y],
+                [player.x, player.y + distanceToToss],
+                [player.x - distanceToToss, player.y],
+                [player.x, player.y - distanceToToss],
+                [player.x + distanceToToss, player.y],
+                [player.x, player.y + distanceToToss],
+            ];
+            let initialIndexToCheck = 0; // by default unless set by player direction in following switch stmt:
+            switch (player.direction) {
+                case Directions.RIGHT : initialIndexToCheck = 0; break;
+                case Directions.LEFT : initialIndexToCheck = 2; break;
+            }
+            for (let i=initialIndexToCheck; i<potentialCoordinates.length; i++) {
+                if (checkSuitabilityOfDiscardLocation(this,potentialCoordinates[i][0], potentialCoordinates[i][1])) {
+                    this.initialX = potentialCoordinates[i][0];
+                    this.initialY = potentialCoordinates[i][1];
+                    break;
+                }
+            }
         }
 
         this.x = this.initialX;
@@ -722,8 +759,8 @@ class Thing extends GameElement {
                 return true;
         }
 
-        let adjustedWidth = this.halfWidth;
-        let adjustedHeight = this.halfHeight;
+        let adjustedWidth = this.getHalfWidthOfClickableArea();
+        let adjustedHeight = this.getHalfHeightOfClickableArea();
         if (this.getKey() in inventory) {
             adjustedHeight = adjustedHeight / this.inventoryImageRatio;
             adjustedWidth = adjustedWidth / this.inventoryImageRatio;
@@ -781,8 +818,6 @@ class Thing extends GameElement {
     okayToDisplayWord() {
         return true;
     }
-
-    handleCollision() {}
 
     checkIfOkayToTransform() {
         return true; // specific things could override this.
@@ -967,11 +1002,47 @@ class Passage extends GameElement {
 function noteOriginalObstacleLocation(key) {
     if (key in thingsHere && !(key in originalObstacleLocations)) {
         let obstacle = thingsHere[key];
-        console.log('noteOriginalObstacleLocation for ' + key + ':');
-        console.log(obstacle);
+        // console.log('noteOriginalObstacleLocation for ' + key + ':');
+        // console.log(obstacle);
         // this will be used if player recreates an obstacle Thing in its initial room (it will go back here):
         originalObstacleLocations[key] = { 'room':currentRoom, 'x':obstacle.x, 'y':obstacle.y};
     }
+}
+
+function checkForExcessiveOverlap(element1,proposedX,proposedY,element2) {
+    let disqualifyingOverlapFraction = 0.33;
+    let element1Area = element1.getClickableArea();
+    let element2Area = element2.getClickableArea();
+    let overlapArea = element1.getHypotheticalOverlappingClickableArea(element2,proposedX,proposedY);
+    return ((overlapArea >= element1Area * disqualifyingOverlapFraction) || (overlapArea >= element2Area * disqualifyingOverlapFraction));
+}
+
+// check whether discarding to proposed location is okay (true) or is off-edge or overlaps passage or another thing too much (false):
+function checkSuitabilityOfDiscardLocation (element1, proposedX, proposedY) {
+    // check overlaps with passages:
+    console.log ('checking for ' + element1.getKey());
+
+    for (let i=0; i<passages[length]; i++) {
+        if (passages[i].state === PASSAGE_STATE_OCCUPIED || !passages[i].activated)
+            continue; // not clickable so irrelevant
+        if (checkForExcessiveOverlap(element1,proposedX,proposedY,passages[i])) {
+            console.log('overlapped with passage ' + i.toString());
+            return false; // too much overlap with passage.
+        }
+    }
+
+    for (let key in thingsHere) {
+        console.log('checking w/r/t ' + key);
+        if (element1.getKey() === key)
+            continue; // don't worry about its overlap with its own current location (this case should never come up because element1 should be in inventory, not thingsHere, but just in case.)
+        let excessiveOverlap = checkForExcessiveOverlap(element1,proposedX,proposedY,thingsHere[key]);
+        console.log('excessive overlap:' + excessiveOverlap.toString());
+        if (excessiveOverlap)
+            return false; // too much overlap with other thing.
+    }
+
+    // otherwise all the checks passed so return true.
+    return true;
 }
 
 // this will be bound to player object using "player.extraPostMovementBehavior = arriveAtPassage":
@@ -1014,7 +1085,7 @@ function getThing(word, room, x, y, treatXandYasPercentages = true, isonymIndex 
         y = y * yScaleFactor;
     }
     // first see if there is a subclass of Thing defined for this word in level-specific code:
-    let thing = level.getThing(word,room,x,y);
+    let thing = level.getThing(word,room,x,y,isonymIndex);
     if (typeof thing !== 'object') { // i.e. if the level doesn't instantiate it as a special subclass of Thing ...
         thing = new Thing(word, room, x, y, isonymIndex);
     }
@@ -1045,6 +1116,7 @@ function getNewCaptionDiv(word, idKey = undefined) {
     captionDiv.id = idKey;
     captionDiv.classList.add('word-bubble');
     captionDiv.classList.add('visible-now');
+    captionDiv.classList.add('noselect'); // don't want text to be selectable/highlightable
     captionDiv.innerText = word;
     let outerDiv = document.getElementById('game-container-div');
     outerDiv.appendChild(captionDiv);
@@ -1173,6 +1245,12 @@ function displaySequenceableMessage(msg, msgID, msgIDtoSupersede, durationMS = 0
     sounds['notification'].play();
     let messageObject = displayMessage(msg, durationMS, x, y, treatCoordinatesAsPercentages);
     messageObject.msgID = msgID;
+}
+
+function displayBonusWordExplanation() {
+    if (logOfInstructionsDisplayed.indexOf('bonus words') < 0)
+        logOfInstructionsDisplayed.push('bonus words');
+    displayMessage("Bonus words in a level win you points but aren't needed to solve the level; you might need to change them back to solve the level.");
 }
 
 function closeMessage(messageNumber, returnToIntro = false) {
@@ -1325,7 +1403,14 @@ function registerWordForScoringPurposes(word) {
     if (!isAlternateFormOfWordAlreadyFound) {
         modifyScore(word.length);
         if (typeof level.bonusWords !== 'undefined' && level.bonusWords.indexOf(word) >= 0) {
-            displayMessage('Bonus word!', DEFAULT_MESSAGE_DURATION);
+            let toolTipHtml = '';
+            if (logOfInstructionsDisplayed.indexOf('bonus words') < 0) {
+                displayMessage('Bonus word!', DEFAULT_MESSAGE_DURATION);
+                displayBonusWordExplanation();
+            }
+            else {
+                displayMessage('Bonus word! <a href="#" onclick="displayBonusWordExplanation(); return false;"><b>(?)</b></a>', 2 * DEFAULT_MESSAGE_DURATION);
+            }
             sounds['bonus'].play();
         }
     }
@@ -1531,6 +1616,9 @@ function executeTransformation() {
         newObject.activateOrDeactivateObstacle(true);
     }
 
+    if (inInventory && typeof level.targetThing === 'string' && level.targetThing === toWord)
+        completeLevel();
+
     newObject.extraTransformIntoBehavior();
 
     fadeinTimer = Date.now();
@@ -1608,8 +1696,8 @@ function regenerateZOrderStack() {
     }
     nonObstacles.sort((a,b) => a.getBaseY() - b.getBaseY() );
 
-    console.log(obstacles);
-    console.log(nonObstacles);
+    // console.log(obstacles);
+    // console.log(nonObstacles);
 
     zOrderStack = obstacles.concat(nonObstacles);
 }
@@ -1955,7 +2043,7 @@ function launchLevel() {
         else {
             path = levelPath + '/audio/' + level.backgroundMusicFile;
         }
-        console.log(path);
+        // console.log(path);
         backgroundMusic = new Audio(path);
         document.getElementById('music-toggle-div').style.display = 'block';
         startMusic();
@@ -2037,9 +2125,9 @@ function setBackgroundImageForRoom(roomName, roomData, forceUseOfReusableBackgro
     let hasEastExit = false;
     let passages = roomData.passages;
     for (let i=0; i<passages.length; i++) {
-        if (passages[i].direction === 'W')
+        if (passages[i].direction === 'W' && passages[i].destinationRoom !== roomName)
             hasWestExit = true;
-        if (passages[i].direction === 'E')
+        if (passages[i].direction === 'E' && passages[i].destinationRoom !== roomName)
             hasEastExit = true;
     }
 
@@ -2131,8 +2219,8 @@ function loadLevel(lName) {
             imagesRequiredToStartThisLevel[objectData[i][0]] = thing.image; // todo: should probably handle case where an image in initial room is animated right off the bat ... let its subclass of thing define explicitly how many animation images it has
         }
     }
-     console.log(thingsElsewhere);
-     console.log(imagesRequiredToStartThisLevel);
+     // console.log(thingsElsewhere);
+     // console.log(imagesRequiredToStartThisLevel);
 
     // register paths for all OTHER attainable thing images in this level, to be pre-loaded after imagesRequiredToStartThisLevel:
     for (let i=0; i<level.allWords.length; i++) {
@@ -2374,7 +2462,7 @@ function processSingleOrDoubleClick(e, doubleRatherThanSingle = false) {
     let yWithinCanvas = e.y - canvasOffsetY;
 
     for (let i = 0; i < passages.length; i++) {
-        if (passages[i].occupiesPoint(xWithinCanvas, yWithinCanvas)) {
+        if (passages[i].activated === true && passages[i].state !== PASSAGE_STATE_OCCUPIED && passages[i].occupiesPoint(xWithinCanvas, yWithinCanvas)) {
             passages[i].handleClick();
             return;
         }
@@ -2597,7 +2685,7 @@ function initialize() {
     instructionDiv.style.left = (canvasOffsetX + 15).toString() + 'px';
     instructionDiv.style.height = ((CANVAS_HEIGHT - PLAY_AREA_HEIGHT) - 45).toString() + 'px';
     instructionDiv.style.width = (CANVAS_WIDTH.toString() - 45).toString() + 'px';
-    instructionDiv.innerText = "Click anywhere to close the Binder.";
+    instructionDiv.innerHTML = "Click anywhere to close the Binder.<br/> Arrow keys turn pages.";
 }
 
 function showIntroScreen() {

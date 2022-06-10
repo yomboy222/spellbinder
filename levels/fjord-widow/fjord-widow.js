@@ -19,6 +19,9 @@ getLevelFunctions['fjord-widow'] = function() {
                     this.startStroke();
                     startSuppressingPlayerInput(3000);
                 }
+                else if ('widow' in thingsHere && this.word in inventory) {
+                    displayMessage('The widow dodges your axe!', DEFAULT_MESSAGE_DURATION);
+                }
                 else {
                     return super.handleDblclick(e);
                 }
@@ -49,6 +52,13 @@ getLevelFunctions['fjord-widow'] = function() {
         }
 
         window.Fjord = class Fjord extends Thing {
+            constructor(word,room,x,y,isonymIndex) {
+                super(word,room,x,y,isonymIndex);
+                this.reblocksPassageUponReturn = true;
+            }
+            passageBlockingBehavior() {
+                displayMessage('The fjord is too deep!', DEFAULT_MESSAGE_DURATION);
+            }
         }
 
         window.Floes = class Floes extends Thing {
@@ -76,9 +86,17 @@ getLevelFunctions['fjord-widow'] = function() {
         }
 
         window.Widow = class Widow extends Thing {
+            extraTransformIntoBehavior() {
+                passages[1].activated = false;
+            }
         }
 
         window.Window = class Window extends Thing {
+            extraTransformIntoBehavior() {
+                this.initialX = 89 * xScaleFactor;
+                this.x = this.initialX;
+                passages[1].activated = true;
+            }
         }
 
     }
@@ -103,9 +121,9 @@ getLevelFunctions['fjord-widow'] = function() {
     level.initialY = 75;
     level.initialSpells = [ 'add-letter-nfs', 'remove-letter-nfs' ];
     level.initialInventory = {};
-    level.backgroundMusicFile = undefined;
+    level.backgroundMusicFile = 'Sneaky Snitch.mp3';
     level.allWords = [ 'ad','ade','ale','awn','ax','axe','axle','fjord','floes','foes','ford','foxes','jade','lad','law','lawn','lead','widow','window' ];
-    level.initialThings = [ ['fjord','room1',18,68],['ale','room1',60,81],['widow','room1',81,68],['awn','room0',14,81],['foxes','room0',52,81],['ade','room2',40,81] ];
+    level.initialThings = [ ['fjord','room1',18,55],['ale','room1',60,81],['widow','room1',87,63],['awn','room0',14,81],['foxes','room0',52,81],['ade','room2',50,81] ];
     level.targetThing = 'jade';
     level.immovableObjects = [ 'fjord','floes','foes','ford','foxes','lad','lawn','widow','window' ];
     level.bonusWords = [ 'ad','ax','floes','lad','lead' ];
@@ -120,8 +138,10 @@ getLevelFunctions['fjord-widow'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room0', 90, 77, true, 77, 77, 'fjord', PASSAGE_STATE_BLOCKED, 26, 77),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room2', 10, 77, true, 50, 77, 'widow', PASSAGE_STATE_BLOCKED, 73, 77)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 67, 'room0', 90, 77, true, 77, 77, 'fjord', PASSAGE_STATE_BLOCKED, 26, 67),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 68, 'room2', 10, 77, false, 33, 77, 'widow', PASSAGE_STATE_BLOCKED, 73, 77),
+            ],
+            hasOwnBackgroundImage: true,
         },
         'room0': {
             boundaries: [],

@@ -48,6 +48,9 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             okayToDisplayWord() {
                 return false;
             }
+            getBaseY() {
+                return 1; // force to back of Z-order stack
+            }
 
         }
 
@@ -274,7 +277,7 @@ getLevelFunctions['aromantics-hotspot'] = function() {
     }
 
     level.initialRoom = 'room1';
-    level.initialX = 45; // expressed as % of way across x axis, i.e. value range is 0-100
+    level.initialX = 42; // expressed as % of way across x axis, i.e. value range is 0-100
     level.initialY = 68;
     level.initialSpells = [ 'add-letter-nfs', 'remove-letter-nfs', 'change-letter-nfs' ];
     level.initialInventory = {};
@@ -285,8 +288,8 @@ getLevelFunctions['aromantics-hotspot'] = function() {
         'lambkin', 'lambskin', 'godzilloid',
         'tit','tint','tin','nit','hint',
     ];
-    level.initialThings = [ ['aromantics','room1',42,87],['hotspot','room1',64,76],['lambkin','room1',18,80],['godzilloid','room1',81,80],
-        ['manifesto','room3',48,65],
+    level.initialThings = [ ['aromantics','room3',77,84],['hotspot','room1',60,76],['lambkin','room1',18,80],['godzilloid','room1',81,80],
+        ['manifesto','room3',28,65],
         ['armoire','room2',75,62], ['tapestry','room2',25,40], ['tit','room2',70,26],
         ['treasure','secret room',40,70]
     ];
@@ -315,14 +318,14 @@ getLevelFunctions['aromantics-hotspot'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [
-                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 3, 75, 'room3', 90, 75, true, 65,75, 'lambkin', PASSAGE_STATE_BLOCKED, 20, 75 ),
+                new Passage(PassageTypes.INVISIBLE_VERTICAL, 'W', 3, 75, 'room3', 90, 75, true, 50,75, 'lambkin', PASSAGE_STATE_BLOCKED, 20, 75 ),
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 70, 'room2', 10, 75, true, 50, 75, 'godzilloid', PASSAGE_STATE_BLOCKED, 77, 75)],
         },
         'room2': {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 68, 'room1', 90, 68, true, 45, 68)
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 68, 'room1', 90, 68, true, 42, 68)
             ],
             specificNewRoomBehavior: function() {
                 if ('tit' in thingsHere)

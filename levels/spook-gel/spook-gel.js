@@ -29,6 +29,13 @@ getLevelFunctions['spook-gel [new, missing some artwork]'] = function() {
                 this.frameDisplayTimeMS = 50;
                 this.startAnimating();
             }
+            // need to override dimensions of clickable area, otherwise the whole giant flash image will count as clickable:
+            getHalfWidthOfClickableArea() {
+                return 35;
+            }
+            getHalfHeightOfClickableArea() {
+                return 55;
+            }
         }
 
         window.Hooks = class Hooks extends Thing {
@@ -41,6 +48,14 @@ getLevelFunctions['spook-gel [new, missing some artwork]'] = function() {
         }
 
         window.Loops = class Loops extends Thing {
+            handleClick() {
+                console.log('handleClick loops');
+                return super.handleClick();
+            }
+            handleDblclick() {
+                console.log('handleDblclick loops');
+                return super.handleDblclick();
+            }
         }
 
         window.Pouch = class Pouch extends Thing {
@@ -89,7 +104,7 @@ getLevelFunctions['spook-gel [new, missing some artwork]'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = 'Investigations Kevin MacLeod Gaming Background Music HD.mp3';
     level.allWords = [ 'cooks','couch','flack','flash','flask','gel','hocks','hooks','hoops','keg','leg','log','loops','peg','pooch','pouch','spook','spool','treasure' ];
-    level.initialThings = [ ['gel','room1',52,81],['spook','room1',81,70],['flash','room2',40,81],['couch','room2',79,75],['treasure','room3',40,81] ];
+    level.initialThings = [ ['gel','room1',28,81],['spook','room1',81,70],['flash','room2',40,81],['couch','room2',79,75],['treasure','room3',75,81] ];
     level.targetThing = 'treasure';
     level.immovableObjects = [ 'cooks','couch','flack','spook' ];
     level.bonusWords = [ 'cooks','flack','hocks','log','peg','pooch' ];

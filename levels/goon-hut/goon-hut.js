@@ -59,7 +59,22 @@ getLevelFunctions['goon-hut'] = function() {
         window.Hut = class Hut extends Thing {
         }
 
-        window.Lout = class Lout extends Thing {
+        window.Loot = class Loot extends Thing {
+            constructor(word,room,x,y,isonymIndex) {
+                super(word,room,x,y,isonymIndex);
+                // the two loot objects need different pictures to suggest they turn into different tools:
+                console.log('here########');
+                if (isonymIndex === 0) {
+                    console.log('now here');
+                    let theIndex = 0;
+                    for (let i=0; i++; i<additionalImagesToPreLoad.length) {
+                        if (additionalImagesToPreLoad[i].src.indexOf('rubies') >= 0)
+                            theIndex = i;
+                        console.log('found at ' + i.toString());
+                    }
+                    this.image = additionalImagesToPreLoad[theIndex];
+                }
+            }
         }
 
         window.Oven = class Oven extends Thing {
@@ -266,14 +281,14 @@ getLevelFunctions['goon-hut'] = function() {
 
     }
 
-    level.getThing = function(word,room,x,y) {
+    level.getThing = function(word,room,x,y,isonymIndex) {
         switch (word) {
             case 'goat' : return new Goat(word,room,x,y);
             case 'gnat' : return new Gnat(word,room,x,y);
             case 'goon' : return new Goon(word,room,x,y);
             case 'gown' : return new Gown(word,room,x,y);
             case 'hut' : return new Hut(word,room,x,y);
-            case 'lout' : return new Lout(word,room,x,y);
+            // case 'loot' : return new Loot(word,room,x,y,isonymIndex);
             case 'oven' : return new Oven(word,room,x,y);
             case 'portcullis' : return new Portcullis(word,room,x,y);
             case 'shifter' : return new Shifter(word,room,x,y);
@@ -304,7 +319,7 @@ getLevelFunctions['goon-hut'] = function() {
     level.immovableObjects = [ 'gang','gnat','goal','goat','gong','goon','hut','lout','oven','oxen','portcullis','shifter',
         'soiree','wheel','hole','3hole','5hole','10wheel','12wheel','town','tug','tun','vat' ];
     level.initialRunes = ['v','w'];
-    level.additionalImageNamesToPreload = ['tool_0','shifter_0','shifter_1','shifter_2','soiree_0','gown_0'];
+    level.additionalImageNamesToPreload = ['tool_0','shifter_0','shifter_1','shifter_2','soiree_0','gown_0','rubies'];
     level.sounds = {
         'click' : new Audio(getLevelPathFromFolderName(level.folderName + '/audio/click3.wav')),
         'unlock': new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/410983__mihirfreesound__unlocking-door.wav'),
