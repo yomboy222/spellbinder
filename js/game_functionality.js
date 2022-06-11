@@ -26,8 +26,8 @@ const PLAYER_HEIGHT = 160;
 const PLAYER_WIDTH = 56;
 let EXTRA_SPELL_RADIUS = 260; // currently don't want to make distance an issue. in the future might need to reduce this though.
 const EXTRA_PICKUP_RADIUS = 60;
-const MIN_HALFWIDTH = 20;
-const MIN_HALFHEIGHT = 20;
+const MIN_HALFWIDTH = 25;
+const MIN_HALFHEIGHT = 25;
 const MOVEMENT_TYPE_LINEAR = 0; const MOVEMENT_TYPE_PARABOLIC = 1;
 const allSpells = { ADD_EDGE:'add-edge', ADD_EDGE_NFS:'add-edge-nfs', REMOVE_EDGE:'remove-edge', REMOVE_EDGE_NFS:'remove-edge-nfs',
     REVERSAL : 'reversal', ANAGRAM : 'anagram', SYNONYM : 'synonym', ADD : 'add-letter', ADD_NFS : 'add-letter-nfs', REMOVE : 'remove-letter',
@@ -262,10 +262,10 @@ class GameElement {
     }
     // specific things can override, e.g. if image has thing surrounded by (unclickable) aura:
     getHalfHeightOfClickableArea() {
-        return this.halfHeight;
+        return Math.max(this.halfHeight, MIN_HALFHEIGHT);
     }
     getHalfWidthOfClickableArea() {
-        return this.halfWidth;
+        return Math.max(this.halfWidth, MIN_HALFWIDTH);
     }
     getClickableArea() {
         return (this.getHalfWidthOfClickableArea() * this.getHalfHeightOfClickableArea());

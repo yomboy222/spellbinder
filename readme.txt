@@ -64,7 +64,7 @@ images to do or redo:
   jerk-whiskeys: ??  brake, dyes, ryes, tubers, tubes, tubs
   fjord-widow: lots
   spook-gel:check for rest
-  asp-lamia: ???
+  asp-lamia: ??? -- also fix axe usage! 
 
 make script to automatically pull in & rate transforms in puzzle_ideas.txt
 

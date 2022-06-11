@@ -31,6 +31,10 @@ getLevelFunctions['goon-hut'] = function() {
                 this.x = this.initialX + (80 * arrowsAlphaLookupTable[t2]) - 40;
                 this.y = this.initialY + (200 * arrowsAlphaLookupTable[t1]) - 150;
             }
+            extraTransformFromBehavior() {
+                this.x = this.initialX;
+                this.y = this.initialY;
+            }
         }
 
         window.Goon = class Goon extends Thing {

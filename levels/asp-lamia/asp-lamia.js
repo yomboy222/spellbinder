@@ -164,6 +164,10 @@ getLevelFunctions['asp-lamia'] = function() {
                 this.reblocksPassageUponReturn = true;
                 this.startAnimating();
             }
+            extraTransformFromBehavior() {
+                this.x = this.initialX;
+                this.y = this.initialY;
+            }
             extraTransformIntoBehavior() {
                 if (currentRoom === 'room1')
                     passages[2].setObstacle(this.getKey());
@@ -176,9 +180,6 @@ getLevelFunctions['asp-lamia'] = function() {
                 this.y = this.initialY + (200 * arrowsAlphaLookupTable[t1]) - 150;
             }
         }
-
-
-
     }
 
     level.getThing = function(word,room,x,y) {
@@ -209,7 +210,7 @@ getLevelFunctions['asp-lamia'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = 'Investigations Kevin MacLeod Gaming Background Music HD.mp3';
     level.allWords = [ 'asp','cod','code','codes','crook','crooks','cub','cube','cubes','cubs','doe','does','dose','lamia','lamias','ode','odes','paw','paws','rapper','rappers','rook','rooks','salami','sap','sitar','sitars','spa','stair','stairs','treasure','treasures','wasp','wrapper' ];
-    level.initialThings = [  ['asp','room1',80,86],['lamia','room1',56,70],['wrapper','room0',58,81],['ode','room0',32,32],['crook','room2',50,77],['sitar','room2',85,81],['cub','room3',81,80],['treasure','room4',75,81] ];
+    level.initialThings = [  ['asp','room1',80,86],['lamia','room1',56,70],['wrapper','room0',58,81],['ode','room0',32,33],['crook','room2',50,77],['sitar','room2',85,81],['cub','room3',81,80],['treasure','room4',75,81] ];
     level.targetThing = 'treasure';
     level.immovableObjects = [ 'asp','crook','crooks','cub','cube','cubes','cubs','doe','does','lamia','lamias','rapper','rappers','spa','stair','stairs','wasp' ];
     level.bonusWords = ['doe','does','dose','sap','spa'];

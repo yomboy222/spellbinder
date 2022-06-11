@@ -151,7 +151,7 @@ getLevelFunctions['fjord-widow'] = function() {
             boundaries: [],
             filledPolygons: [],
             passages: [ 
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 67, 'room0', 90, 77, true, 77, 77, 'fjord', PASSAGE_STATE_BLOCKED, 26, 67),
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 50, 'room0', 90, 77, true, 77, 77, 'fjord', PASSAGE_STATE_BLOCKED, 26, 67),
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 68, 'room2', 10, 77, false, 33, 77, 'widow', PASSAGE_STATE_BLOCKED, 73, 77),
             ],
             hasOwnBackgroundImage: true,
@@ -161,7 +161,7 @@ getLevelFunctions['fjord-widow'] = function() {
             filledPolygons: [],
             passages: [
                 new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',35, 77, 'room0', 35, 77, true, undefined, undefined, 'foxes', PASSAGE_STATE_BLOCKED, 58, 77),
-                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room1', 10, 77, true, 50, 77)],
+                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room1', 10, 50, true, 50, 77)],
         },
         'room2': {
             boundaries: [],
