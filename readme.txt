@@ -14,7 +14,6 @@ check that walking back thru rooms works
 
 TODO:
 
-for wasp > paws, need general solution to placement of newThing ... like method getCoordinatesForReplacement() which by default gives x,y but can be overridden to give initialX, initialY
 
 logic for where to discard something: why isn't wrapper > rapper working? change vectors to try.
 
@@ -31,6 +30,23 @@ refactor all this.x = , this.y = to setCoordinatesUponAppearance()
 keep track of whether certain reminder messages have been shown so as to show them exactly once:
   -- to pick up an object, double-click
   -- to use an object, double-click while it's in your inventory (maybe mark tool objects as such)
+
+====================
+
+things noted from other games --
+
+choose your character
+
+some more praise.
+list of words obtained inc. bonus words
+
+group puzzles by spells you have ... unlock new spells
+
+tiers and packs :)
+
+enough bonus words to get a special prize
+
+
 
 
 ===============================

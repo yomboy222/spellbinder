@@ -102,6 +102,10 @@ getLevelFunctions['asp-lamia'] = function() {
         }
 
         window.Stair = class Stair extends Thing {
+            constructor(word,room,x,y,isonymIndex) {
+                super(word,room,x,y,isonymIndex);
+                this.wordDisplayOffsetX = -90;
+            }
             appearInRoom0() {
                 if (currentRoom === 'room0') {
                     this.x = 56 * xScaleFactor;
