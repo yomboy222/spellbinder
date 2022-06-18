@@ -14,6 +14,9 @@ check that walking back thru rooms works
 
 TODO:
 
+figure out why "host" caption remains sometimes on ghost level
+
+points-added bubble
 
 logic for where to discard something: why isn't wrapper > rapper working? change vectors to try.
 
@@ -38,6 +41,9 @@ things noted from other games --
 choose your character
 
 some more praise.
+
+more audio flourishes
+
 list of words obtained inc. bonus words
 
 group puzzles by spells you have ... unlock new spells

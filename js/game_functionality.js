@@ -519,7 +519,7 @@ class Thing extends GameElement {
         super.concludeMovement(); // this calls extraPostMovementBehavior, which could return thing to inventory
         if (this.deleteAfterMovement === true)
             this.dispose();
-        else if (this.getKey() in thingsHere)
+        else if (this.getKey() in thingsHere && this.okayToDisplayWord())
             this.setCaptionPositionInThingsHere();
     }
 
@@ -711,7 +711,7 @@ class Thing extends GameElement {
         this.y = player.y + yDistFromPlayer;
         this.putIntoThingsHere();
         if (typeof this.captionDiv !== 'undefined') {
-            this.captionDiv.style.display = 'none'; // don't display caption while saw being used
+            this.captionDiv.style.display = 'none'; // don't display caption while being used
         }
     }
 
