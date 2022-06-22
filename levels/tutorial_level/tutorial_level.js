@@ -49,10 +49,7 @@ getLevelFunctions['tutorial level'] = function() {
                 if (this.solid === true) {
                     // play unlocking sound, change image
                     level.sounds['unlock'].play();
-                    this.destX = this.x + 80;
-                    this.destY = this.y + 90;
-                    this.beginMovementTime = Date.now();
-                    this.movementDurationMS = 1200;
+                    this.setMovement(this.x + 80, this.y + 90, 1200);
                     this.solid = false;
                     this.unblockPassagesThisHadBeenBlocking();
                     displaySequenceableMessage('The gate is now unlocked. In general, if an object can be used, you use it by double-clicking on it when it is in your inventory.','gate-unlocked', 'got-key-message');

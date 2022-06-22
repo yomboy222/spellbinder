@@ -145,7 +145,7 @@ class Level {
         this.completionBonus = 10;
         this.goalDescription = '[undefined]';
         this.defineThingSubclasses = function() {};
-        this.getThing = function(word,room,x,y) {
+        this.getThing = function(word,room,x,y,isonymIndex) {
             return undefined; // undefined indicates no special Thing subclass for this word
         };
         this.displayLevelIntroMessage = function() {};
@@ -1343,7 +1343,7 @@ function unhighlightAllSpellNames() {
     }
 }
 
-// this function has return value of form { attemptedSpell, runeNeeded, runeReleased, affectsEnd }
+// this function has return value of form [ attemptedSpell, runeNeeded, runeReleased, affectsEnd ]
 function getAttemptedSingleRuneSpell(fromWord,toWord) {
     for (let i = 0; i < fromWord.length+1; i++) {
         if (toWord.slice(0, i) === fromWord.slice(0,i) && toWord.slice(i+1) === fromWord.slice(i)) {
@@ -1451,10 +1451,6 @@ function castSpell() {
     let runeNeeded = undefined;
     let runeReleased = undefined;
     let involvesFinalS = false;
-
-    if (getCanonicalAnagram(toWord) === getCanonicalAnagram(fromWord)) {
-        spellRequested = allSpells.ANAGRAM;
-    }
 
     /* TODO: cases where two spells could work ... don't want situtation where you check one first that player doesn't have,
     but they do have the other spell. like tapir > taper could be homophone or change-letter
@@ -2198,14 +2194,13 @@ function loadLevel(lName) {
     let objectData = level.initialThings;
 
     // have to do two separate loops through objectData:
-    // the first finds & records things in the initial room so they will be pre-loaded prior to level launch.
-    // the second actually instantiates all the objects, which also
+    // the first finds & records things in the initial room so their images will be pre-loaded prior to level launch.
+    // the second actually instantiates all the objects
 
     imagesRequiredToStartThisLevel['backgroundImage'] = 'pending';
 
     for (let i=0; i < objectData.length; i++) {
         if (objectData[i][1] === level.initialRoom) { // treasure occurs in so many levels, it will be loaded from root images directory, in initialize() function.
-            // console.log(' yo ' + objectData[i][0]);
             imagesRequiredToStartThisLevel[objectData[i][0]] = 'pending';
         }
     }
@@ -2219,8 +2214,6 @@ function loadLevel(lName) {
             imagesRequiredToStartThisLevel[objectData[i][0]] = thing.image; // todo: should probably handle case where an image in initial room is animated right off the bat ... let its subclass of thing define explicitly how many animation images it has
         }
     }
-     // console.log(thingsElsewhere);
-     // console.log(imagesRequiredToStartThisLevel);
 
     // register paths for all OTHER attainable thing images in this level, to be pre-loaded after imagesRequiredToStartThisLevel:
     for (let i=0; i<level.allWords.length; i++) {
