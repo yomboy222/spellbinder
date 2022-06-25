@@ -19,7 +19,8 @@ const MAX_ITEMS_IN_INVENTORY = 6;
 const RUNE_IMAGE_WIDTH = 65; const RUNE_IMAGE_HEIGHT = 92; const RUNE_DISPLAY_WIDTH = 32; const RUNE_DISPLAY_HEIGHT = 46;
 const PASSAGE_WIDTH = 55;
 const PASSAGE_LENGTH = 150;
-const PASSAGE_STATE_INACTIVE = 0; const PASSAGE_STATE_BLOCKED = 1; const PASSAGE_STATE_ACTIVE = 2; const PASSAGE_STATE_OCCUPIED = 3;
+const PASSAGE_STATE_INACTIVE = 0; const PASSAGE_STATE_BLOCKED = 1; const PASSAGE_STATE_ACTIVE = 2;
+const PASSAGE_STATE_OCCUPIED = 3; const PASSAGE_STATE_HIDDEN = 4;
 let canvasOffsetX = 0; // will be set in initialize()
 let canvasOffsetY = 0;
 const PLAYER_HEIGHT = 160;
@@ -424,6 +425,7 @@ class Thing extends GameElement {
         this.wordDisplayOffsetX = -18 - (4 * this.word.length); // where to set "left" property of captionDev rel. to this.x. subclasses may redefine.
         this.wordDisplayOffsetY = 0;// where to set "top" property of captionDev rel. to this.y. subclasses may redefine.
         this.reblocksPassageUponReturn = false; // if it's an obstacle, and is changed then changed back, it will become obstacle again.
+        this.hasBeenTransformedAtLeastOnce = false; // certain behaviors (like spinning motion of blade) shouldn't happen if thing is recreated later
     }
 
     getKey() { // the key used for this thing in thingsHere, thingsElsewhere, inventory:
@@ -927,16 +929,16 @@ class Passage extends GameElement {
         }
     }
     draw() {
-        if (typeof this.image != 'undefined')
+        if (typeof this.image != 'undefined' && this.state !== PASSAGE_STATE_HIDDEN)
             ctx.drawImage(this.image,this.x - this.halfWidth, this.y - this.halfHeight, this.width, this.height);
-        if (this.activated && this.state !== PASSAGE_STATE_OCCUPIED) {
+        if (this.activated && this.state !== PASSAGE_STATE_OCCUPIED && this.state !== PASSAGE_STATE_HIDDEN) {
             ctx.globalAlpha = arrowsAlpha;
             ctx.drawImage(arrowImages[this.direction],this.x - this.arrowHalfWidth, this.y - this.arrowHalfHeight);
             ctx.globalAlpha = 1.0;
         }
     }
     handleClick(e) {
-        if (this.state === PASSAGE_STATE_ACTIVE || this.state === PASSAGE_STATE_BLOCKED) {
+        if (this.state === PASSAGE_STATE_ACTIVE || this.state === PASSAGE_STATE_BLOCKED || this.state === PASSAGE_STATE_HIDDEN) {
             // move to the passage or to "blocked" point. first, if player currently "occupying" a passage, unoccupy it:
             for (let i=0; i<passages.length;i++) {
                 if (passages[i].state == PASSAGE_STATE_OCCUPIED)
@@ -1569,6 +1571,8 @@ function executeTransformation() {
     // note "false" here means treat x and y as actual coordinates rather than percentages:
     let newObject = getThing(toWord, currentRoom, sourceThing.x, sourceThing.y, false);
 
+    newObject.hasBeenTransformedAtLeastOnce = true;
+
     if (typeof sourceThing.isonymIndex !== 'undefined') {
         newObject.isonymIndex = sourceThing.isonymIndex; // so if there are multiple "loot" objects distinguished by isonymIndex, same can hold for "tool" objects
     }
@@ -1868,6 +1872,7 @@ function completeLevel() {
         backgroundMusic.pause();
     }
     stopDisplayingMsg(true); // closes any messages currently open
+    startSuppressingPlayerInput();
 
     let messageObject = {};
     messageObject.standardIndex = undefined; // this will be a "large" message, not one in one of the standard message slots
@@ -2296,7 +2301,7 @@ function handleArrowKey(direction, e) {
     let closestDistanceFound = 999999;
     for (let i=0; i<passages.length; i++) {
         let p = passages[i];
-        if (p.activated && p.direction === direction) {
+        if (p.activated && p.direction.indexOf(direction) >= 0) { // so direction "W" will work when p.direction is "SW", etc.
             // disregard this passage if it's behind user (rel. to given direction)
             if ( (direction === 'N' && player.y < p.y) ||
                 (direction === 'S' && player.y > p.y) ||
@@ -2396,6 +2401,9 @@ function handleClick(e) {
     if (typeof e.target !== 'undefined' && typeof e.target.tagName !== undefined) {
         tagName = e.target.tagName.toLowerCase();
     }
+
+    if (levelComplete)
+        return;
 
     if (!tagName.startsWith('canvas') && !(tagName.startsWith('div'))) {  // only handle clicks here directly on canvas & caption divs, not "cast" button, links ...
         // console.log('returning without setting timeout to checkIfClickWasMadeDouble');

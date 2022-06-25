@@ -14,11 +14,13 @@ check that walking back thru rooms works
 
 TODO:
 
+in tutorial, make clear you can change things in your inventory too.
+
+when you click or double-click on anything, change character direction to face it (if it's not facing already)
+
 figure out why "host" caption remains sometimes on ghost level
 
 points-added bubble
-
-logic for where to discard something: why isn't wrapper > rapper working? change vectors to try.
 
 refactor "reblocks when re-emerges" so just add a method
 

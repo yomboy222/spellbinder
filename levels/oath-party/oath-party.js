@@ -15,6 +15,10 @@ getLevelFunctions['oath-party'] = function() {
         }
 
         window.Balloon = class Balloon extends Thing {
+            constructor(word,room,x,y,isonymIndex) {
+                super(word, room, x, y, isonymIndex);
+                this.wordDisplayOffsetY = -18;
+            }
             handleDblclick(e) {
                 if (this.y < 200) {
                     displayMessage('You cannot reach this!', DEFAULT_MESSAGE_DURATION);
@@ -170,7 +174,7 @@ getLevelFunctions['oath-party'] = function() {
                     this.movementType = MOVEMENT_TYPE_PARABOLIC;
                     let balloon = thingsHere['balloon'];
                     this.discard(true);
-                    this.setMovement(balloon.x,balloon.y,500,undefined,undefined,true,true);
+                    this.setMovement(balloon.x,balloon.y-40,500,undefined,undefined,true,true);
                 }
                 else {
                     return super.handleDblclick(e);
@@ -278,7 +282,7 @@ getLevelFunctions['oath-party'] = function() {
     level.initialInventory = {};
     level.backgroundMusicFile = 'FoamRubber-320bit.mp3';
     level.allWords = [ 'ape','art','balloon','boa','boar','board','boat','dart','hart','hoar','hoard','key','oar','oat','oath','part','party','pond','gate','rat','tap','tape','tar','tarp','tart','trap','treasure' ];
-    level.initialThings = [ ['oath','room1',65,81],['party','room2',50,81],['board','room3',94,62],['pond','room4',81,68],['key','room5',60,22],['balloon','room5',60,9],['gate','room5',81,77],['ape','room6',81,68],['treasure','room7',40,81] ];
+    level.initialThings = [ ['oath','room1',65,81],['party','room2',50,81],['board','room3',94,62],['pond','room4',81,68],['key','room5',57,39],['balloon','room5',55,18],['gate','room5',81,77],['ape','room6',81,68],['treasure','room7',72,81] ];
     level.targetThing = 'treasure';
     level.immovableObjects = ['ape','balloon','boar','board','boat','hart','hoar','party','pond','gate','tar','trap',];
     level.bonusWords = [];
@@ -289,6 +293,7 @@ getLevelFunctions['oath-party'] = function() {
         'oink' : new Audio(getLevelPathFromFolderName(level.folderName) + '/audio/pigmen.m4a'),
     };
     level.additionalImageNamesToPreload = [];
+    level.goalDescription = 'Get the treasure!';
 
     level.boarInTrap = false;
     level.gateOpened = false;
@@ -334,7 +339,7 @@ getLevelFunctions['oath-party'] = function() {
             filledPolygons: [],
             passages: [ 
                new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'E',97, 77, 'room7', 10, 77, true, 50, 77, 'ape', PASSAGE_STATE_BLOCKED, 73, 77),
-               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room5', 90, 77, true, 75, 77)],
+               new Passage(PassageTypes.INVISIBLE_HORIZONTAL, 'W',3, 77, 'room5', 90, 77, true, 40, 77)],
         },
         'room7': {
             boundaries: [],
