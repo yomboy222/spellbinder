@@ -50,9 +50,43 @@ list of words obtained inc. bonus words
 
 group puzzles by spells you have ... unlock new spells
 
+hints paid for with some kind of coins/points. 
+
 tiers and packs :)
 
 enough bonus words to get a special prize
+
+new large-scale structure: go up levels within tower. central room with cauldron in middle acts as elevator. has doors going off it that correspond to what we've called levels up until now. 
+
+
+have to square this structure with the "binder" approach to doling out spells: why would the binder's pages change from level to level? You could just arbitrarily/magically make them change as you go up and down. and maybe this is the best approach. you can't have an approach where you find/acquire new spells, because sometimes you need to lose spells as you go up.
+
+but under the arbitrary/magical plan, would need to call attention to the fact that pages have disappeared from the binder. or maybe have them all disappear, and then at the start of the level you get the pages to add. 
+
+Level 1 (add/remove-edge)
+Level 2 (add/remove-edge, reverse)
+Level 3 (add/remove any)
+Level 4 (add/remove any, reverse)
+Level 5 (change-edge -- what kind of puzzles can you make with change-edge only? -- actually a lot of good charm-3+ puzzles so probably can do a lot with this.)
+Level 6 (change-edge, reverse)
+
+the narrative is along the lines of: 
+  -- first level is just to get acquainted with mechanics. load up on more humorous puzzles to keep interest. toward end of level, might be nice to introduce gombrecht's familiar ... like a squirrel or something ... who acts as a kind of sherpa for you. explains the spell that keeps the tower invisible except to people who might have a chance of completing gombrecht's work. explains that a few germans have been allowed inside but got nowhere. "i wouldn't have let any of them inside -- my master was the most brilliant, most irrefrugnable magician there could ever be, and if he could not realize this dream, nobody will ever be able to" ... that kind of thing.
+  -- then at higher levels, "i have grown to appreciate your cleverness. i will share a secret suspicion with you, i believe gombrecht designed the lower levels of the tower as tests for the wanderers he thought might be able to complete his work, to weed out those who turned out not to be up to the task. But at higher levels I believe he called on higher powers, mysteries he could not fully control, and there resulted mysterious rooms and passages that he did not fully foresee or understand. i myself have not been able to penetrate all these rooms. i believe they will lead to his goal but in ways he himself did not foresee."
+
+... maybe the squirrel becomes the source of hints. the creation of bonus words yields gems as a side effect. the squirrel will provide hints in exchange for these gems. but might call them something else so player not frustrated that they can't change gem to hem or whatever. 
+
+i think maybe 5 doorways per level is a good number
+
+
+
+
+
+
+
+ 
+  -- 
+
 
 
 

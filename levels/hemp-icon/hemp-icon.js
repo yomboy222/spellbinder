@@ -150,6 +150,12 @@ getLevelFunctions['hemp-icon'] = function() {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 this.wordDisplayOffsetY = 100;
+                this.reblocksPassageUponReturn = true;
+            }
+            extraTransformIntoBehavior() {
+                if (currentRoom === 'room3') {
+                    passages[1].setObstacle(this.getKey());
+                }
             }
         }
 

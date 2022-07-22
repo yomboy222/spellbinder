@@ -98,7 +98,7 @@ getLevelFunctions['drawer-mangler'] = function() {
                     this.drawerOpen = true;
                     if (!level.noteHasBeenCreated) {
                         let note = level.getNote();
-                        note.setMovement(this.x+16, this.y+125, 1000, undefined, undefined, true, true);
+                        note.setMovement(this.x+8, this.y+125, 1000, undefined, undefined, true, true);
                     }
                 }
                 else {
@@ -133,6 +133,9 @@ getLevelFunctions['drawer-mangler'] = function() {
             constructor(word,room,x,y) {
                 super(word,room,x,y);
                 //this.wordDisplayOffsetY = -20;
+            }
+            getBaseY() {
+                return 400;
             }
         }
 

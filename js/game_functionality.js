@@ -1172,7 +1172,7 @@ function displayMessage(msg, durationMS = 0, x = undefined, y = undefined, treat
     // see if message already being displayed; if so, return.
     for (let [id, messageObj] of Object.entries(messages)) {
         if (messageObj.msg == msg) {
-            return;
+            return messageObj;
         }
     }
 
