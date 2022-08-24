@@ -183,7 +183,8 @@ opera in thorn/divan , https://freesound.org/s/216502/
 horn in thorn/divan https://freesound.org/s/413203/
 collapse in easy soap bowtie -- https://freesound.org/s/434897/
 collapse there -- https://freesound.org/s/77074/
-
+suite-complete fanfare -- https://freesound.org/s/413203/
+short fanfare -- https://freesound.org/s/534017/
 ================
 
 people to send to --

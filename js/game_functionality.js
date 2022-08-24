@@ -716,7 +716,6 @@ class Thing extends GameElement {
             this.captionDiv.style.display = 'none'; // don't display caption while being used
         }
     }
-
     returnToInventoryAfterUseOnScreen() {
         if (typeof this.captionDiv !== 'undefined') {
             this.captionDiv.style.display = 'block';
